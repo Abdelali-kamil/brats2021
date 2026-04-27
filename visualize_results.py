@@ -16,7 +16,7 @@ def visualize_worst_case():
     label = patient_data['label']
 
     model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(device)
-    model.load_state_dict(torch.load("checkpoints/segmentor_epoch_300.pth"))
+    model.load_state_dict(torch.load("checkpoints/segmentor_epoch_400.pth"))
     model.eval()
 
     with torch.no_grad():

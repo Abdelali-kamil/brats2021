@@ -30,8 +30,8 @@ def main():
     print("📂 Loading Model...")
     model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(device)
     
-    # Path to your best checkpoint (e.g., epoch 50)
-    checkpoint_path = "checkpoints/segmentor_epoch_50.pth"
+    # Path to your best checkpoint (e.g., epoch )
+    checkpoint_path = "checkpoints/segmentor_epoch_400.pth"
     
     if os.path.exists(checkpoint_path):
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -55,7 +55,7 @@ def main():
             # Predict
             logits = model(images)
             probs = torch.sigmoid(logits)
-            pred_mask = (probs > 0.5).float()
+            pred_mask = (probs > 0.20).float()
             
             # Calculate Dice for Channel 1 (Tumor Core) as it is the most critical
             # Labels Channel 1 = Tumor Core

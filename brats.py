@@ -118,16 +118,24 @@ class Brats(Dataset):
         return len(self.datas)
 
 def get_datasets(seed=42, debug=False, on="train"):
-    root_path = pathlib.Path("/home/kamilabdelali/brats2021").resolve()
+    # 1. تأكد من توجيه المسار إلى مجلد data مباشرة حيث فككت الضغط
+    root_path = pathlib.Path("/home/kamilabdelali/brats2021/data").resolve()
     
-    # البحث العميق الذي وجد 384 مريضاً
-    all_dirs = list(root_path.rglob("BraTS2021_*"))
-    patients_dir = sorted([d for d in all_dirs if d.is_dir()])
+    # 2. البحث عن المجلدات التي تبدأ بـ BraTS2021_ فقط في المستوى الأول
+    # استخدم glob بدلاً من rglob لتجنب التكرار والبحث العميق الخاطئ
+    patients_dir = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
     
     if debug:
         patients_dir = patients_dir[:10]
         
-    # ملاحظة: training=True إذا كان on="train"
+    # إذا كانت القائمة فارغة، جرب البحث في المجلد الرئيسي (للاحتياط)
+    if len(patients_dir) == 0:
+        print("⚠️ No folders in /data, checking main directory...")
+        root_path = pathlib.Path("/home/kamilabdelali/brats2021").resolve()
+        patients_dir = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
+
+    print(f"📂 Found {len(patients_dir)} candidate patient folders.")
+    
     return Brats(patients_dir, training=(on == "train"), normalisation="minmax", data_aug=False)
 
 

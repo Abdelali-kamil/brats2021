@@ -51,8 +51,8 @@ def evaluate_during_training(model, dataloader, device):
 
 def main():
     # --- CONFIGURATION ---
-    START_EPOCH = 300 # تأكد من تغييرها لـ 300 لتبدأ من حيث انتهيت
-    total_target_epochs = 400 
+    START_EPOCH = 600 # تأكد من تغييرها لـ 300 لتبدأ من حيث انتهيت
+    total_target_epochs = 650 
     LEARNING_RATE = 2e-5  # معدل صغير للتحسين الدقيق
     BATCH_SIZE = 2
     SAVE_DIR = "checkpoints"
