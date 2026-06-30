@@ -1,0 +1,6 @@
+Patient_ID,Dice,HD95,GT_Voxels,Pred_Voxels,Overlap_Voxels,Prob_Max,Prob_Mean,Voxels_Above_Threshold,Binary_Channel,Threshold,Target_Shape,Image_Path,Label_Path,Error
+1.1,0.0,50.04048356339629,81,5769,0,1.0,0.018942322582006454,5812,2,0.25,"(64, 64, 64)",/home/kamilabdelali/anotherdata/images/1.1.nii.gz,/home/kamilabdelali/anotherdata/labels/1.1.nii.gz,
+2.1,0.0,34.39476397175633,51,21994,0,1.0,0.08058678358793259,22008,2,0.25,"(64, 64, 64)",/home/kamilabdelali/anotherdata/images/2.1.nii.gz,/home/kamilabdelali/anotherdata/labels/2.1.nii.gz,
+4.1,0.0,38.91786171390925,76,16509,0,1.0,0.058819398283958435,16527,2,0.25,"(64, 64, 64)",/home/kamilabdelali/anotherdata/images/4.1.nii.gz,/home/kamilabdelali/anotherdata/labels/4.1.nii.gz,
+5.1,0.0,30.01666203960727,76,6008,0,1.0,0.02057371288537979,6085,2,0.25,"(64, 64, 64)",/home/kamilabdelali/anotherdata/images/5.1.nii.gz,/home/kamilabdelali/anotherdata/labels/5.1.nii.gz,
+6.1,0.0,31.40620865922336,162,6927,0,1.0,0.024440772831439972,7030,2,0.25,"(64, 64, 64)",/home/kamilabdelali/anotherdata/images/6.1.nii.gz,/home/kamilabdelali/anotherdata/labels/6.1.nii.gz,

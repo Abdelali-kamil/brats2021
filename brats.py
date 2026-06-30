@@ -5,7 +5,6 @@ import torch
 from torch.utils.data.dataset import Dataset
 import random 
 
-# استيراد الدوال المساعدة (تأكد من وجود ملفات image.py و config.py في نفس المجلد)
 try:
     from image import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
 except ImportError:
@@ -20,7 +19,6 @@ class Brats(Dataset):
         self.datas = []
         self.no_seg = no_seg
         
-        # الأنماط المطلوبة للملفات (T1, T1ce, T2, FLAIR) + Segmentation
         self.patterns = ["_t1", "_t1ce", "_t2", "_flair"]
         if not no_seg:
             self.patterns += ["_seg"]
@@ -30,12 +28,9 @@ class Brats(Dataset):
         valid_count = 0
         for patient_dir in patients_dir:
             patient_id = patient_dir.name
-            
-            # البحث المرن: يدعم .nii و .nii.gz وأسماء الملفات المختلفة
             is_valid = True
             current_paths = []
             for pattern in self.patterns:
-                # يبحث عن أي ملف يحتوي على النمط (مثل _flair) داخل مجلد المريض
                 found = list(patient_dir.glob(f"*{pattern}.nii*"))
                 if len(found) > 0:
                     current_paths.append(found[0])
@@ -44,10 +39,8 @@ class Brats(Dataset):
                     break
             
             if not is_valid:
-                # إذا نقص أي ملف (مثلاً ملف الـ seg)، يتم تخطي المريض
                 continue 
 
-            # تخزين بيانات المريض في قاموس
             patient_dict = {
                 "id": patient_id,
                 "t1": current_paths[0],
@@ -64,34 +57,27 @@ class Brats(Dataset):
     def __getitem__(self, idx):
         _p = self.datas[idx]
         
-        # 1. تحميل الصور الأربعة (Modalities)
         img_data = {k: self.load_nii(_p[k]) for k in ["t1", "t1ce", "t2", "flair"]}
         
-        # 2. التطبيع (Normalization)
         if self.normalisation == "minmax":
             img_data = {k: irm_min_max_preprocess(v) for k, v in img_data.items()}
         else:
             img_data = {k: zscore_normalise(v) for k, v in img_data.items()}
             
-        # دمج القنوات الأربعة في مصفوفة واحدة [Channels, D, H, W]
         image = np.stack([img_data[k] for k in ["t1", "t1ce", "t2", "flair"]])
         
-        # 3. معالجة قناع التجزئة (Segmentation Mask)
         if not self.no_seg and _p["seg"] is not None:
             mask = self.load_nii(_p["seg"])
-            # تحويل القيم (1, 2, 4) إلى قنوات (ET, TC, WT)
-            et = (mask == 4) # Enhancing Tumor
-            tc = np.logical_or(mask == 4, mask == 1) # Tumor Core
-            wt = np.logical_or(tc, mask == 2) # Whole Tumor
+            et = (mask == 4)
+            tc = np.logical_or(mask == 4, mask == 1)
+            wt = np.logical_or(tc, mask == 2)
             label = np.stack([et, tc, wt])
         else:
-            # في حال عدم وجود Seg (مثل بيانات التست)، ننشئ قناعاً صفرياً
             label = np.zeros((3, *image.shape[1:]))
             
-        # 4. توحيد الأبعاد (Crop/Pad) إلى 128x128x128 ليتناسب مع U-Net
-        image, label = pad_or_crop_image(image, label, target_size=(128, 128, 128))
+        # ✅ KEY FIX: pass training=self.training for deterministic center crop during eval
+        image, label = pad_or_crop_image(image, label, target_size=(128, 128, 128), training=self.training)
             
-        # 5. تحسين البيانات (Augmentation) عشوائياً أثناء التدريب
         if self.training and self.data_aug:
             image, label = self.augment(image, label)
             
@@ -102,7 +88,6 @@ class Brats(Dataset):
         }
 
     def augment(self, img, lbl):
-        # قلب عشوائي على المحاور المكانية
         if random.random() > 0.5:
             img, lbl = np.flip(img, axis=2).copy(), np.flip(lbl, axis=2).copy()
         if random.random() > 0.5:
@@ -111,24 +96,19 @@ class Brats(Dataset):
 
     @staticmethod
     def load_nii(path):
-        """تحميل ملف NIfTI وتحويله إلى مصفوفة Numpy"""
         return sitk.GetArrayFromImage(sitk.ReadImage(str(path)))
 
     def __len__(self):
         return len(self.datas)
 
-def get_datasets(seed=42, debug=False, on="train"):
-    # 1. تأكد من توجيه المسار إلى مجلد data مباشرة حيث فككت الضغط
+# ✅ KEY FIX: default changed from "train" to "test"
+def get_datasets(seed=42, debug=False, on="test"):
     root_path = pathlib.Path("/home/kamilabdelali/brats2021/data").resolve()
-    
-    # 2. البحث عن المجلدات التي تبدأ بـ BraTS2021_ فقط في المستوى الأول
-    # استخدم glob بدلاً من rglob لتجنب التكرار والبحث العميق الخاطئ
     patients_dir = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
     
     if debug:
         patients_dir = patients_dir[:10]
         
-    # إذا كانت القائمة فارغة، جرب البحث في المجلد الرئيسي (للاحتياط)
     if len(patients_dir) == 0:
         print("⚠️ No folders in /data, checking main directory...")
         root_path = pathlib.Path("/home/kamilabdelali/brats2021").resolve()
@@ -139,21 +119,16 @@ def get_datasets(seed=42, debug=False, on="train"):
     return Brats(patients_dir, training=(on == "train"), normalisation="minmax", data_aug=False)
 
 
-# الجزء التنفيذي للتأكد من عمل الكود بشكل مستقل
 if __name__ == "__main__":
     print("🚀 Running brats.py Test Sequence...")
     try:
         dataset = get_datasets()
-        print(f"📊 Dataset Statistics:")
-        print(f"   Total Patients: {len(dataset)}")
-        
+        print(f"📊 Total Patients: {len(dataset)}")
         if len(dataset) > 0:
             sample = dataset[0]
-            print(f"✅ Data integrity check passed!")
-            print(f"   Image Shape: {sample['image'].shape}") # [4, 128, 128, 128]
-            print(f"   Label Shape: {sample['label'].shape}") # [3, 128, 128, 128]
+            print(f"✅ Image Shape: {sample['image'].shape}")
+            print(f"✅ Label Shape: {sample['label'].shape}")
         else:
-            print("⚠️ Warning: No valid patients found in the directory.")
-            
+            print("⚠️ Warning: No valid patients found.")
     except Exception as e:
         print(f"❌ An error occurred: {e}")

@@ -1,0 +1,8 @@
+SAFE REPORT WORDING
+================================================================================
+
+The fine-tuned binary Wavelet U-Net++ model was evaluated on 435 pontine infarction cases. The full-dataset mean Dice score was 0.5342, with a median Dice score of 0.6450. The maximum Dice score was 0.9192. 3 cases (0.69%) achieved Dice scores of at least 0.90, 53 cases (12.18%) achieved Dice scores of at least 0.80, and 165 cases (37.93%) achieved Dice scores of at least 0.70. These results indicate that the model achieved high segmentation accuracy in a subset of cases, although the overall mean performance was reduced by low-overlap or failed cases.
+
+IMPORTANT:
+Do not report filtered subset Dice as full-dataset performance.
+The full-dataset mean Dice is the main evaluation result.

@@ -8,10 +8,10 @@ import os
 def dice_coefficient(y_pred, y_true):
     """
     Calculates the Dice Score:
-    - 1.0 means perfect overlap (Excellent)
+    - 1e-5  means perfect overlap (Excellent)
     - 0.0 means no overlap (Poor)
     """
-    smooth = 1.0
+    smooth = 1e-5 
     y_pred = y_pred.view(-1)
     y_true = y_true.view(-1)
     intersection = (y_pred * y_true).sum()
@@ -31,7 +31,7 @@ def main():
     model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(device)
     
     # Path to your best checkpoint (e.g., epoch )
-    checkpoint_path = "checkpoints/segmentor_epoch_400.pth"
+    checkpoint_path = "checkpoints/segmentor_epoch_650.pth"
     
     if os.path.exists(checkpoint_path):
         model.load_state_dict(torch.load(checkpoint_path, map_location=device))
@@ -55,7 +55,7 @@ def main():
             # Predict
             logits = model(images)
             probs = torch.sigmoid(logits)
-            pred_mask = (probs > 0.20).float()
+            pred_mask = (probs > 0.30).float()
             
             # Calculate Dice for Channel 1 (Tumor Core) as it is the most critical
             # Labels Channel 1 = Tumor Core

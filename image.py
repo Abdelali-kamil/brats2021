@@ -1,13 +1,13 @@
 import random
 import numpy as np
 
-def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
+def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144), training=True):
     c, z, y, x = image.shape
-    z_slice, y_slice, x_slice = [get_crop_slice(target, dim) for target, dim in zip(target_size, (z, y, x))]
+    z_slice, y_slice, x_slice = [get_crop_slice(target, dim, training=training) for target, dim in zip(target_size, (z, y, x))]
     image = image[:, z_slice, y_slice, x_slice]
     if seg is not None:
         seg = seg[:, z_slice, y_slice, x_slice]
-    todos = [get_left_right_idx_should_pad(size, dim) for size, dim in zip(target_size, [z, y, x])]
+    todos = [get_left_right_idx_should_pad(size, dim, training=training) for size, dim in zip(target_size, [z, y, x])]
     padlist = [(0, 0)]  # channel dim
     for to_pad in todos:
         if to_pad[0]:
@@ -20,19 +20,25 @@ def pad_or_crop_image(image, seg=None, target_size=(128, 144, 144)):
         return image, seg
     return image
 
-def get_left_right_idx_should_pad(target_size, dim):
+def get_left_right_idx_should_pad(target_size, dim, training=True):
     if dim >= target_size:
         return [False]
     elif dim < target_size:
         pad_extent = target_size - dim
-        left = random.randint(0, pad_extent)
+        if training:
+            left = random.randint(0, pad_extent)
+        else:
+            left = pad_extent // 2
         right = pad_extent - left
         return True, left, right
 
-def get_crop_slice(target_size, dim):
+def get_crop_slice(target_size, dim, training=True):
     if dim > target_size:
         crop_extent = dim - target_size
-        left = random.randint(0, crop_extent)
+        if training:
+            left = random.randint(0, crop_extent)
+        else:
+            left = crop_extent // 2
         right = crop_extent - left
         return slice(left, dim - right)
     elif dim <= target_size:
