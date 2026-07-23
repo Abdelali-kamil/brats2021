@@ -52,7 +52,11 @@ from brats_gbm.model import WaveletUNetPlusPlus  # noqa: E402
 from brats_gbm.splits import assert_disjoint, freeze_upenn_split, upenn_split  # noqa: E402
 
 NIFTI_DIR = ROOT / "upenn_nifti"
-CLINICAL_CSV = ROOT / "upenn_data" / "UPENN-GBM_clinical_info_v2.1.csv"
+# Kept in-repo (65 KB) so the pipeline does not depend on the 132 GB raw
+# DICOM tree, which is only needed to regenerate upenn_nifti/.
+CLINICAL_CSV = ROOT / "metadata" / "UPENN-GBM_clinical_info_v2.1.csv"
+if not CLINICAL_CSV.exists():
+    CLINICAL_CSV = ROOT / "upenn_data" / "UPENN-GBM_clinical_info_v2.1.csv"
 RESULTS_DIR = ROOT / "results" / "upenn"
 CACHE_DIR = ROOT / "cache" / "upenn_probs"
 

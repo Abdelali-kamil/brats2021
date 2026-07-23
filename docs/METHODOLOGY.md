@@ -97,6 +97,15 @@ Applied in `brats_gbm/eval/postprocess.py`, in order:
    (ET 5, TC 20, WT 50), keeping the largest if that would empty the mask.
 3. **ET policy.** See below.
 
+> The hierarchy constraint was previously applied innermost-outwards — ET was
+> intersected with TC, and only then was TC intersected with WT. The second
+> step can remove TC voxels that the first step had already admitted ET into,
+> leaving ET outside the final TC. The original code happened to compensate by
+> invoking the constraint three times per case, but threshold selection invoked
+> it once and so swept over slightly inconsistent masks. Applying the
+> constraints outermost-inwards makes a single pass correct. This is covered by
+> `tests/test_eval.py::test_hierarchy_is_enforced`.
+
 ### The ET policy
 
 Dice is all-or-nothing on a region whose ground truth is empty: a handful of

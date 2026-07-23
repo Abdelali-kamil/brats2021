@@ -19,3 +19,6 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 venv/
+
+# pytest
+.pytest_cache/

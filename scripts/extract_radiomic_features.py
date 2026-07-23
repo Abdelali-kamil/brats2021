@@ -40,7 +40,11 @@ from brats_gbm.data.upenn import ET_LABELS  # noqa: E402
 
 UPENN_DIR = ROOT
 NIFTI_DIR = UPENN_DIR / "upenn_nifti"
-CLINICAL_CSV = UPENN_DIR / "upenn_data" / "UPENN-GBM_clinical_info_v2.1.csv"
+# Kept in-repo (65 KB) so the pipeline does not depend on the 132 GB raw
+# DICOM tree, which is only needed to regenerate upenn_nifti/.
+CLINICAL_CSV = ROOT / "metadata" / "UPENN-GBM_clinical_info_v2.1.csv"
+if not CLINICAL_CSV.exists():
+    CLINICAL_CSV = ROOT / "upenn_data" / "UPENN-GBM_clinical_info_v2.1.csv"
 # Use the UPenn-adapted segmentor (corrected ET labels). The BraTS checkpoint
 # scores only ~0.15 Dice here because UPENN-GBM images are not skull-stripped,
 # so it would produce unusable masks for the subjects lacking ground truth.
