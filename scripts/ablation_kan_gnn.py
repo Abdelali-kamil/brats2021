@@ -66,6 +66,11 @@ OUTER_FOLDS, INNER_FOLDS, N_REPEATS = 5, 3, 3
 MAX_EPOCHS, PATIENCE = 200, 25
 
 CONFIGS = {
+    # Essential control. If clinical-only matches or beats the fusion rungs,
+    # then "multimodal fusion" is really clinical prediction with imaging
+    # riding along, and every downstream gain must be attributed accordingly.
+    "clinical_only": dict(use_clinical=True,  use_kan=False, use_gnn=False,
+                          use_gate=False, drop_imaging=True),
     "imaging_only":  dict(use_clinical=False, use_kan=False, use_gnn=False, use_gate=False),
     "mlp_fusion":    dict(use_clinical=True,  use_kan=False, use_gnn=False, use_gate=False),
     "kan_fusion":    dict(use_clinical=True,  use_kan=True,  use_gnn=False, use_gate=False),
@@ -116,6 +121,11 @@ def fit_transform(train: np.ndarray, *others: np.ndarray):
 
 def train_model(cfg, hp, Xi_tr, Xc_tr, y_tr, Xi_va, Xc_va, y_va, seed):
     torch.manual_seed(seed)
+    if cfg.get("drop_imaging"):
+        # Keep the architecture identical; feed a constant so the imaging
+        # branch can contribute nothing. Isolates the clinical signal alone.
+        Xi_tr = np.zeros((Xi_tr.shape[0], 1), dtype=float)
+        Xi_va = np.zeros((Xi_va.shape[0], 1), dtype=float)
     use_clin = cfg["use_clinical"]
     n_clin = Xc_tr.shape[1] if use_clin else 0
 
