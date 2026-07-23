@@ -54,10 +54,17 @@ def remove_small_components(mask: np.ndarray, min_voxels: int) -> np.ndarray:
 
 
 def enforce_hierarchy(pred: np.ndarray) -> np.ndarray:
-    """ET subset of TC subset of WT."""
+    """ET subset of TC subset of WT.
+
+    Order matters. Constraining ET to TC first and only then shrinking TC into
+    WT can leave ET voxels outside the final TC, because the second step
+    removes TC voxels that the first step had already accepted ET into. Going
+    outermost-inwards fixes each containing region before the region it
+    contains, so one pass suffices.
+    """
     pred = pred.astype(bool)
-    pred[0] &= pred[1]
     pred[1] &= pred[2]
+    pred[0] &= pred[1]
     return pred
 
 

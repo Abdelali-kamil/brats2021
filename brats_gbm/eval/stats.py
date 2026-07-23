@@ -75,19 +75,29 @@ def fmt_ci(point: float, lo: float, hi: float, nd: int = 4) -> str:
     return f"{point:.{nd}f} [{lo:.{nd}f}, {hi:.{nd}f}]"
 
 
+# A case scoring below this counts as a complete failure. Testing exact
+# equality with zero would miss most of them: BraTS per-case scores were
+# produced by a smoothed Dice (2*inter/(sum+eps)), so a total miss lands at
+# ~1e-9 rather than at 0.0.
+FAILURE_DICE = 0.01
+
+
 def summarise_segmentation(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     """Per-region Dice/HD95 with bootstrap CIs for a per-case results frame."""
     rows = []
     for region in ("ET", "TC", "WT"):
-        d = bootstrap_ci(df[f"Dice_{region}"])
+        dice_vals = pd.to_numeric(df[f"Dice_{region}"], errors="coerce")
+        d = bootstrap_ci(dice_vals)
         h = bootstrap_ci(df[f"HD95_{region}"])
         rows.append({
             "label": label,
             "region": region,
-            "n": int(pd.to_numeric(df[f"Dice_{region}"], errors="coerce").notna().sum()),
+            "n": int(dice_vals.notna().sum()),
             "dice": d[0], "dice_lo": d[1], "dice_hi": d[2],
             "hd95": h[0], "hd95_lo": h[1], "hd95_hi": h[2],
-            "n_zero_dice": int((pd.to_numeric(df[f"Dice_{region}"], errors="coerce") == 0).sum()),
+            "n_failed": int((dice_vals < FAILURE_DICE).sum()),
+            "n_hd95_undefined": int(
+                pd.to_numeric(df[f"HD95_{region}"], errors="coerce").isna().sum()),
         })
 
     mean_dice = df[["Dice_ET", "Dice_TC", "Dice_WT"]].mean(axis=1)
@@ -100,7 +110,7 @@ def summarise_segmentation(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         "label": label, "region": "MEAN", "n": len(df),
         "dice": md[0], "dice_lo": md[1], "dice_hi": md[2],
         "hd95": mh[0], "hd95_lo": mh[1], "hd95_hi": mh[2],
-        "n_zero_dice": "",
+        "n_failed": "", "n_hd95_undefined": "",
     })
     return pd.DataFrame(rows)
 
