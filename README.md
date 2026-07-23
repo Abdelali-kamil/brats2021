@@ -8,8 +8,9 @@ and IDH1 mutation classification from segmentation-derived radiomic features.
 > fine-tuning recovers it to ~0.82 — an apparent +0.66 domain-adaptation gain.
 > That was a bug, not a finding: the BraTS checkpoint was being fed the UPenn
 > channel order and normalisation rather than its own. Given the preprocessing
-> it was trained under, the same checkpoint transfers at roughly 0.77 zero-shot,
-> so the real benefit of fine-tuning is on the order of +0.05. See
+> it was trained under, the same checkpoint transfers at **0.695** zero-shot, so
+> the real benefit of fine-tuning is **+0.11 [0.04, 0.19]** rather than +0.66.
+> The effect is real but roughly a fifth of what was claimed. See
 > `docs/METHODOLOGY.md`. Do not cite the older figure.
 
 ## Layout
@@ -36,8 +37,15 @@ scripts/                   entry points, all argparse-driven
   summarize_brats.py       BraTS internal-validation summary with CIs
   extract_radiomic_features.py
   train_classifier_idh1.py IDH1 classification
-  visualize_upenn.py       qualitative overlays
+  evaluate_brats.py        evaluate on BraTS under the recorded protocol
+  selection_sensitivity.py fixed vs validation-selected post-processing
+  probe_baseline_threshold.py  threshold sensitivity of the zero-shot baseline
+  build_brats_swa.py       weight averaging (guarded; not used — see docstring)
+  visualize_upenn.py       qualitative overlays, UPenn
+  visualize_brats.py       qualitative overlays, BraTS
+  make_report.py           regenerate docs/RESULTS.md from results/
   verify_no_leakage.py     assert every data-integrity property
+  watch.sh                 follow a running pipeline stage
   run_pipeline.sh          full pipeline, end to end
 
 tests/                     pytest suite for metrics, post-processing, splits
@@ -52,7 +60,7 @@ Data (`data/`, `upenn_nifti/`, `upenn_data/`), model weights (`checkpoints/`)
 and cached probability maps (`cache/`) are gitignored.
 
 ```bash
-python -m pytest tests/ -q     # 28 tests, ~1 s, no data or GPU needed
+python -m pytest tests/ -q     # 39 tests, ~2 s, no data or GPU needed
 ```
 
 ### Disk
@@ -93,15 +101,22 @@ python scripts/verify_no_leakage.py
 # BraTS2021 — internal-validation summary with bootstrap CIs (CPU, seconds)
 python scripts/summarize_brats.py
 
-# UPenn-GBM — all four setups (GPU, ~2.5 h; probability maps are cached,
-# so reruns that only change post-processing are near-instant)
+# BraTS2021 — recompute per-case scores under the recorded protocol (GPU, ~2 h)
+python scripts/evaluate_brats.py --partition internal_validation
+
+# UPenn-GBM — all setups (GPU; probability maps are cached, so reruns that
+# only change post-processing are near-instant)
 python scripts/evaluate_upenn.py
+
+# The reported numbers: fixed configuration, no tuning (CPU, minutes)
+python scripts/selection_sensitivity.py
 ```
 
-`evaluate_upenn.py` selects region thresholds and the ET post-processing policy
-on the 14 validation subjects, then scores the 29 test subjects **once**. The
-selected configuration and the validation score that justified it are written
-to `results/upenn/validation_selection.csv`.
+`evaluate_upenn.py` selects thresholds and post-processing on the 14 validation
+subjects and scores the test set once; `selection_sensitivity.py` rescores every
+setup under the fixed configuration and compares the two. **The fixed
+configuration is what the results above report** — see `docs/METHODOLOGY.md` for
+why validation selection was abandoned.
 
 ### Classification
 
@@ -163,11 +178,12 @@ The BraTS figure is internal validation. The clean external evaluation in this
 project is UPenn-GBM.
 
 The UPenn test set has 29 subjects, so differences smaller than about 0.05 mean
-Dice are not resolvable. Now that the preprocessing bug is fixed, the
-fine-tuned-versus-zero-shot difference is itself in that range — it is no longer
-a claim the data can carry on its own, and the cross-validation in
-`scripts/crossval_upenn.py` would be needed to settle it. The ordering among
-fine-tuned variants is likewise not resolvable.
+Dice are not resolvable. The fine-tuned-versus-zero-shot gap (+0.11, CI
+excluding zero) clears that bar and is a claim the data supports. The ordering
+*among* the fine-tuned variants does not — they span 0.806 to 0.820 with almost
+entirely overlapping intervals, so calling any one of them best would be
+fitting noise. `scripts/crossval_upenn.py` over 147 subjects is what would
+resolve it.
 
 IDH1 classification rests on 17 positive cases. It is a feasibility result.
 Positive predictive value in particular will not transfer to a general glioma
