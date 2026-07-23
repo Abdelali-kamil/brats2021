@@ -1,132 +1,206 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math
+import numpy as np
+import pandas as pd
 
-# --- 1. KAN Layer (Fixed) ---
-class KANLinear(nn.Module):
-    def __init__(self, in_features, out_features, grid_size=5, spline_order=3):
-        super(KANLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        
-        # Base weight (linear transformation)
-        self.base_weight = nn.Parameter(torch.Tensor(out_features, in_features))
-        
-        # Spline weights (non-linear transformation)
-        self.spline_weight = nn.Parameter(torch.Tensor(out_features, in_features))
-        
-        self.reset_parameters()
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
+from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, mutual_info_classif
+from sklearn.metrics import roc_auc_score, f1_score, recall_score, confusion_matrix, balanced_accuracy_score
 
-    def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.base_weight, a=math.sqrt(5))
-        nn.init.constant_(self.spline_weight, 0.1)
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 
-    def forward(self, x):
-        # x: [Batch, In_Features]
-        
-        # 1. Base Linear Path
-        base_output = F.linear(x, self.base_weight)
-        
-        # 2. Non-linear Spline Path (Corrected)
-        # Apply activation -> Then Linear Projection
-        spline_output = F.linear(F.silu(x), self.spline_weight)
+# Optional: XGBoost
+USE_XGB = True
+if USE_XGB:
+    from xgboost import XGBClassifier
 
-        return base_output + spline_output
+from imblearn.over_sampling import SMOTE
 
-# --- 2. GNN-Enhanced Memory Bank ---
-class GNNMemoryBank(nn.Module):
-    def __init__(self, feature_dim, memory_size=100):
-        super(GNNMemoryBank, self).__init__()
-        # Memory slots
-        self.memory = nn.Parameter(torch.randn(1, memory_size, feature_dim))
-        
-        # Attention Mechanism
-        self.attention = nn.MultiheadAttention(embed_dim=feature_dim, num_heads=4, batch_first=True)
-        self.norm = nn.LayerNorm(feature_dim)
+RANDOM_STATE = 42
+TARGET_COL = "TARGET_COL"   # <-- replace
+ID_COL = "ID_COL"           # <-- replace
 
-    def forward(self, x):
-        # x: [Batch, Feature_Dim] -> [Batch, 1, Feature_Dim]
-        x = x.unsqueeze(1) 
-        
-        # Expand memory to match batch size
-        batch_size = x.size(0)
-        mem = self.memory.expand(batch_size, -1, -1)
-        
-        # Graph Attention
-        attn_output, _ = self.attention(x, mem, mem)
-        
-        return self.norm(x + attn_output).squeeze(1)
+# 1) Load
+df = pd.read_csv("features.csv")
 
-# --- 3. The Main Classifier Architecture ---
-class AdvancedClassifier(nn.Module):
-    def __init__(self, feature_dim=512, clinical_dim=10, num_classes=2):
-        super(AdvancedClassifier, self).__init__()
-        
-        # A. Clinical Data Encoder
-        self.clinical_net = nn.Sequential(
-            nn.Linear(clinical_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128)
+# 2) Basic checks
+assert TARGET_COL in df.columns, "Target column missing"
+assert ID_COL in df.columns, "ID column missing"
+
+y = df[TARGET_COL].astype(int).values
+X = df.drop(columns=[TARGET_COL, ID_COL])
+
+# Keep numeric columns only for now
+X = X.select_dtypes(include=[np.number]).copy()
+
+# 3) Define pipelines + grids
+pipelines = {}
+
+# Baseline Logistic
+pipelines["logreg_balanced"] = (
+    Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("select", SelectKBest(score_func=mutual_info_classif)),
+        ("clf", LogisticRegression(class_weight="balanced", max_iter=2000, random_state=RANDOM_STATE))
+    ]),
+    {
+        "select__k": [10, 20, 30, "all"],
+        "clf__C": [0.01, 0.1, 1, 10]
+    }
+)
+
+# SVM RBF + class weight
+pipelines["svm_rbf_balanced"] = (
+    Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("select", SelectKBest(score_func=mutual_info_classif)),
+        ("clf", SVC(kernel="rbf", probability=True, class_weight="balanced", random_state=RANDOM_STATE))
+    ]),
+    {
+        "select__k": [10, 20, 30, "all"],
+        "clf__C": [0.1, 1, 10, 50],
+        "clf__gamma": ["scale", 0.1, 0.01, 0.001]
+    }
+)
+
+# Random Forest
+pipelines["rf_balanced"] = (
+    Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("select", SelectKBest(score_func=mutual_info_classif)),
+        ("clf", RandomForestClassifier(class_weight="balanced", random_state=RANDOM_STATE))
+    ]),
+    {
+        "select__k": [10, 20, 30, "all"],
+        "clf__n_estimators": [200, 500],
+        "clf__max_depth": [None, 5, 10],
+        "clf__min_samples_split": [2, 5, 10]
+    }
+)
+
+# SVM + SMOTE variant
+pipelines["svm_rbf_smote"] = (
+    ImbPipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("smote", SMOTE(random_state=RANDOM_STATE)),
+        ("select", SelectKBest(score_func=mutual_info_classif)),
+        ("clf", SVC(kernel="rbf", probability=True, random_state=RANDOM_STATE))
+    ]),
+    {
+        "select__k": [10, 20, 30, "all"],
+        "clf__C": [0.1, 1, 10, 50],
+        "clf__gamma": ["scale", 0.1, 0.01, 0.001]
+    }
+)
+
+if USE_XGB:
+    pipelines["xgb"] = (
+        Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("select", SelectKBest(score_func=mutual_info_classif)),
+            ("clf", XGBClassifier(
+                random_state=RANDOM_STATE,
+                eval_metric="logloss",
+                n_estimators=300
+            ))
+        ]),
+        {
+            "select__k": [10, 20, 30, "all"],
+            "clf__max_depth": [3, 5, 7],
+            "clf__learning_rate": [0.01, 0.05, 0.1],
+            "clf__subsample": [0.8, 1.0],
+            "clf__colsample_bytree": [0.8, 1.0]
+        }
+    )
+
+# 4) Nested CV
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+inner_cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
+
+results = []
+oof_preds = {}  # out-of-fold predictions for each model
+oof_true = np.zeros(len(y), dtype=int)
+
+for model_name in pipelines:
+    oof_preds[model_name] = np.zeros(len(y), dtype=float)
+
+for fold, (train_idx, test_idx) in enumerate(outer_cv.split(X, y), 1):
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+    oof_true[test_idx] = y_test
+
+    for model_name, (pipe, grid) in pipelines.items():
+        gs = GridSearchCV(
+            estimator=pipe,
+            param_grid=grid,
+            scoring="roc_auc",
+            cv=inner_cv,
+            n_jobs=-1,
+            refit=True
         )
-        
-        # B. Transformer Branch
-        self.transformer = nn.TransformerEncoderLayer(d_model=feature_dim, nhead=8, batch_first=True)
-        
-        # C. KAN Branch
-        self.kan_layer = KANLinear(feature_dim, feature_dim)
-        
-        # D. GNN Memory
-        self.memory_bank = GNNMemoryBank(feature_dim)
-        
-        # E. Fusion Gate
-        self.fusion_dim = feature_dim + 128
-        self.gate = nn.Linear(self.fusion_dim, self.fusion_dim)
-        
-        # F. Final Classifier
-        self.final_head = nn.Sequential(
-            nn.Linear(self.fusion_dim, 128),
-            nn.SiLU(),
-            nn.Linear(128, num_classes)
-        )
+        gs.fit(X_train, y_train)
+        proba = gs.predict_proba(X_test)[:, 1]
+        pred = (proba >= 0.5).astype(int)
 
-    def forward(self, img_features, clinical_data):
-        # 1. Clinical
-        clin_feat = self.clinical_net(clinical_data) 
-        
-        # 2. Transformer
-        trans_feat = self.transformer(img_features.unsqueeze(1)).squeeze(1)
-        
-        # 3. KAN
-        kan_feat = self.kan_layer(img_features)
-        
-        # 4. Memory Refinement
-        combined_img = trans_feat + kan_feat
-        mem_feat = self.memory_bank(combined_img)
-        
-        # 5. Fusion
-        fusion_input = torch.cat([mem_feat, clin_feat], dim=1) 
-        
-        # Gating
-        gate_val = torch.sigmoid(self.gate(fusion_input))
-        fusion_output = fusion_input * gate_val
-        
-        # 6. Logits
-        logits = self.final_head(fusion_output)
-        
-        return logits
+        auc = roc_auc_score(y_test, proba)
+        f1 = f1_score(y_test, pred)
+        sens = recall_score(y_test, pred)  # recall of positive class
+        tn, fp, fn, tp = confusion_matrix(y_test, pred).ravel()
+        spec = tn / (tn + fp) if (tn + fp) > 0 else np.nan
+        bacc = balanced_accuracy_score(y_test, pred)
 
-# --- Test Script ---
-if __name__ == "__main__":
-    batch_size = 2
-    img_features = torch.randn(batch_size, 512)
-    clinical_data = torch.randn(batch_size, 10)
-    
-    model = AdvancedClassifier(feature_dim=512, clinical_dim=10, num_classes=2)
-    
-    print("⏳ Testing Part 3 (Fixed): GNN-KAN Classifier...")
-    output = model(img_features, clinical_data)
-    
-    print(f"✅ Part 3 Successful!")
-    print(f"   Input Features: {img_features.shape}")
-    print(f"   Output Logits: {output.shape}")
+        results.append({
+            "fold": fold,
+            "model": model_name,
+            "auc": auc,
+            "f1": f1,
+            "sensitivity": sens,
+            "specificity": spec,
+            "balanced_acc": bacc
+        })
+
+        oof_preds[model_name][test_idx] = proba
+
+res_df = pd.DataFrame(results)
+
+# 5) Summary
+summary = res_df.groupby("model")[["auc","f1","sensitivity","specificity","balanced_acc"]].agg(["mean","std"])
+print(summary)
+
+# 6) Bootstrap CI for AUC difference (best vs baseline)
+def bootstrap_auc_diff(y_true, p_new, p_old, n_boot=2000, random_state=42):
+    rng = np.random.default_rng(random_state)
+    diffs = []
+    n = len(y_true)
+    idx = np.arange(n)
+    for _ in range(n_boot):
+        s = rng.choice(idx, size=n, replace=True)
+        if len(np.unique(y_true[s])) < 2:
+            continue
+        d = roc_auc_score(y_true[s], p_new[s]) - roc_auc_score(y_true[s], p_old[s])
+        diffs.append(d)
+    diffs = np.array(diffs)
+    return diffs.mean(), np.percentile(diffs, 2.5), np.percentile(diffs, 97.5)
+
+# choose best model by mean fold AUC
+mean_auc = res_df.groupby("model")["auc"].mean().sort_values(ascending=False)
+best_model = mean_auc.index[0]
+baseline_model = "logreg_balanced"
+
+mean_diff, ci_low, ci_high = bootstrap_auc_diff(
+    y_true=oof_true,
+    p_new=oof_preds[best_model],
+    p_old=oof_preds[baseline_model],
+    n_boot=2000,
+    random_state=RANDOM_STATE
+)
+
+print(f"Best model: {best_model}")
+print(f"AUC diff vs baseline: {mean_diff:.4f} (95% CI {ci_low:.4f}, {ci_high:.4f})")

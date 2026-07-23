@@ -1,0 +1,86 @@
+nohup: ignoring input
+Device: cuda
+Subjects -> Train:104 Val:14 Test:29
+Resuming from: upenn_finetuned_last.pth
+Resume epoch=81, best_val=0.8458
+Epoch 081/140 | lr=3.85e-08 | train_loss=0.2272 | val_meBest thresholds from val: ET=0.3, TC=0.45, WT=0.2, score=0.8234
+
+=== FINAL TEST ===
+Dice_ET  : 0.9310
+Dice_TC  : 0.7106
+Dice_WT  : 0.7595
+Dice_MEAN: 0.8004
+Saved: upenn_test_results_finetuned.csv
+l_mean=0.8422 (ET=0.9286, TC=0.8160, WT=0.7822)
+Epoch 084/140 | lr=6.16e-07 | train_loss=0.2268 | val_mean=0.8391 (ET=0.9286, TC=0.8128, WT=0.7758)
+Epoch 085/140 | lr=9.61e-07 | train_loss=0.2269 | val_mean=0.8410 (ET=0.9286, TC=0.8146, WT=0.7798)
+Epoch 086/140 | lr=1.38e-06 | train_loss=0.2273 | val_mean=0.8426 (ET=0.9286, TC=0.8157, WT=0.7836)
+Epoch 087/140 | lr=1.88e-06 | train_loss=0.2271 | val_mean=0.8440 (ET=0.9286, TC=0.8210, WT=0.7824)
+Epoch 088/140 | lr=2.45e-06 | train_loss=0.2268 | val_mean=0.8428 (ET=0.9286, TC=0.8157, WT=0.7841)
+Epoch 089/140 | lr=3.09e-06 | train_loss=0.2267 | val_mean=0.8432 (ET=0.9286, TC=0.8201, WT=0.7809)
+Epoch 090/140 | lr=3.81e-06 | train_loss=0.2272 | val_mean=0.8417 (ET=0.9286, TC=0.8157, WT=0.7807)
+Epoch 091/140 | lr=4.59e-06 | train_loss=0.2270 | val_mean=0.8451 (ET=0.9286, TC=0.8240, WT=0.7826)
+Epoch 092/140 | lr=5.45e-06 | train_loss=0.2271 | val_mean=0.8458 (ET=0.9286, TC=0.8239, WT=0.7850)
+  ✅ Saved best checkpoint: upenn_finetuned_best.pth (val_mean=0.8458)
+Epoch 093/140 | lr=6.38e-06 | train_loss=0.2268 | val_mean=0.8436 (ET=0.9286, TC=0.8192, WT=0.7831)
+Epoch 094/140 | lr=7.37e-06 | train_loss=0.2269 | val_mean=0.8407 (ET=0.9286, TC=0.8131, WT=0.7805)
+Epoch 095/140 | lr=8.43e-06 | train_loss=0.2271 | val_mean=0.8418 (ET=0.9286, TC=0.8152, WT=0.7815)
+Epoch 096/140 | lr=9.55e-06 | train_loss=0.2269 | val_mean=0.8405 (ET=0.9286, TC=0.8121, WT=0.7808)
+Epoch 097/140 | lr=1.07e-05 | train_loss=0.2268 | val_mean=0.8363 (ET=0.9286, TC=0.8189, WT=0.7615)
+Epoch 098/140 | lr=1.20e-05 | train_loss=0.2266 | val_mean=0.8385 (ET=0.9286, TC=0.8080, WT=0.7788)
+Epoch 099/140 | lr=1.33e-05 | train_loss=0.2268 | val_mean=0.8378 (ET=0.9286, TC=0.8108, WT=0.7739)
+Epoch 100/140 | lr=1.46e-05 | train_loss=0.2277 | val_mean=0.8412 (ET=0.9286, TC=0.8132, WT=0.7817)
+Epoch 101/140 | lr=1.61e-05 | train_loss=0.2269 | val_mean=0.8382 (ET=0.9286, TC=0.8085, WT=0.7776)
+Epoch 102/140 | lr=1.75e-05 | train_loss=0.2278 | val_mean=0.8393 (ET=0.9286, TC=0.8070, WT=0.7822)
+Epoch 103/140 | lr=1.90e-05 | train_loss=0.2277 | val_mean=0.8332 (ET=0.9286, TC=0.7963, WT=0.7747)
+Epoch 104/140 | lr=2.06e-05 | train_loss=0.2272 | val_mean=0.8387 (ET=0.9286, TC=0.8117, WT=0.7759)
+Epoch 105/140 | lr=2.22e-05 | train_loss=0.2267 | val_mean=0.8407 (ET=0.9286, TC=0.8197, WT=0.7738)
+Epoch 106/140 | lr=2.39e-05 | train_loss=0.2269 | val_mean=0.8287 (ET=0.9286, TC=0.7847, WT=0.7727)
+Epoch 107/140 | lr=2.56e-05 | train_loss=0.2275 | val_mean=0.8375 (ET=0.9286, TC=0.8164, WT=0.7675)
+Epoch 108/140 | lr=2.73e-05 | train_loss=0.2275 | val_mean=0.8460 (ET=0.9286, TC=0.8207, WT=0.7886)
+  ✅ Saved best checkpoint: upenn_finetuned_best.pth (val_mean=0.8460)
+Epoch 109/140 | lr=2.91e-05 | train_loss=0.2282 | val_mean=0.8422 (ET=0.9286, TC=0.8102, WT=0.7877)
+Epoch 110/140 | lr=3.09e-05 | train_loss=0.2278 | val_mean=0.8422 (ET=0.9286, TC=0.8136, WT=0.7845)
+Epoch 111/140 | lr=3.27e-05 | train_loss=0.2283 | val_mean=0.8413 (ET=0.9286, TC=0.8130, WT=0.7823)
+Epoch 112/140 | lr=3.45e-05 | train_loss=0.2277 | val_mean=0.8440 (ET=0.9286, TC=0.8169, WT=0.7865)
+Epoch 113/140 | lr=3.64e-05 | train_loss=0.2273 | val_mean=0.8651 (ET=1.0000, TC=0.8106, WT=0.7846)
+  ✅ Saved best checkpoint: upenn_finetuned_best.pth (val_mean=0.8651)
+Epoch 114/140 | lr=3.83e-05 | train_loss=0.2267 | val_mean=0.8426 (ET=0.9286, TC=0.8127, WT=0.7864)
+Epoch 115/140 | lr=4.02e-05 | train_loss=0.2263 | val_mean=0.8647 (ET=1.0000, TC=0.8143, WT=0.7797)
+Epoch 116/140 | lr=4.22e-05 | train_loss=0.2279 | val_mean=0.7996 (ET=0.7857, TC=0.8180, WT=0.7950)
+Epoch 117/140 | lr=4.41e-05 | train_loss=0.2281 | val_mean=0.8671 (ET=1.0000, TC=0.8319, WT=0.7695)
+  ✅ Saved best checkpoint: upenn_finetuned_best.pth (val_mean=0.8671)
+Epoch 118/140 | lr=4.61e-05 | train_loss=0.2284 | val_mean=0.8629 (ET=1.0000, TC=0.8167, WT=0.7720)
+Epoch 119/140 | lr=4.80e-05 | train_loss=0.2285 | val_mean=0.8658 (ET=1.0000, TC=0.8159, WT=0.7816)
+Epoch 120/140 | lr=5.00e-05 | train_loss=0.2288 | val_mean=0.8485 (ET=1.0000, TC=0.7800, WT=0.7656)
+Epoch 121/140 | lr=5.20e-05 | train_loss=0.2338 | val_mean=0.8625 (ET=1.0000, TC=0.8042, WT=0.7834)
+Epoch 122/140 | lr=5.39e-05 | train_loss=0.2300 | val_mean=0.8431 (ET=0.9286, TC=0.8152, WT=0.7854)
+Epoch 123/140 | lr=5.59e-05 | train_loss=0.2283 | val_mean=0.8179 (ET=0.8571, TC=0.8256, WT=0.7709)
+Epoch 124/140 | lr=5.78e-05 | train_loss=0.2277 | val_mean=0.8710 (ET=1.0000, TC=0.8243, WT=0.7887)
+  ✅ Saved best checkpoint: upenn_finetuned_best.pth (val_mean=0.8710)
+Epoch 125/140 | lr=5.98e-05 | train_loss=0.2293 | val_mean=0.8084 (ET=0.8571, TC=0.8041, WT=0.7639)
+Epoch 126/140 | lr=6.17e-05 | train_loss=0.2294 | val_mean=0.8484 (ET=1.0000, TC=0.8152, WT=0.7301)
+Epoch 127/140 | lr=6.36e-05 | train_loss=0.2284 | val_mean=0.8343 (ET=0.9286, TC=0.8136, WT=0.7607)
+Epoch 128/140 | lr=6.55e-05 | train_loss=0.2282 | val_mean=0.8569 (ET=1.0000, TC=0.8120, WT=0.7587)
+Epoch 129/140 | lr=6.73e-05 | train_loss=0.2312 | val_mean=0.7934 (ET=0.8571, TC=0.7661, WT=0.7570)
+Epoch 130/140 | lr=6.91e-05 | train_loss=0.2353 | val_mean=0.8594 (ET=1.0000, TC=0.8119, WT=0.7663)
+Epoch 131/140 | lr=7.09e-05 | train_loss=0.2302 | val_mean=0.8390 (ET=0.9286, TC=0.8226, WT=0.7660)
+Epoch 132/140 | lr=7.27e-05 | train_loss=0.2289 | val_mean=0.8604 (ET=1.0000, TC=0.8089, WT=0.7723)
+Epoch 133/140 | lr=7.44e-05 | train_loss=0.2272 | val_mean=0.8603 (ET=1.0000, TC=0.8111, WT=0.7699)
+Epoch 134/140 | lr=7.61e-05 | train_loss=0.2285 | val_mean=0.8573 (ET=1.0000, TC=0.8050, WT=0.7668)
+Epoch 135/140 | lr=7.78e-05 | train_loss=0.2281 | val_mean=0.8536 (ET=1.0000, TC=0.8062, WT=0.7547)
+Epoch 136/140 | lr=7.94e-05 | train_loss=0.2273 | val_mean=0.8619 (ET=1.0000, TC=0.8117, WT=0.7741)
+Epoch 137/140 | lr=8.10e-05 | train_loss=0.2280 | val_mean=0.8540 (ET=1.0000, TC=0.7945, WT=0.7674)
+Epoch 138/140 | lr=8.25e-05 | train_loss=0.2291 | val_mean=0.8074 (ET=0.8571, TC=0.8006, WT=0.7646)
+Epoch 139/140 | lr=8.39e-05 | train_loss=0.2312 | val_mean=0.8527 (ET=1.0000, TC=0.8009, WT=0.7572)
+Epoch 140/140 | lr=8.54e-05 | train_loss=0.2307 | val_mean=0.8562 (ET=1.0000, TC=0.8009, WT=0.7676)
+
+Loading best checkpoint for threshold search + final test...
+Best thresholds from val: ET=0.3, TC=0.25, WT=0.2, score=0.8487
+
+=== FINAL TEST ===
+Dice_ET  : 0.9310
+Dice_TC  : 0.6883
+Dice_WT  : 0.7644
+Dice_MEAN: 0.7946
+Saved: upenn_test_results_finetuned.csv

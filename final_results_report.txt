@@ -1,0 +1,33 @@
+FINAL RESULTS REPORT
+
+A) ALL SETUPS RANKED
+ rank                      setup  et_thr  tc_thr  wt_thr  overall_dice_mean
+    1          upenn_v2_last.pth   0.015    0.25    0.18           0.816661
+    2          upenn_v2_best.pth   0.080    0.20    0.25           0.775117
+    3 ens_v2_best_plus_finetuned   0.080    0.25    0.20           0.772963
+    4   upenn_finetuned_best.pth   0.080    0.25    0.20           0.772679
+    5              ens_all_three   0.005    0.25    0.20           0.760977
+    6   ens_v2_last_plus_v2_best   0.003    0.20    0.25           0.743508
+    7 ens_v2_last_plus_finetuned   0.003    0.25    0.20           0.740467
+
+B) BEST SETUP
+Best setup: upenn_v2_last.pth
+Best per-case CSV: v2_segmentation_upenn_v2_last.csv
+
+C) BEST SETUP METRICS
+Dice_ET: 0.931034
+Dice_TC: 0.725900
+Dice_WT: 0.793048
+Overall_Dice: 0.816661
+HD95_ET: NaN
+HD95_TC: 3.785296
+HD95_WT: 10.335179
+ZeroDice_ET: 2
+ZeroDice_TC: 1
+ZeroDice_WT: 0
+Failed_Cases: 1
+
+D) HD95_ET INTERPRETATION
+HD95_ET is NaN because no valid numeric HD95_ET values were available in the best per-case CSV.
+
+Recomputed best overall dice from per-case CSV: 0.816661

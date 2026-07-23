@@ -11,8 +11,6 @@ from torch.utils.data import DataLoader, Subset
 from medpy import metric
 
 from brats import get_datasets
-from model import WaveletUNetPlusPlus
-
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ============================================================
@@ -346,13 +344,6 @@ def summarize_run(df, checkpoint_name):
     return out
 
 ### `analyze_results.py`
-"""
-BraTS2021 Multi-Run Evaluation
-- Evaluate multiple checkpoints (independent trainings)
-- Report per-run metrics
-- Report Mean ± STD across runs
-"""
-
 import os
 import re
 import random
@@ -384,8 +375,12 @@ CHECKPOINTS = [
 TEST_IDS_FILE = "test_ids.txt"
 
 # Output files
-RUN_SUMMARY_CSV = "run_summary.csv"         # one row per checkpoint
-AGG_SUMMARY_CSV = "aggregate_summary.csv"   # mean±std final table
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "..", "outputs", "brats")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+RUN_SUMMARY_CSV = os.path.join(OUTPUT_DIR, "run_summary.csv")
+AGG_SUMMARY_CSV = os.path.join(OUTPUT_DIR, "aggregate_summary.csv")
 
 BATCH_SIZE = 2
 NUM_WORKERS = 4
@@ -804,7 +799,7 @@ def main():
 
         # Save per-patient results for this run
         safe_name = os.path.basename(ckpt_path).replace(".pth", "")
-        per_patient_csv = f"final_results_{safe_name}.csv"
+        per_patient_csv = os.path.join(OUTPUT_DIR, f"final_results_{safe_name}.csv")
         df.to_csv(per_patient_csv, index=False)
         print(f"Saved per-patient results: {per_patient_csv}")
 

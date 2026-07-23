@@ -1,43 +1,21 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Analyze Dice distribution from final segmentation evaluation CSV.
-
-Default input:
-    FINAL_BINARY_FINE_TUNED_128_T02.csv
-
-This script prints and saves:
-- Full-dataset Dice statistics
-- Number of cases above Dice thresholds
-- Filtered/subset analysis
-- Best cases
-- Worst cases
-- Safe report wording
-
-Important:
-- Overall Mean Dice is the real full-dataset result.
-- High Dice values such as >0.90 can only be reported as best-case or subset performance.
-- Filtered statistics must be clearly labeled and not reported as full test performance.
-
-This version does NOT require openpyxl.
-It saves CSV and TXT files only.
-"""
-
 import argparse
+import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "..", "outputs", "brats")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-DEFAULT_INPUT_CSV = "FINAL_BINARY_FINE_TUNED_128_T02.csv"
-DEFAULT_OUTPUT_SUMMARY_CSV = "DICE_DISTRIBUTION_SUMMARY.csv"
-DEFAULT_OUTPUT_COUNTS_CSV = "DICE_THRESHOLD_COUNTS.csv"
-DEFAULT_OUTPUT_FILTERED_CSV = "DICE_FILTERED_SUBSET_ANALYSIS.csv"
-DEFAULT_OUTPUT_BEST_CASES_CSV = "BEST_DICE_CASES.csv"
-DEFAULT_OUTPUT_WORST_CASES_CSV = "WORST_DICE_CASES.csv"
-DEFAULT_OUTPUT_REPORT_TXT = "DICE_REPORT_WORDING.txt"
+DEFAULT_INPUT_CSV = os.path.join(OUTPUT_DIR, "FINAL_BINARY_FINE_TUNED_128_T02.csv")
+DEFAULT_OUTPUT_SUMMARY_CSV = os.path.join(OUTPUT_DIR, "DICE_DISTRIBUTION_SUMMARY.csv")
+DEFAULT_OUTPUT_COUNTS_CSV = os.path.join(OUTPUT_DIR, "DICE_THRESHOLD_COUNTS.csv")
+DEFAULT_OUTPUT_FILTERED_CSV = os.path.join(OUTPUT_DIR, "DICE_FILTERED_SUBSET_ANALYSIS.csv")
+DEFAULT_OUTPUT_BEST_CASES_CSV = os.path.join(OUTPUT_DIR, "BEST_DICE_CASES.csv")
+DEFAULT_OUTPUT_WORST_CASES_CSV = os.path.join(OUTPUT_DIR, "WORST_DICE_CASES.csv")
+DEFAULT_OUTPUT_REPORT_TXT = os.path.join(OUTPUT_DIR, "DICE_REPORT_WORDING.txt")
 
 
 def safe_numeric(df, col):
@@ -59,6 +37,7 @@ def load_results(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
     df = pd.read_csv(csv_path)
+    df = df.rename(columns={"Dice_WT": "Dice"})
 
     required_cols = ["Patient_ID", "Dice"]
 

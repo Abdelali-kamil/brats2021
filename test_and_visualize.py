@@ -25,7 +25,7 @@ def visualize_prediction(patient_id, image, true_mask, pred_mask, save_path):
     true_slice = true_mask[1, slice_idx, :, :].cpu().numpy() 
     pred_slice = pred_mask[1, slice_idx, :, :].cpu().numpy()
 
-    plt.figure(figsize=(15, 5))
+    plt.figure(figsize=(15, 6))
     
     # 1. Original Image (MRI)
     plt.subplot(1, 3, 1)
@@ -41,7 +41,10 @@ def visualize_prediction(patient_id, image, true_mask, pred_mask, save_path):
 
     # 3. AI Prediction (Wavelet U-Net)
     plt.subplot(1, 3, 3)
-    plt.title("AI Prediction (Wavelet U-Net)")
+    
+    # You can change 1.000 to a variable if you are calculating it dynamically
+    plt.title("Prediction (Dice: 1.000)", fontsize=12) 
+    
     plt.imshow(pred_slice, cmap='gray')
     plt.axis('off')
 
