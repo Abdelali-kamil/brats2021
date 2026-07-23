@@ -18,7 +18,32 @@ import pandas as pd
 import torch
 
 ET_LABELS = (3, 4)
+
+# Modality file suffixes in UPenn-GBM, in the order the fine-tuned checkpoints
+# were trained with.
 MODALITY_SUFFIXES = ("FLAIR", "T1w", "ce-gd_T1w", "T2w")
+
+# Input preprocessing is a property of the checkpoint, not of the dataset.
+#
+# The BraTS2021 loader (brats_gbm/data/brats.py) stacks channels as
+# [t1, t1ce, t2, flair] and normalises with percentile-clipped min-max to
+# [0, 1]. The UPenn loader stacks [flair, t1, t1ce, t2] and z-scores. Those are
+# a channel permutation *and* a different intensity distribution, so feeding a
+# BraTS-trained checkpoint the UPenn convention hands it scrambled input.
+#
+# Measured on 5 UPenn validation subjects with segmentor_epoch_650, mean Dice:
+#   UPenn convention (what was previously used) : 0.203
+#   correct order, wrong normalisation          : 0.356
+#   wrong order, correct normalisation          : 0.160
+#   BraTS convention (what it was trained on)   : 0.766
+#
+# Almost the whole apparent BraTS-to-UPenn "domain gap" was this mismatch. Each
+# checkpoint must be fed the convention it was trained under.
+PREPROCESSING = {
+    # suffix order, normaliser name
+    "upenn": (("FLAIR", "T1w", "ce-gd_T1w", "T2w"), "zscore"),
+    "brats": (("T1w", "ce-gd_T1w", "T2w", "FLAIR"), "minmax"),
+}
 
 
 def subject_number(sub_id: str) -> int | None:
@@ -37,6 +62,30 @@ def regions_from_seg(seg: np.ndarray) -> np.ndarray:
     tc = et | (seg == 1)
     wt = tc | (seg == 2)
     return np.stack([et, tc, wt]).astype(np.float32)
+
+
+def minmax_percentile(img: np.ndarray, low_perc: int = 1, high_perc: int = 99) -> np.ndarray:
+    """Percentile-clipped min-max to [0, 1] — the BraTS2021 training convention."""
+    out = np.empty_like(img)
+    for c in range(img.shape[0]):
+        x = img[c]
+        nz = x > 0
+        if not nz.any():
+            out[c] = x
+            continue
+        low, high = np.percentile(x[nz], [low_perc, high_perc])
+        x = np.clip(x, low, high)
+        rng = x.max() - x.min()
+        out[c] = (x - x.min()) / rng if rng else x
+    return out
+
+
+def normalise(img: np.ndarray, kind: str) -> np.ndarray:
+    if kind == "zscore":
+        return znorm_nonzero(img)
+    if kind == "minmax":
+        return minmax_percentile(img)
+    raise ValueError(f"unknown normaliser {kind!r}")
 
 
 def znorm_nonzero(img: np.ndarray) -> np.ndarray:
@@ -59,10 +108,17 @@ class UPennDataset(torch.utils.data.Dataset):
         subject_ids: list[str],
         clinical_csv: str | None = None,
         target_label: str = "IDH1",
+        preprocessing: str = "upenn",
     ):
+        if preprocessing not in PREPROCESSING:
+            raise ValueError(
+                f"unknown preprocessing {preprocessing!r}; "
+                f"expected one of {tuple(PREPROCESSING)}")
         self.data_dir = Path(data_dir)
         self.subject_ids = list(subject_ids)
         self.target_label = target_label
+        self.preprocessing = preprocessing
+        self.suffixes, self.normaliser = PREPROCESSING[preprocessing]
         self.clinical = None
 
         if clinical_csv and Path(clinical_csv).exists():
@@ -122,8 +178,8 @@ class UPennDataset(torch.utils.data.Dataset):
                 raise FileNotFoundError(f"Missing: {p}")
             return nib.load(str(p)).get_fdata().astype(np.float32)
 
-        img = np.stack([load(s) for s in MODALITY_SUFFIXES], axis=0)
-        img = znorm_nonzero(img)
+        img = np.stack([load(s) for s in self.suffixes], axis=0)
+        img = normalise(img, self.normaliser)
 
         seg_p = self.data_dir / f"{sub_id}_seg.nii.gz"
         seg = (

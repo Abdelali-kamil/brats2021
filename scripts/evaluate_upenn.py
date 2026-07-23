@@ -36,7 +36,7 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from brats_gbm.data.upenn import UPennDataset  # noqa: E402
+from brats_gbm.data.upenn import PREPROCESSING, UPennDataset  # noqa: E402
 from brats_gbm.eval import postprocess as pp  # noqa: E402
 from brats_gbm.eval.inference import (  # noqa: E402
     average_probability_maps,
@@ -62,12 +62,6 @@ CACHE_DIR = ROOT / "cache" / "upenn_probs"
 
 # Threshold grid, swept on validation only.
 #
-# It extends down to 0.10 because the zero-shot baseline selects the smallest
-# available value in every region: its optimum lies at or below the grid floor,
-# and a grid that stops at 0.30 would report the baseline at a threshold it did
-# not want. Since the baseline is the "before" term in the domain-adaptation
-# comparison, handicapping it would inflate the improvement. Giving it its best
-# validated configuration makes that comparison conservative.
 # The floor sits at 0.02 because the baseline kept selecting whatever minimum
 # it was offered: its probabilities are systematically low on out-of-domain
 # data, which is a calibration shift rather than an absence of signal. Each
@@ -88,18 +82,25 @@ SETUPS: dict[str, dict] = {
     "baseline_brats": {
         "checkpoints": [ROOT / "checkpoints" / "segmentor_epoch_650.pth"],
         "description": "BraTS2021-trained, zero-shot on UPenn-GBM",
+        # Fed the BraTS convention it was trained under: [t1,t1ce,t2,flair]
+        # channel order, percentile min-max normalisation. Using the UPenn
+        # convention here scrambles its input and understates it by ~0.56 Dice.
+        "preprocessing": "brats",
     },
     "upenn_v3_best": {
         "checkpoints": [ROOT / "checkpoints" / "upenn_v3_best.pth"],
         "description": "Fine-tuned on UPenn-GBM, best EMA validation checkpoint",
+        "preprocessing": "upenn",
     },
     "upenn_v3_last": {
         "checkpoints": [ROOT / "checkpoints" / "upenn_v3_last.pth"],
         "description": "Fine-tuned on UPenn-GBM, final epoch",
+        "preprocessing": "upenn",
     },
     "ensemble_top5": {
         "checkpoints": sorted((ROOT / "checkpoints" / "upenn_v3_topk").glob("*.pth")),
         "description": "Probability-average of the top-5 validation checkpoints",
+        "preprocessing": "upenn",
     },
 }
 
@@ -122,8 +123,14 @@ def probs_for_checkpoint(
     split_name: str,
     use_cache: bool = True,
 ) -> dict[str, np.ndarray]:
-    """Probability maps for every subject, cached on disk as float16."""
-    cache_dir = CACHE_DIR / ckpt.stem / split_name
+    """Probability maps for every subject, cached on disk as float16.
+
+    The cache key carries the preprocessing variant: the same checkpoint under
+    a different channel order or normaliser is a different computation, and
+    silently reusing maps across variants would reintroduce the mismatch this
+    field exists to prevent.
+    """
+    cache_dir = CACHE_DIR / f"{ckpt.stem}__{dataset.preprocessing}" / split_name
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     out: dict[str, np.ndarray] = {}
@@ -313,6 +320,7 @@ def main() -> None:
         SETUPS[f"crossval_{fold_dir}"] = {
             "checkpoints": [ckpt],
             "description": f"Cross-validation {fold_dir}, best inner-validation checkpoint",
+            "preprocessing": "upenn",
         }
     else:
         train_subs, val_subs, test_subs = upenn_split(args.nifti_dir)
@@ -323,10 +331,10 @@ def main() -> None:
     print(f"subjects  train={len(train_subs)}  val={len(val_subs)}  test={len(test_subs)}")
     print("split verified disjoint and frozen -> results/upenn/split_assignment.csv")
 
-    val_ds = UPennDataset(args.nifti_dir, val_subs, str(CLINICAL_CSV))
-    test_ds = UPennDataset(args.nifti_dir, test_subs, str(CLINICAL_CSV))
-    val_gt = ground_truth(val_ds)
-    test_gt = ground_truth(test_ds)
+    # Targets do not depend on preprocessing, so build them once from a
+    # throwaway dataset; the imaging inputs are rebuilt per setup below.
+    val_gt = ground_truth(UPennDataset(args.nifti_dir, val_subs))
+    test_gt = ground_truth(UPennDataset(args.nifti_dir, test_subs))
 
     summaries, selections, per_case = [], [], {}
 
@@ -338,7 +346,15 @@ def main() -> None:
             print(f"\n[skip] {name}: missing {[str(m) for m in missing] or 'checkpoints'}")
             continue
 
+        preproc = spec.get("preprocessing", "upenn")
         print(f"\n{'=' * 72}\n{name}  —  {spec['description']}\n{'=' * 72}")
+        print(f"  preprocessing: {preproc} "
+              f"(order {PREPROCESSING[preproc][0]}, {PREPROCESSING[preproc][1]})")
+
+        val_ds = UPennDataset(args.nifti_dir, val_subs, str(CLINICAL_CSV),
+                              preprocessing=preproc)
+        test_ds = UPennDataset(args.nifti_dir, test_subs, str(CLINICAL_CSV),
+                               preprocessing=preproc)
 
         print("  validation inference")
         val_maps = [probs_for_checkpoint(c, val_ds, "val", use_cache) for c in ckpts]
@@ -371,6 +387,7 @@ def main() -> None:
         summary["wt_threshold"] = thresholds[2]
         summary["et_policy"] = et_policy
         summary["et_min_volume"] = et_min_vol
+        summary["preprocessing"] = preproc
         summaries.append(summary)
         print_summary(summary, f"TEST — {name} (n={len(df)})")
 
