@@ -1,0 +1,43 @@
+{
+  "imaging_only": {
+    "auc": 0.531047302641987,
+    "auc_ci_low": 0.4532232385554644,
+    "auc_ci_high": 0.6077367839580011,
+    "auc_per_repeat_mean": 0.531047302641987,
+    "auc_per_repeat_sd": 0.0,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      }
+    ]
+  },
+  "cohort": {
+    "n": 227,
+    "n_positive": 98,
+    "n_imaging": 51,
+    "n_clinical": 3
+  }
+}
