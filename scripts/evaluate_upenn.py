@@ -68,9 +68,15 @@ CACHE_DIR = ROOT / "cache" / "upenn_probs"
 # not want. Since the baseline is the "before" term in the domain-adaptation
 # comparison, handicapping it would inflate the improvement. Giving it its best
 # validated configuration makes that comparison conservative.
-ET_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
-TC_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
-WT_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
+# The floor sits at 0.02 because the baseline kept selecting whatever minimum
+# it was offered: its probabilities are systematically low on out-of-domain
+# data, which is a calibration shift rather than an absence of signal. Each
+# model getting its own validated operating point is the fair comparison, and
+# a floor low enough that no model is pinned against it is what makes the
+# selection meaningful rather than an artefact of where the grid stops.
+ET_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
+TC_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
+WT_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

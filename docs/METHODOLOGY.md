@@ -87,6 +87,40 @@ test set, not a finding.
 Those scripts and every output derived from them have been removed from the
 repository. `docs/ARCHIVE.md` lists what went where.
 
+### The threshold grid, and why the baseline pins to its floor
+
+Region thresholds are swept on validation over
+{0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50} for each of ET, TC and WT.
+
+The fine-tuned models select interior points, so the grid is adequate for them.
+The zero-shot baseline does not: it selects whatever minimum it is offered. That
+was worth investigating rather than papering over, because the baseline is the
+"before" term in the domain-adaptation comparison and handicapping it would
+inflate the reported gain.
+
+`scripts/probe_baseline_threshold.py` sweeps three orders of magnitude on the
+cached validation maps. The baseline's Dice rises **monotonically** all the way
+down to 0.0002 with no interior optimum:
+
+| ET=TC threshold | 0.50 | 0.30 | 0.10 | 0.02 | 0.002 | 0.0002 |
+|---|---|---|---|---|---|---|
+| Validation mean Dice | 0.144 | 0.151 | 0.163 | 0.177 | 0.201 | 0.227 |
+
+This is not a grid that is too narrow. The baseline's enhancing-tumour and
+tumour-core probabilities on UPenn-GBM lie almost entirely below any sensible
+cut, so lowering the threshold does not recover a calibrated decision boundary —
+it just labels progressively more voxels. **Threshold tuning cannot repair the
+domain gap.**
+
+The reporting consequence is that the baseline's Dice is a function of where the
+grid stops, so no single value is canonical. The grid floor is held at 0.02 for
+every setup, giving one uniform protocol, and the full curve is recorded in
+`results/upenn/baseline_threshold_sensitivity.csv` so the reported figure can be
+read against it. The conclusion is invariant across the whole range: the
+baseline is catastrophic at every threshold, and fine-tuning moves it to
+roughly 0.82. Quote the domain-adaptation improvement as approximate rather than
+to four decimal places, since its "before" term carries this dependence.
+
 ## Post-processing
 
 Applied in `brats_gbm/eval/postprocess.py`, in order:
