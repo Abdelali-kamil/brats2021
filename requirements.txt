@@ -1,0 +1,13 @@
+# Versions are those the reported results were produced with.
+# torch is a CUDA 12.8 nightly; any torch >= 2.4 with a matching CUDA build
+# should reproduce the numbers, though bit-exact equality is not guaranteed
+# across torch versions.
+torch>=2.4
+numpy>=2.0,<3
+pandas>=2.2
+scipy>=1.13
+nibabel>=5.2
+scikit-learn>=1.5
+scikit-image>=0.24
+SimpleITK>=2.3
+matplotlib>=3.8
