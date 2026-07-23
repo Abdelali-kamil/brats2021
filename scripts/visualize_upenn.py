@@ -24,8 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from brats_gbm.model import WaveletUNetPlusPlus  # noqa: E402
-from brats_gbm.eval.inference import sliding_window_predict  # noqa: E402
-from brats_gbm.eval.postprocess import apply_thresholds, enforce_hierarchy  # noqa: E402
+from brats_gbm.eval.inference import (  # noqa: E402
+    PATCH_SIZE as SPATIAL_SIZE,
+    STEP_SIZE as SLIDE_STEP,
+    sliding_window_predict,
+)
+from brats_gbm.eval.postprocess import postprocess  # noqa: E402
 from brats_gbm.data.upenn import ET_LABELS  # noqa: E402
 
 UPENN = ROOT
@@ -34,7 +38,9 @@ CKPT = ROOT / "checkpoints" / "upenn_v3_best.pth"
 RESULTS = ROOT / "results" / "upenn" / "per_case_upenn_v3_best.csv"
 OUTDIR = ROOT / "results" / "upenn" / "figures"
 
-# thresholds selected on the validation split
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Thresholds selected on the validation split by scripts/evaluate_upenn.py.
 ET_THR, TC_THR, WT_THR = 0.40, 0.40, 0.40
 
 # report palette: WT aqua, TC orange, ET blue
@@ -97,15 +103,20 @@ def main():
         ]
 
     OUTDIR.mkdir(parents=True, exist_ok=True)
-    model = load_model(str(CKPT))
+    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
+    _ck = torch.load(str(CKPT), map_location=DEVICE, weights_only=False)
+    model.load_state_dict(
+        _ck.get("model_state_dict", _ck) if isinstance(_ck, dict) else _ck, strict=True)
+    model.eval()
     mod_idx = {"FLAIR": 0, "T1w": 1, "ce-gd_T1w": 2, "T2w": 3}[args.modality]
 
     for sub, kind in picks:
         raw = load_subject(sub)
         img = normalise(raw)
 
-        prob = sliding_window_predict(model, img, SPATIAL_SIZE, SLIDE_STEP, use_tta=True)
-        pred = apply_thresholds(prob, ET_THR, TC_THR, WT_THR)
+        prob = sliding_window_predict(
+            model, img, DEVICE, SPATIAL_SIZE, SLIDE_STEP, use_tta=True)
+        pred = postprocess(prob, ET_THR, TC_THR, WT_THR).astype(np.float32)
 
         seg = nib.load(str(NIFTI / f"{sub}_seg.nii.gz")).get_fdata()
         gt = {

@@ -30,8 +30,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from brats_gbm.model import WaveletUNetPlusPlus  # noqa: E402
-from brats_gbm.eval.inference import sliding_window_predict  # noqa: E402
-from brats_gbm.eval.postprocess import apply_thresholds, enforce_hierarchy  # noqa: E402
+from brats_gbm.eval.inference import (  # noqa: E402
+    PATCH_SIZE as SPATIAL_SIZE,
+    STEP_SIZE as SLIDE_STEP,
+    sliding_window_predict,
+)
+from brats_gbm.eval.postprocess import postprocess  # noqa: E402
 from brats_gbm.data.upenn import ET_LABELS  # noqa: E402
 
 UPENN_DIR = ROOT
@@ -48,6 +52,21 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Match the thresholds the fine-tuning run validated against, so the masks here
 # correspond to the reported validation Dice.
 ET_THR, TC_THR, WT_THR = 0.30, 0.40, 0.35
+
+# Post-processing for predicted masks. Read from the validation-selected
+# configuration written by scripts/evaluate_upenn.py so feature masks are built
+# the same way the reported segmentation masks are, rather than by a second,
+# independently chosen rule.
+ET_POLICY, ET_MIN_VOLUME = "min_volume", 200
+_selection = ROOT / "results" / "upenn" / "validation_selection.csv"
+if _selection.exists():
+    import pandas as _pd
+    _sel = _pd.read_csv(_selection)
+    _row = _sel[_sel.setup == "upenn_v3_best"].sort_values(
+        "val_mean_dice", ascending=False)
+    if len(_row):
+        ET_POLICY = str(_row.iloc[0]["et_policy"])
+        ET_MIN_VOLUME = int(_row.iloc[0]["et_min_volume"])
 
 MODALITIES = {"flair": "FLAIR", "t1": "T1w", "t1ce": "ce-gd_T1w", "t2": "T2w"}
 
@@ -156,7 +175,12 @@ def main():
     model = None
     if needs_inference:
         print(f"Loading segmentor: {CHECKPOINT}")
-        model = load_model(str(CHECKPOINT))
+        model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
+        _ck = torch.load(str(CHECKPOINT), map_location=DEVICE, weights_only=False)
+        model.load_state_dict(
+            _ck.get("model_state_dict", _ck) if isinstance(_ck, dict) else _ck,
+            strict=True)
+        model.eval()
 
     rows = []
     for i, sub_id in enumerate(subjects, 1):
@@ -173,9 +197,12 @@ def main():
                 mask_source = "ground_truth"
             else:
                 prob = sliding_window_predict(
-                    model, img, SPATIAL_SIZE, SLIDE_STEP, use_tta=False
+                    model, img, DEVICE, SPATIAL_SIZE, SLIDE_STEP, use_tta=False
                 )
-                pred = apply_thresholds(prob, ET_THR, TC_THR, WT_THR)
+                pred = postprocess(
+                    prob, ET_THR, TC_THR, WT_THR,
+                    et_policy=ET_POLICY, et_min_volume=ET_MIN_VOLUME,
+                ).astype(np.float32)
                 et, tc, wt = pred[0], pred[1], pred[2]
                 mask_source = "model_predicted"
 
