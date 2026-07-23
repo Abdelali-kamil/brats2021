@@ -70,14 +70,16 @@ def main() -> None:
               "post-processing policy were selected on the 14 validation subjects;",
               "the test set was scored once.", "",
               "### Summary across setups", "",
-              "| Setup | Mean Dice [95% CI] | ET | TC | WT | Mean HD95 mm |",
-              "|---|---|---|---|---|---|"]
+              "| Setup | Preproc | Mean Dice [95% CI] | ET | TC | WT | Mean HD95 mm |",
+              "|---|---|---|---|---|---|---|"]
         for s in setups:
             sub = u[u.label == s]
             m = sub[sub.region == "MEAN"].iloc[0]
             g = {r["region"]: r for _, r in sub.iterrows()}
+            pre = m.get("preprocessing", "")
+            pre = "" if pd.isna(pre) else pre
             L.append(
-                f"| `{s}` | {ci(m, 'dice')} | {g['ET']['dice']:.4f} | "
+                f"| `{s}` | {pre} | {ci(m, 'dice')} | {g['ET']['dice']:.4f} | "
                 f"{g['TC']['dice']:.4f} | {g['WT']['dice']:.4f} | {m['hd95']:.2f} |")
         L += [""]
 
@@ -85,10 +87,18 @@ def main() -> None:
             sub = u[u.label == s]
             first = sub.iloc[0]
             L += [f"### `{s}`", ""]
-            L += [f"Selected on validation: thresholds ET={first['et_threshold']:.2f}, "
-                  f"TC={first['tc_threshold']:.2f}, WT={first['wt_threshold']:.2f}; "
-                  f"ET policy `{first['et_policy']}` "
-                  f"(cutoff {int(first['et_min_volume'])} voxels).", ""]
+            bits = [
+                f"thresholds ET={first['et_threshold']:.2f}, "
+                f"TC={first['tc_threshold']:.2f}, WT={first['wt_threshold']:.2f}",
+                f"ET policy `{first['et_policy']}` "
+                f"(cutoff {int(first['et_min_volume'])} voxels)",
+            ]
+            if "wt_policy" in first.index and pd.notna(first.get("wt_policy")):
+                bits.append(f"WT policy `{first['wt_policy']}`")
+            L += ["Selected on validation: " + "; ".join(bits) + ".", ""]
+            if "preprocessing" in first.index and pd.notna(first.get("preprocessing")):
+                L += [f"Input convention: `{first['preprocessing']}` — the one this "
+                      f"checkpoint was trained under.", ""]
             L += seg_table(sub) + [""]
 
         da = RESULTS / "upenn" / "domain_adaptation.json"
@@ -121,13 +131,19 @@ def main() -> None:
             L += ["### Post-processing selection", "",
                   "Every candidate ET policy scored on validation. The selected row",
                   "per setup is the one with the highest `val_mean_dice`.", "",
-                  "| Setup | ET policy | Cutoff | Val mean Dice | Val ET Dice |",
-                  "|---|---|---|---|---|"]
+                  "| Setup | WT policy | ET policy | Cutoff | Val mean Dice | Val ET | Val WT |",
+                  "|---|---|---|---|---|---|---|"]
             for s in setups:
                 sub = v[v.setup == s].sort_values("val_mean_dice", ascending=False)
                 for _, r in sub.iterrows():
-                    L.append(f"| `{s}` | {r['et_policy']} | {int(r['et_min_volume'])} | "
-                             f"{r['val_mean_dice']:.4f} | {r['val_et_dice']:.4f} |")
+                    L.append(
+                        f"| `{s}` | {r.get('wt_policy', '')} | {r['et_policy']} | "
+                        f"{int(r['et_min_volume'])} | {r['val_mean_dice']:.4f} | "
+                        f"{r['val_et_dice']:.4f} | "
+                        f"{r['val_wt_dice']:.4f} |" if 'val_wt_dice' in r.index else
+                        f"| `{s}` | {r.get('wt_policy', '')} | {r['et_policy']} | "
+                        f"{int(r['et_min_volume'])} | {r['val_mean_dice']:.4f} | "
+                        f"{r['val_et_dice']:.4f} | — |")
             L += [""]
     else:
         L += ["_Not available — run `scripts/evaluate_upenn.py`._", ""]
