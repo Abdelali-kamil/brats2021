@@ -61,6 +61,54 @@ def main() -> None:
 
     # ---------------- UPenn ----------------
     L += ["## UPenn-GBM segmentation", ""]
+
+    fixed_csv = RESULTS / "upenn" / "segmentation_summary_fixedcfg.csv"
+    sens_csv = RESULTS / "upenn" / "selection_sensitivity.csv"
+    if fixed_csv.exists():
+        f = pd.read_csv(fixed_csv)
+        fm = f[f.region == "MEAN"].sort_values("dice", ascending=False)
+        L += ["Held-out test set, 29 subjects. **Primary results use a fixed",
+              "configuration with no tuning**: threshold 0.5 in every region,",
+              "standard component cleanup, no ET volume rule, no WT",
+              "largest-component rule, identical for every setup.", "",
+              "| Setup | Mean Dice [95% CI] | ET | TC | WT | Mean HD95 mm |",
+              "|---|---|---|---|---|---|"]
+        for _, m in fm.iterrows():
+            sub = f[f.label == m["label"]]
+            g = {r["region"]: r for _, r in sub.iterrows()}
+            L.append(f"| `{m['label']}` | {ci(m, 'dice')} | {g['ET']['dice']:.4f} "
+                     f"| {g['TC']['dice']:.4f} | {g['WT']['dice']:.4f} "
+                     f"| {m['hd95']:.2f} |")
+        L += [""]
+
+        best = fm.iloc[0]
+        L += [f"Best: **`{best['label']}`** at mean Dice "
+              f"{ci(best, 'dice')}.", ""]
+        L += seg_table(f[f.label == best["label"]]) + [""]
+
+        if sens_csv.exists():
+            c = pd.read_csv(sens_csv)
+            n_better = int((c.delta_fixed_minus_selected > 0).sum())
+            L += ["### Why nothing is tuned", "",
+                  f"Selecting thresholds and post-processing on the 14-subject",
+                  f"validation split was measured against the fixed configuration.",
+                  f"Fixed wins on **{n_better} of {len(c)}** setups "
+                  f"(mean {c.delta_fixed_minus_selected.mean():+.4f} Dice), so the",
+                  f"selection was costing performance rather than adding it. Six",
+                  f"parameters cannot be chosen on fourteen subjects.", "",
+                  "| Setup | Fixed | Validation-selected | Δ |", "|---|---|---|---|"]
+            for _, r in c.sort_values("fixed_dice", ascending=False).iterrows():
+                L.append(f"| `{r['setup']}` | {r['fixed_dice']:.4f} | "
+                         f"{r['validation_selected_dice']:.4f} | "
+                         f"{r['delta_fixed_minus_selected']:+.4f} |")
+            L += ["",
+                  "The choice to lead with the fixed configuration rests on the",
+                  "sample-size argument, not on these test numbers — picking a",
+                  "selection strategy by its test performance would be test-set",
+                  "tuning one level up. Both are shown so the reasoning can be",
+                  "checked. See `docs/METHODOLOGY.md`.", ""]
+
+    L += ["### Sensitivity analysis: validation-selected configuration", ""]
     upenn_csv = RESULTS / "upenn" / "segmentation_summary.csv"
     if upenn_csv.exists():
         u = pd.read_csv(upenn_csv)

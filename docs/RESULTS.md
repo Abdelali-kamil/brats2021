@@ -18,6 +18,54 @@ clean external evaluation in this project is UPenn-GBM.
 
 ## UPenn-GBM segmentation
 
+Held-out test set, 29 subjects. **Primary results use a fixed
+configuration with no tuning**: threshold 0.5 in every region,
+standard component cleanup, no ET volume rule, no WT
+largest-component rule, identical for every setup.
+
+| Setup | Mean Dice [95% CI] | ET | TC | WT | Mean HD95 mm |
+|---|---|---|---|---|---|
+| `ensemble_v3_v4` | 0.8204 [0.7587, 0.8716] | 0.7976 | 0.8572 | 0.8063 | 7.30 |
+| `upenn_v3_best` | 0.8156 [0.7554, 0.8637] | 0.7814 | 0.8491 | 0.8164 | 8.89 |
+| `ensemble_top5` | 0.8131 [0.7487, 0.8653] | 0.7761 | 0.8452 | 0.8180 | 6.84 |
+| `upenn_v4_best` | 0.8071 [0.7395, 0.8658] | 0.7994 | 0.8505 | 0.7714 | 10.22 |
+| `upenn_v3_last` | 0.8060 [0.7358, 0.8618] | 0.7659 | 0.8388 | 0.8134 | 6.95 |
+| `baseline_brats` | 0.6948 [0.5984, 0.7800] | 0.7144 | 0.7418 | 0.6282 | 41.30 |
+
+Best: **`ensemble_v3_v4`** at mean Dice 0.8204 [0.7587, 0.8716].
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7976 [0.7264, 0.8589] | 2.93 [1.61, 4.58] | 0 | 0 |
+| TC | 29 | 0.8572 [0.7845, 0.9141] | 3.87 [2.34, 5.72] | 0 | 0 |
+| WT | 29 | 0.8063 [0.7450, 0.8625] | 15.10 [8.28, 22.86] | 0 | 0 |
+| MEAN | 29 | 0.8204 [0.7587, 0.8716] | 7.30 [4.72, 10.10] |  |  |
+
+### Why nothing is tuned
+
+Selecting thresholds and post-processing on the 14-subject
+validation split was measured against the fixed configuration.
+Fixed wins on **5 of 6** setups (mean +0.0034 Dice), so the
+selection was costing performance rather than adding it. Six
+parameters cannot be chosen on fourteen subjects.
+
+| Setup | Fixed | Validation-selected | Δ |
+|---|---|---|---|
+| `ensemble_v3_v4` | 0.8204 | 0.8128 | +0.0075 |
+| `upenn_v3_best` | 0.8156 | 0.8070 | +0.0086 |
+| `ensemble_top5` | 0.8131 | 0.8095 | +0.0036 |
+| `upenn_v4_best` | 0.8071 | 0.8048 | +0.0023 |
+| `upenn_v3_last` | 0.8060 | 0.8056 | +0.0005 |
+| `baseline_brats` | 0.6948 | 0.6968 | -0.0019 |
+
+The choice to lead with the fixed configuration rests on the
+sample-size argument, not on these test numbers — picking a
+selection strategy by its test performance would be test-set
+tuning one level up. Both are shown so the reasoning can be
+checked. See `docs/METHODOLOGY.md`.
+
+### Sensitivity analysis: validation-selected configuration
+
 Held-out test set, 29 subjects. Thresholds and the ET
 post-processing policy were selected on the 14 validation subjects;
 the test set was scored once.
@@ -243,19 +291,19 @@ thresholds fitted on cross-fitted training-fold scores.
 
 | Model | AUC [95% CI] | Balanced acc | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|---|
-| logreg | 0.796 [0.650, 0.927] | 0.741 | 0.800 | 0.676 | 0.806 | 0.218 |
-| random_forest | 0.904 [0.836, 0.962] | 0.778 | 0.785 | 0.771 | 0.785 | 0.230 |
+| logreg | 0.804 [0.682, 0.912] | 0.722 | 0.764 | 0.676 | 0.768 | 0.192 |
+| random_forest | 0.896 [0.831, 0.952] | 0.790 | 0.738 | 0.847 | 0.734 | 0.211 |
 
 ### Sensitivity analysis — mixed provenance
 
 | Model | AUC [95% CI] | Balanced acc | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|---|
-| logreg | 0.836 [0.703, 0.949] | 0.765 | 0.836 | 0.689 | 0.841 | 0.227 |
-| random_forest | 0.905 [0.839, 0.961] | 0.783 | 0.784 | 0.783 | 0.784 | 0.201 |
+| logreg | 0.848 [0.737, 0.938] | 0.759 | 0.844 | 0.667 | 0.851 | 0.230 |
+| random_forest | 0.903 [0.845, 0.953] | 0.776 | 0.754 | 0.800 | 0.753 | 0.183 |
 
 ### Recommended model
 
-**random_forest**, on the primary cohort: AUC 0.904 [0.836, 0.962], sensitivity 0.771, specificity 0.785.
+**random_forest**, on the primary cohort: AUC 0.896 [0.831, 0.952], sensitivity 0.847, specificity 0.734.
 
 F1 and positive predictive value are low because prevalence is
 about 4%: at that base rate most positive calls are false even
