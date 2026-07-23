@@ -315,13 +315,37 @@ feasibility result, not a validated classifier. The confidence
 intervals are the result; the point estimates should not be quoted
 alone.
 
-## MGMT classification
+## BraTS2021 MGMT classification
 
-Not retained. The earlier MGMT experiment (n=116, accuracy 0.62,
-AUC 0.65) was run on a different cohort with a pipeline that no longer
-exists in this repository, and its per-case outputs could not be tied
-to a reproducible split. Rather than report a number that cannot be
-regenerated, it has been archived. `brats_gbm/data/upenn.py` still
-supports `target_label="MGMT"`, so the analysis can be redone
-properly against the current pipeline.
+Cohort: **577 cases, 301 methylated (52.2%)**, features from expert segmentations.
+
+Expert masks mean uniform provenance, so mask source cannot act as a
+label proxy, and the segmentation model is absent from this analysis
+entirely. The features therefore describe an idealised mask: this is
+the ceiling available to radiomic MGMT classification given perfect
+segmentation, not end-to-end performance.
+
+| Model | AUC [95% CI] | Bal. acc | Sensitivity | Specificity | F1 |
+|---|---|---|---|---|---|
+| logreg | 0.583 [0.538, 0.628] | 0.537 | 0.412 | 0.662 | 0.472 |
+| random_forest | 0.576 [0.528, 0.623] | 0.551 | 0.417 | 0.685 | 0.488 |
+
+### Interpretation
+
+Best AUC is **0.583 [0.538, 0.628]**. The interval excludes 0.5, so a weak signal
+is statistically detectable — but balanced accuracy is 0.537, barely above a coin flip,
+and that is with perfect segmentation on a well-powered, balanced
+cohort. **This is not clinically useful and should not be presented
+as a working MGMT classifier.**
+
+The result is consistent with the published difficulty of the task:
+the RSNA-MICCAI 2021 challenge that produced these labels was won at
+roughly 0.62 AUC, and subsequent analyses argue the imaging signal is
+weak or absent.
+
+It also supersedes this project's earlier MGMT attempt, which reported
+AUC 0.651 on 116 cases from an unreproducible pipeline. Five times the
+data under repeated cross-validation gives a *lower* estimate — the
+gap between 0.651 and 0.583 is the optimism of a small-sample estimate,
+and it is why the earlier figure was archived rather than reported.
 

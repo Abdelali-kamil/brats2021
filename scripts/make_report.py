@@ -262,14 +262,52 @@ def main() -> None:
     else:
         L += ["_Not available — run `scripts/train_classifier_idh1.py`._", ""]
 
-    L += ["## MGMT classification", "",
-          "Not retained. The earlier MGMT experiment (n=116, accuracy 0.62,",
-          "AUC 0.65) was run on a different cohort with a pipeline that no longer",
-          "exists in this repository, and its per-case outputs could not be tied",
-          "to a reproducible split. Rather than report a number that cannot be",
-          "regenerated, it has been archived. `brats_gbm/data/upenn.py` still",
-          "supports `target_label=\"MGMT\"`, so the analysis can be redone",
-          "properly against the current pipeline.", ""]
+    L += ["## BraTS2021 MGMT classification", ""]
+    mgmt = RESULTS / "classification" / "mgmt_results.json"
+    if mgmt.exists():
+        d = json.loads(mgmt.read_text())
+        c = d["cohort"]
+        L += [f"Cohort: **{c['n']} cases, {c['n_methylated']} methylated "
+              f"({c['n_methylated'] / c['n'] * 100:.1f}%)**, features from expert "
+              f"segmentations.", "",
+              "Expert masks mean uniform provenance, so mask source cannot act as a",
+              "label proxy, and the segmentation model is absent from this analysis",
+              "entirely. The features therefore describe an idealised mask: this is",
+              "the ceiling available to radiomic MGMT classification given perfect",
+              "segmentation, not end-to-end performance.", "",
+              "| Model | AUC [95% CI] | Bal. acc | Sensitivity | Specificity | F1 |",
+              "|---|---|---|---|---|---|"]
+        for name in ("logreg", "random_forest"):
+            if name not in d:
+                continue
+            m = d[name]
+            pb = m["auc_patient_bootstrap"]
+            L.append(f"| {name} | {pb['mean']:.3f} [{pb['ci_low']:.3f}, "
+                     f"{pb['ci_high']:.3f}] | {m['balanced_accuracy']['mean']:.3f} "
+                     f"| {m['sensitivity']['mean']:.3f} "
+                     f"| {m['specificity']['mean']:.3f} | {m['f1']['mean']:.3f} |")
+        best = max((k for k in ("logreg", "random_forest") if k in d),
+                   key=lambda k: d[k]["auc_patient_bootstrap"]["mean"])
+        pb = d[best]["auc_patient_bootstrap"]
+        L += ["", "### Interpretation", "",
+              f"Best AUC is **{pb['mean']:.3f} [{pb['ci_low']:.3f}, "
+              f"{pb['ci_high']:.3f}]**. The interval excludes 0.5, so a weak signal",
+              "is statistically detectable — but balanced accuracy is "
+              f"{d[best]['balanced_accuracy']['mean']:.3f}, barely above a coin flip,",
+              "and that is with perfect segmentation on a well-powered, balanced",
+              "cohort. **This is not clinically useful and should not be presented",
+              "as a working MGMT classifier.**", "",
+              "The result is consistent with the published difficulty of the task:",
+              "the RSNA-MICCAI 2021 challenge that produced these labels was won at",
+              "roughly 0.62 AUC, and subsequent analyses argue the imaging signal is",
+              "weak or absent.", "",
+              "It also supersedes this project's earlier MGMT attempt, which reported",
+              "AUC 0.651 on 116 cases from an unreproducible pipeline. Five times the",
+              "data under repeated cross-validation gives a *lower* estimate — the",
+              "gap between 0.651 and 0.583 is the optimism of a small-sample estimate,",
+              "and it is why the earlier figure was archived rather than reported.", ""]
+    else:
+        L += ["_Not available — run `scripts/train_classifier_mgmt.py`._", ""]
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(L) + "\n")
