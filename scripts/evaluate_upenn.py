@@ -282,40 +282,47 @@ def select_thresholds(
     return best_cfg
 
 
-def select_et_policy(
+def select_postprocessing(
     val_probs: dict[str, np.ndarray],
     val_gt: dict[str, np.ndarray],
     thresholds: tuple[float, float, float],
-) -> tuple[str, int, pd.DataFrame]:
-    """Choose the ET policy on validation with thresholds held fixed."""
+) -> tuple[str, int, str, pd.DataFrame]:
+    """Choose the ET and WT policies on validation, thresholds held fixed."""
+    from brats_gbm.eval.metrics import dice_score
+
     et_t, tc_t, wt_t = thresholds
-    candidates = [("min_volume", v) for v in pp.ET_MIN_VOLUME_GRID]
-    candidates.append(("rescue", 0))
+    et_candidates = [("min_volume", v) for v in pp.ET_MIN_VOLUME_GRID]
+    et_candidates.append(("rescue", 0))
 
     rows = []
-    for policy, min_vol in candidates:
-        preds = {
-            pid: pp.postprocess(
-                prob.astype(np.float32), et_t, tc_t, wt_t,
-                et_policy=policy, et_min_volume=min_vol,
-            )
-            for pid, prob in val_probs.items()
-        }
-        from brats_gbm.eval.metrics import dice_score
-
-        et_dice = float(np.mean([dice_score(preds[p][0], val_gt[p][0]) for p in preds]))
-        rows.append({
-            "et_policy": policy,
-            "et_min_volume": min_vol,
-            "val_mean_dice": mean_dice(preds, val_gt),
-            "val_et_dice": et_dice,
-        })
+    for wt_policy in pp.WT_POLICIES:
+        for et_policy, min_vol in et_candidates:
+            preds = {
+                pid: pp.postprocess(
+                    prob.astype(np.float32), et_t, tc_t, wt_t,
+                    et_policy=et_policy, et_min_volume=min_vol,
+                    wt_policy=wt_policy,
+                )
+                for pid, prob in val_probs.items()
+            }
+            rows.append({
+                "wt_policy": wt_policy,
+                "et_policy": et_policy,
+                "et_min_volume": min_vol,
+                "val_mean_dice": mean_dice(preds, val_gt),
+                "val_et_dice": float(np.mean(
+                    [dice_score(preds[p][0], val_gt[p][0]) for p in preds])),
+                "val_wt_dice": float(np.mean(
+                    [dice_score(preds[p][2], val_gt[p][2]) for p in preds])),
+            })
 
     table = pd.DataFrame(rows).sort_values("val_mean_dice", ascending=False)
     best = table.iloc[0]
-    print(f"    ET policy  {best['et_policy']} (min_volume={int(best['et_min_volume'])})"
+    print(f"    postproc   WT={best['wt_policy']}  ET={best['et_policy']}"
+          f"(min_volume={int(best['et_min_volume'])})"
           f"  val mean Dice {best['val_mean_dice']:.4f}")
-    return str(best["et_policy"]), int(best["et_min_volume"]), table
+    return (str(best["et_policy"]), int(best["et_min_volume"]),
+            str(best["wt_policy"]), table)
 
 
 # --------------------------------------------------------------------------
@@ -327,6 +334,7 @@ def score_split(
     thresholds: tuple[float, float, float],
     et_policy: str,
     et_min_volume: int,
+    wt_policy: str = "components",
 ) -> pd.DataFrame:
     et_t, tc_t, wt_t = thresholds
     rows = []
@@ -334,6 +342,7 @@ def score_split(
         pred = pp.postprocess(
             prob.astype(np.float32), et_t, tc_t, wt_t,
             et_policy=et_policy, et_min_volume=et_min_volume,
+            wt_policy=wt_policy,
         )
         row = {"Patient_ID": pid}
         row.update(score_case(pred, gts[pid]))
@@ -420,7 +429,8 @@ def main() -> None:
         )
 
         thresholds = select_thresholds(val_probs, val_gt)
-        et_policy, et_min_vol, policy_table = select_et_policy(val_probs, val_gt, thresholds)
+        et_policy, et_min_vol, wt_policy, policy_table = select_postprocessing(
+            val_probs, val_gt, thresholds)
         policy_table.insert(0, "setup", name)
         selections.append(policy_table)
         del val_probs, val_maps
@@ -436,7 +446,8 @@ def main() -> None:
             else {p: average_probability_maps([m[p] for m in test_maps]) for p in test_maps[0]}
         )
 
-        df = score_split(test_probs, test_gt, thresholds, et_policy, et_min_vol)
+        df = score_split(test_probs, test_gt, thresholds, et_policy, et_min_vol,
+                         wt_policy)
         df.to_csv(out_dir / f"per_case_{name}.csv", index=False)
         per_case[name] = df
         del test_probs, test_maps
@@ -447,6 +458,7 @@ def main() -> None:
         summary["wt_threshold"] = thresholds[2]
         summary["et_policy"] = et_policy
         summary["et_min_volume"] = et_min_vol
+        summary["wt_policy"] = wt_policy
         summary["preprocessing"] = preproc
         summaries.append(summary)
         print_summary(summary, f"TEST — {name} (n={len(df)})")

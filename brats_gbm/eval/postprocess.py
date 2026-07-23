@@ -35,6 +35,23 @@ ET_MIN_VOLUME_GRID = [0, 50, 100, 200, 300, 500]
 
 ET_POLICIES = ("min_volume", "none", "rescue")
 
+# Whole-tumour component policy, also swept on validation.
+#
+# "components" keeps every component above the voxel floor. "largest" keeps only
+# the single largest, on the prior that a case carries one tumour.
+#
+# This matters most for cross-cohort transfer. BraTS images are skull-stripped
+# and UPenn-GBM images are not, so a BraTS-trained model applied to UPenn tends
+# to light up skull and scalp as whole tumour: distant false-positive components
+# that cost little Dice individually but wreck HD95, which is a distance metric
+# and is dominated by the furthest error. Restricting to the largest component
+# removes them.
+#
+# It is a real trade-off rather than a free win — a genuinely multifocal tumour
+# loses its satellite lesions — so the choice is made on validation rather than
+# asserted.
+WT_POLICIES = ("components", "largest")
+
 
 def remove_small_components(mask: np.ndarray, min_voxels: int) -> np.ndarray:
     """Drop components under `min_voxels`; keep the largest if all would go."""
@@ -51,6 +68,18 @@ def remove_small_components(mask: np.ndarray, min_voxels: int) -> np.ndarray:
     if keep.size == 0:
         keep = np.array([int(np.argmax(sizes)) + 1])
     return np.isin(labeled, keep)
+
+
+def largest_component(mask: np.ndarray) -> np.ndarray:
+    """Keep only the single largest connected component."""
+    mask = mask.astype(bool)
+    if not mask.any():
+        return mask
+    labeled, n = ndimage.label(mask)
+    if n <= 1:
+        return mask
+    sizes = ndimage.sum(mask, labeled, range(1, n + 1))
+    return labeled == (int(np.argmax(sizes)) + 1)
 
 
 def enforce_hierarchy(pred: np.ndarray) -> np.ndarray:
@@ -114,13 +143,22 @@ def postprocess(
     wt_thr: float,
     et_policy: str = "min_volume",
     et_min_volume: int = 200,
+    wt_policy: str = "components",
 ) -> np.ndarray:
-    """Threshold, clean and apply the ET policy. Returns a boolean [3,D,H,W]."""
+    """Threshold, clean and apply the region policies. Returns bool [3,D,H,W]."""
+    if wt_policy not in WT_POLICIES:
+        raise ValueError(f"unknown WT policy {wt_policy!r}; expected {WT_POLICIES}")
+
     pred = apply_thresholds(prob, et_thr, tc_thr, wt_thr)
     pred = enforce_hierarchy(pred)
 
     for i, region in enumerate(("ET", "TC", "WT")):
         pred[i] = remove_small_components(pred[i], MIN_VOXELS[region])
+
+    if wt_policy == "largest":
+        # Applied to WT then propagated inward by the hierarchy, so ET and TC
+        # cannot survive outside the retained whole-tumour region.
+        pred[2] = largest_component(pred[2])
 
     pred = enforce_hierarchy(pred)
     pred = apply_et_policy(pred, prob, policy=et_policy, min_volume=et_min_volume)
