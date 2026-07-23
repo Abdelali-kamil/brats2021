@@ -15,11 +15,14 @@ L=logs
 
 snapshot() {
   echo "──────── jobs ────────"
-  ps -eo pid,etime,cmd --no-headers \
+  ps -eo pid,etime,comm,args --no-headers \
     | grep -E "train_upenn|evaluate_upenn|evaluate_brats|extract_radiomic|train_classifier|opt_chain" \
-    | grep -v grep | grep -v "bash -c" \
-    | sed -E 's|.*(scripts/[a-z_]+\.py\|opt_chain\.sh)|\1|' \
-    | awk '{printf "  %-8s up %-9s %s\n", $1, $2, substr($0, index($0,$3))}'
+    | grep -v grep | grep -v "bash -c" | grep -v "tail -f" \
+    | while read -r pid etime _ rest; do
+        # Show just the script being run, not the full argv.
+        script=$(printf '%s\n' "$rest" | grep -oE '[a-z_]+\.(py|sh)' | head -1)
+        printf "  %-8s up %-9s %s\n" "$pid" "$etime" "${script:-$rest}"
+      done
   [ -z "$(pgrep -f 'scripts/(train_upenn|evaluate_upenn|evaluate_brats)\.py')" ] && echo "  (no compute job running)"
 
   echo "──────── gpu ────────"
