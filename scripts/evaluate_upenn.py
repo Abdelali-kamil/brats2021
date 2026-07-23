@@ -149,9 +149,13 @@ def probs_for_checkpoint(
 
 
 def ground_truth(dataset: UPennDataset) -> dict[str, np.ndarray]:
-    """Boolean [3,D,H,W] targets keyed by subject id."""
+    """Boolean [3,D,H,W] targets keyed by subject id.
+
+    Uses the segmentation-only loader: the four modality volumes are already
+    represented in the cached probability maps and are not needed again here.
+    """
     return {
-        dataset.subject_ids[i]: dataset[i]["label"].numpy().astype(bool)
+        dataset.subject_ids[i]: dataset.labels_only(i)
         for i in range(len(dataset))
     }
 

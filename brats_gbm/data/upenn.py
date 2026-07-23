@@ -99,6 +99,20 @@ class UPennDataset(torch.utils.data.Dataset):
                 return y
         return -1
 
+    def labels_only(self, idx: int) -> np.ndarray:
+        """Boolean [3,D,H,W] target without touching the four modality volumes.
+
+        `__getitem__` loads and z-scores roughly 3.5 GB of imaging per subject.
+        Evaluation needs the targets alone, so reading just the segmentation
+        turns a multi-minute setup into a few seconds.
+        """
+        sub_id = self.subject_ids[idx]
+        seg_p = self.data_dir / f"{sub_id}_seg.nii.gz"
+        if not seg_p.exists():
+            raise FileNotFoundError(f"Missing segmentation: {seg_p}")
+        seg = nib.load(str(seg_p)).get_fdata().astype(np.float32)
+        return regions_from_seg(seg).astype(bool)
+
     def __getitem__(self, idx: int) -> dict:
         sub_id = self.subject_ids[idx]
 
