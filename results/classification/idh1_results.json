@@ -54,7 +54,9 @@
         "fn": 55,
         "tp": 115
       },
-      "degenerate": false
+      "degenerate": false,
+      "n": 416,
+      "n_positive": 17
     },
     "random_forest": {
       "auc": {
@@ -110,7 +112,9 @@
         "fn": 26,
         "tp": 144
       },
-      "degenerate": false
+      "degenerate": false,
+      "n": 416,
+      "n_positive": 17
     }
   },
   "sensitivity_mixed_provenance": {
@@ -168,7 +172,9 @@
         "fn": 60,
         "tp": 120
       },
-      "degenerate": false
+      "degenerate": false,
+      "n": 532,
+      "n_positive": 18
     },
     "random_forest": {
       "auc": {
@@ -224,7 +230,9 @@
         "fn": 36,
         "tp": 144
       },
-      "degenerate": false
+      "degenerate": false,
+      "n": 532,
+      "n_positive": 18
     }
   },
   "cohort_sizes": {

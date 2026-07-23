@@ -326,3 +326,68 @@ def test_unknown_wt_policy_raises():
     prob = np.zeros((3, 6, 6, 6), np.float32)
     with pytest.raises(ValueError):
         pp.postprocess(prob, 0.5, 0.5, 0.5, wt_policy="nonsense")
+
+
+# ------------------------------------------------------ radiomic features
+from brats_gbm.features import all_region_features, region_features, znorm  # noqa: E402
+
+
+def _sphere(shape=(30, 30, 30), radius=6):
+    zz, yy, xx = np.ogrid[:shape[0], :shape[1], :shape[2]]
+    c = [s // 2 for s in shape]
+    return ((zz - c[0]) ** 2 + (yy - c[1]) ** 2 + (xx - c[2]) ** 2) <= radius ** 2
+
+
+def test_region_features_reports_size_and_volume():
+    m = _sphere()
+    f = region_features(m, {"t1": np.ones((30, 30, 30), np.float32)}, "WT", 2.0)
+    assert f["WT_voxels"] == int(m.sum())
+    assert f["WT_volume_mm3"] == pytest.approx(int(m.sum()) * 2.0)
+
+
+def test_tiny_region_returns_nan_not_zero():
+    """A 3-voxel region has no meaningful shape; NaN is honest, 0.0 is not."""
+    m = np.zeros((10, 10, 10), bool); m[1, 1, 1:4] = True
+    f = region_features(m, {"t1": np.ones((10, 10, 10), np.float32)}, "ET", 1.0)
+    assert np.isnan(f["ET_t1_mean"])
+    assert np.isnan(f["ET_sphericity"])
+    assert f["ET_n_components"] == 0
+
+
+def test_sphericity_of_a_sphere_is_near_one():
+    m = _sphere(radius=8)
+    f = region_features(m, {"t1": np.ones((30, 30, 30), np.float32)}, "WT", 1.0)
+    assert 0.85 < f["WT_sphericity"] < 1.15
+
+
+def test_component_count_is_correct():
+    m = np.zeros((30, 30, 30), bool)
+    m[2:8, 2:8, 2:8] = True
+    m[20:26, 20:26, 20:26] = True
+    f = region_features(m, {"t1": np.ones((30, 30, 30), np.float32)}, "WT", 1.0)
+    assert f["WT_n_components"] == 2
+
+
+def test_composition_ratios_are_bounded_and_consistent():
+    """ET/WT and TC/WT must lie in [0,1] given the nesting."""
+    wt = _sphere(radius=9); tc = _sphere(radius=6); et = _sphere(radius=3)
+    f = all_region_features({"ET": et, "TC": tc, "WT": wt},
+                            {"t1": np.ones((30, 30, 30), np.float32)}, 1.0)
+    assert 0 < f["ET_over_WT"] < 1
+    assert 0 < f["TC_over_WT"] < 1
+    assert f["ET_over_WT"] < f["TC_over_WT"]
+
+
+def test_ratios_are_nan_when_denominator_empty():
+    z = np.zeros((10, 10, 10), bool)
+    f = all_region_features({"ET": z, "TC": z, "WT": z},
+                            {"t1": np.ones((10, 10, 10), np.float32)}, 1.0)
+    assert np.isnan(f["ET_over_WT"])
+
+
+def test_znorm_standardises_within_brain_only():
+    v = np.zeros((8, 8, 8), np.float32)
+    v[2:6, 2:6, 2:6] = np.linspace(100, 900, 64).reshape(4, 4, 4)
+    out = znorm({"t1": v})["t1"]
+    assert out[v == 0].sum() == 0.0
+    assert abs(float(out[v > 0].mean())) < 1e-5
