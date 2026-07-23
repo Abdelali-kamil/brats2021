@@ -23,7 +23,8 @@ snapshot() {
         script=$(printf '%s\n' "$rest" | grep -oE '[a-z_]+\.(py|sh)' | head -1)
         printf "  %-8s up %-9s %s\n" "$pid" "$etime" "${script:-$rest}"
       done
-  [ -z "$(pgrep -f 'scripts/(train_upenn|evaluate_upenn|evaluate_brats)\.py')" ] && echo "  (no compute job running)"
+  [ -z "$(pgrep -f 'scripts/(train_upenn|evaluate_upenn|evaluate_brats|extract_radiomic_features|train_classifier_idh1|visualize_)')" ] \
+    && echo "  (no compute job running)"
 
   echo "──────── gpu ────────"
   nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader | sed 's/^/  /'
