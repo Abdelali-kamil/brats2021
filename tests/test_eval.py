@@ -225,3 +225,104 @@ def test_assert_disjoint_passes_on_disjoint_sets():
 def test_assert_disjoint_raises_on_overlap():
     with pytest.raises(AssertionError, match="Leakage"):
         assert_disjoint(train=["s1", "s2"], test=["s2", "s3"])
+
+
+# ------------------------------------------------- preprocessing conventions
+from brats_gbm.data.upenn import (  # noqa: E402
+    PREPROCESSING,
+    minmax_percentile,
+    normalise,
+    znorm_nonzero,
+)
+
+
+def test_the_two_conventions_actually_differ():
+    """Guards the bug that invalidated the original transfer result.
+
+    BraTS and UPenn disagree on both channel order and normaliser. If these
+    ever silently converge, the per-checkpoint preprocessing machinery becomes
+    a no-op and the mismatch could creep back unnoticed.
+    """
+    brats_order, brats_norm = PREPROCESSING["brats"]
+    upenn_order, upenn_norm = PREPROCESSING["upenn"]
+    assert brats_order != upenn_order
+    assert brats_norm != upenn_norm
+    assert set(brats_order) == set(upenn_order)  # same modalities, different order
+
+
+def test_brats_order_puts_flair_last_and_upenn_puts_it_first():
+    assert PREPROCESSING["brats"][0][-1] == "FLAIR"
+    assert PREPROCESSING["upenn"][0][0] == "FLAIR"
+
+
+def test_minmax_maps_into_unit_range():
+    rng = np.random.default_rng(0)
+    img = rng.random((4, 8, 8, 8)).astype(np.float32) * 500
+    out = minmax_percentile(img)
+    assert out.min() >= 0.0 and out.max() <= 1.0
+
+
+def test_minmax_leaves_all_zero_channel_alone():
+    img = np.zeros((1, 4, 4, 4), np.float32)
+    assert minmax_percentile(img).sum() == 0.0
+
+
+def test_znorm_zeroes_background_and_standardises_foreground():
+    img = np.zeros((1, 6, 6, 6), np.float32)
+    img[0, 1:5, 1:5, 1:5] = np.linspace(10, 50, 64).reshape(4, 4, 4)
+    out = znorm_nonzero(img)
+    assert out[0][img[0] == 0].sum() == 0.0
+    fg = out[0][img[0] > 0]
+    assert abs(float(fg.mean())) < 1e-5
+
+
+def test_normalise_dispatches_and_rejects_unknown():
+    img = np.abs(np.random.default_rng(1).random((2, 4, 4, 4)).astype(np.float32))
+    assert np.allclose(normalise(img, "zscore"), znorm_nonzero(img))
+    assert np.allclose(normalise(img, "minmax"), minmax_percentile(img))
+    with pytest.raises(ValueError):
+        normalise(img, "nonsense")
+
+
+# ------------------------------------------------------------- WT policy
+def test_largest_component_keeps_only_the_biggest():
+    m = np.zeros((20, 20, 20), bool)
+    m[1:5, 1:5, 1:5] = True     # 64 voxels
+    m[15:17, 15:17, 15:17] = True   # 8 voxels
+    out = pp.largest_component(m)
+    assert out.sum() == 64
+    assert not out[15, 15, 15]
+
+
+def test_largest_component_handles_empty_and_single():
+    assert pp.largest_component(np.zeros((5, 5, 5), bool)).sum() == 0
+    m = np.zeros((5, 5, 5), bool); m[1:3, 1:3, 1:3] = True
+    assert pp.largest_component(m).sum() == 8
+
+
+def test_wt_largest_policy_drops_distant_false_positive():
+    """The skull/scalp failure mode: a far-away blob inflates HD95."""
+    prob = np.zeros((3, 30, 30, 30), np.float32)
+    prob[2, 2:10, 2:10, 2:10] = 0.9      # the tumour
+    prob[2, 24:29, 24:29, 24:29] = 0.9   # spurious distant component
+    kept = pp.postprocess(prob, 0.5, 0.5, 0.5, wt_policy="components")
+    dropped = pp.postprocess(prob, 0.5, 0.5, 0.5, wt_policy="largest")
+    assert kept[2, 26, 26, 26]
+    assert not dropped[2, 26, 26, 26]
+    assert dropped[2, 5, 5, 5]
+
+
+def test_wt_largest_propagates_inward_through_hierarchy():
+    """ET/TC must not survive outside the retained WT component."""
+    prob = np.zeros((3, 30, 30, 30), np.float32)
+    prob[:, 2:10, 2:10, 2:10] = 0.9
+    prob[:, 24:29, 24:29, 24:29] = 0.9
+    out = pp.postprocess(prob, 0.5, 0.5, 0.5, wt_policy="largest")
+    assert not out[0, 26, 26, 26] and not out[1, 26, 26, 26]
+    assert not (out[0] & ~out[2]).any()
+
+
+def test_unknown_wt_policy_raises():
+    prob = np.zeros((3, 6, 6, 6), np.float32)
+    with pytest.raises(ValueError):
+        pp.postprocess(prob, 0.5, 0.5, 0.5, wt_policy="nonsense")
