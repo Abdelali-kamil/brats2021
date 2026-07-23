@@ -68,9 +68,14 @@ CACHE_DIR = ROOT / "cache" / "upenn_probs"
 # model getting its own validated operating point is the fair comparison, and
 # a floor low enough that no model is pinned against it is what makes the
 # selection meaningful rather than an artefact of where the grid stops.
-ET_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
-TC_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
-WT_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
+# The grid spans both directions far enough that no model is pinned against an
+# edge. Under the broken preprocessing the baseline ran to the floor; with the
+# correct convention it runs the other way, so the ceiling was raised to 0.80.
+# A selection sitting on an edge is not a selection, it is an artefact of where
+# the grid stops, and select_thresholds warns whenever that happens.
+ET_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+TC_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+WT_GRID = [0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -262,14 +267,18 @@ def select_thresholds(
                 if score > best:
                     best, best_cfg = score, (et_t, tc_t, wt_t)
 
-    at_edge = [r for r, t, g in
-               zip(("ET", "TC", "WT"), best_cfg, (ET_GRID, TC_GRID, WT_GRID))
-               if t == min(g)]
+    low = [r for r, t, g in zip(("ET", "TC", "WT"), best_cfg,
+                                (ET_GRID, TC_GRID, WT_GRID)) if t == min(g)]
+    high = [r for r, t, g in zip(("ET", "TC", "WT"), best_cfg,
+                                 (ET_GRID, TC_GRID, WT_GRID)) if t == max(g)]
     print(f"    thresholds ET={best_cfg[0]:.2f} TC={best_cfg[1]:.2f} "
           f"WT={best_cfg[2]:.2f}  (val mean Dice {best:.4f})")
-    if at_edge:
-        print(f"    note: {', '.join(at_edge)} selected the grid minimum — the "
-              f"optimum may lie lower")
+    if low:
+        print(f"    WARNING: {', '.join(low)} selected the grid minimum — the "
+              f"optimum may lie lower; widen the grid before trusting this")
+    if high:
+        print(f"    WARNING: {', '.join(high)} selected the grid maximum — the "
+              f"optimum may lie higher; widen the grid before trusting this")
     return best_cfg
 
 

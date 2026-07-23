@@ -43,14 +43,14 @@ from brats_gbm.splits import upenn_split  # noqa: E402
 CACHE = ROOT / "cache" / "upenn_probs"
 OUT_CSV = ROOT / "results" / "upenn" / "baseline_threshold_sensitivity.csv"
 
-FLOORS = [0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01,
-          0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50]
+FLOORS = [0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05,
+          0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
 WT_THR = 0.20
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--checkpoint-stem", default="segmentor_epoch_650")
+    ap.add_argument("--checkpoint-stem", default="segmentor_epoch_650__brats")
     ap.add_argument("--nifti-dir", default=str(ROOT / "upenn_nifti"))
     ap.add_argument("--out", default=str(OUT_CSV))
     args = ap.parse_args()
@@ -91,18 +91,23 @@ def main() -> None:
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.out, index=False)
 
-    monotone = bool((df.val_dice_mean.diff().dropna() <= 0).all())
+    best_i = int(df.val_dice_mean.idxmax())
+    best = df.iloc[best_i]
     print()
-    if monotone:
-        best = df.iloc[df.val_dice_mean.idxmax()]
-        print("Validation Dice increases monotonically as the threshold falls: no")
-        print("interior optimum exists, so the baseline's score is a function of")
-        print(f"where the grid stops. Range over this sweep: "
-              f"{df.val_dice_mean.min():.4f} to {df.val_dice_mean.max():.4f} "
-              f"(best at thr={best.et_tc_threshold}).")
-        print("Threshold tuning cannot repair the domain gap.")
+    print(f"peak validation Dice {best.val_dice_mean:.4f} at threshold "
+          f"{best.et_tc_threshold}")
+    if best_i == 0:
+        print("That is the LOWEST threshold swept — the optimum lies below the "
+              "grid, so this number is a function of where the sweep stops.")
+    elif best_i == len(df) - 1:
+        print("That is the HIGHEST threshold swept — the optimum lies above the "
+              "grid, so this number is a function of where the sweep stops.")
     else:
-        print("An interior optimum exists; the grid floor is adequate.")
+        print("The optimum is interior to the sweep, so the grid is adequate and "
+              "the selected threshold is a real choice rather than an edge "
+              "artefact.")
+    print(f"range over the sweep: {df.val_dice_mean.min():.4f} to "
+          f"{df.val_dice_mean.max():.4f}")
     print(f"\nWrote {args.out}")
 
 
