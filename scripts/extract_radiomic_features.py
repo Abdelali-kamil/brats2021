@@ -55,22 +55,23 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Match the thresholds the fine-tuning run validated against, so the masks here
 # correspond to the reported validation Dice.
-ET_THR, TC_THR, WT_THR = 0.30, 0.40, 0.35
+# Matches the fixed reporting configuration.
+ET_THR, TC_THR, WT_THR = 0.50, 0.50, 0.50
 
-# Post-processing for predicted masks. Read from the validation-selected
-# configuration written by scripts/evaluate_upenn.py so feature masks are built
-# the same way the reported segmentation masks are, rather than by a second,
-# independently chosen rule.
-ET_POLICY, ET_MIN_VOLUME = "min_volume", 200
-_selection = ROOT / "results" / "upenn" / "validation_selection.csv"
-if _selection.exists():
-    import pandas as _pd
-    _sel = _pd.read_csv(_selection)
-    _row = _sel[_sel.setup == "upenn_v3_best"].sort_values(
-        "val_mean_dice", ascending=False)
-    if len(_row):
-        ET_POLICY = str(_row.iloc[0]["et_policy"])
-        ET_MIN_VOLUME = int(_row.iloc[0]["et_min_volume"])
+# Post-processing for predicted masks.
+#
+# Uses the FIXED configuration that the primary results are reported under, not
+# the validation-selected one. scripts/selection_sensitivity.py showed that
+# selecting six parameters on 14 validation subjects overfits: it beat the
+# fixed configuration on only 1 of 6 setups. Building feature masks with a
+# configuration that was rejected for reporting would make the classification
+# inputs inconsistent with the segmentation results they are derived from.
+#
+# Concretely, the validation-selected config for upenn_v3_best was
+# WT=largest + ET cutoff 300, which deletes disconnected components and would
+# systematically distort exactly the shape features (component count, surface
+# area, sphericity) the classifier consumes.
+ET_POLICY, ET_MIN_VOLUME, WT_POLICY = "min_volume", 0, "components"
 
 MODALITIES = {"flair": "FLAIR", "t1": "T1w", "t1ce": "ce-gd_T1w", "t2": "T2w"}
 
@@ -206,6 +207,7 @@ def main():
                 pred = postprocess(
                     prob, ET_THR, TC_THR, WT_THR,
                     et_policy=ET_POLICY, et_min_volume=ET_MIN_VOLUME,
+                    wt_policy=WT_POLICY,
                 ).astype(np.float32)
                 et, tc, wt = pred[0], pred[1], pred[2]
                 mask_source = "model_predicted"
