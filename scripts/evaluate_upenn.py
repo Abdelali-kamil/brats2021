@@ -114,7 +114,33 @@ SETUPS: dict[str, dict] = {
         "description": "Probability-average of the top-5 matched-preprocessing checkpoints",
         "preprocessing": "brats",
     },
+    # Cross-convention ensemble. v3 and v4 were trained on the same subjects but
+    # see the input differently (channel order and intensity scale), so their
+    # errors are less correlated than two checkpoints from one run. That
+    # decorrelation is what makes an ensemble worth more than its members.
+    # Membership is fixed a priori, and the thresholds are still chosen on
+    # validation.
+    "ensemble_v3_v4": {
+        "members": [
+            {"checkpoint": ROOT / "checkpoints" / "upenn_v3_best.pth",
+             "preprocessing": "upenn"},
+            {"checkpoint": ROOT / "checkpoints" / "v4" / "upenn_v3_best.pth",
+             "preprocessing": "brats"},
+        ],
+        "description": "Probability-average across both input conventions",
+    },
 }
+
+
+def setup_members(spec: dict) -> list[dict]:
+    """Normalise a setup to a list of {checkpoint, preprocessing} members."""
+    if "members" in spec:
+        return [{"checkpoint": Path(m["checkpoint"]),
+                 "preprocessing": m.get("preprocessing", "upenn")}
+                for m in spec["members"]]
+    preproc = spec.get("preprocessing", "upenn")
+    return [{"checkpoint": Path(c), "preprocessing": preproc}
+            for c in spec["checkpoints"]]
 
 
 # --------------------------------------------------------------------------
@@ -352,24 +378,33 @@ def main() -> None:
 
     for name in args.setups:
         spec = SETUPS[name]
-        ckpts = [Path(c) for c in spec["checkpoints"]]
-        missing = [c for c in ckpts if not c.exists()]
-        if not ckpts or missing:
+        members = setup_members(spec)
+        missing = [m["checkpoint"] for m in members if not m["checkpoint"].exists()]
+        if not members or missing:
             print(f"\n[skip] {name}: missing {[str(m) for m in missing] or 'checkpoints'}")
             continue
 
-        preproc = spec.get("preprocessing", "upenn")
+        preprocs = sorted({m["preprocessing"] for m in members})
+        preproc = preprocs[0] if len(preprocs) == 1 else "+".join(preprocs)
         print(f"\n{'=' * 72}\n{name}  —  {spec['description']}\n{'=' * 72}")
-        print(f"  preprocessing: {preproc} "
-              f"(order {PREPROCESSING[preproc][0]}, {PREPROCESSING[preproc][1]})")
+        for pr in preprocs:
+            print(f"  preprocessing: {pr} "
+                  f"(order {PREPROCESSING[pr][0]}, {PREPROCESSING[pr][1]})")
 
-        val_ds = UPennDataset(args.nifti_dir, val_subs, str(CLINICAL_CSV),
-                              preprocessing=preproc)
-        test_ds = UPennDataset(args.nifti_dir, test_subs, str(CLINICAL_CSV),
-                               preprocessing=preproc)
+        def datasets_for(pr: str):
+            return (UPennDataset(args.nifti_dir, val_subs, str(CLINICAL_CSV),
+                                 preprocessing=pr),
+                    UPennDataset(args.nifti_dir, test_subs, str(CLINICAL_CSV),
+                                 preprocessing=pr))
+
+        ds_cache = {pr: datasets_for(pr) for pr in preprocs}
 
         print("  validation inference")
-        val_maps = [probs_for_checkpoint(c, val_ds, "val", use_cache) for c in ckpts]
+        val_maps = [
+            probs_for_checkpoint(m["checkpoint"], ds_cache[m["preprocessing"]][0],
+                                 "val", use_cache)
+            for m in members
+        ]
         val_probs = (
             val_maps[0] if len(val_maps) == 1
             else {p: average_probability_maps([m[p] for m in val_maps]) for p in val_maps[0]}
@@ -382,7 +417,11 @@ def main() -> None:
         del val_probs, val_maps
 
         print("  test inference")
-        test_maps = [probs_for_checkpoint(c, test_ds, "test", use_cache) for c in ckpts]
+        test_maps = [
+            probs_for_checkpoint(m["checkpoint"], ds_cache[m["preprocessing"]][1],
+                                 "test", use_cache)
+            for m in members
+        ]
         test_probs = (
             test_maps[0] if len(test_maps) == 1
             else {p: average_probability_maps([m[p] for m in test_maps]) for p in test_maps[0]}
