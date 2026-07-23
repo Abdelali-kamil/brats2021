@@ -60,9 +60,17 @@ if not CLINICAL_CSV.exists():
 RESULTS_DIR = ROOT / "results" / "upenn"
 CACHE_DIR = ROOT / "cache" / "upenn_probs"
 
-ET_GRID = [0.30, 0.40, 0.50]
-TC_GRID = [0.30, 0.40, 0.50]
-WT_GRID = [0.30, 0.40, 0.50]
+# Threshold grid, swept on validation only.
+#
+# It extends down to 0.10 because the zero-shot baseline selects the smallest
+# available value in every region: its optimum lies at or below the grid floor,
+# and a grid that stops at 0.30 would report the baseline at a threshold it did
+# not want. Since the baseline is the "before" term in the domain-adaptation
+# comparison, handicapping it would inflate the improvement. Giving it its best
+# validated configuration makes that comparison conservative.
+ET_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
+TC_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
+WT_GRID = [0.10, 0.20, 0.30, 0.40, 0.50]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -166,21 +174,47 @@ def select_thresholds(
     val_gt: dict[str, np.ndarray],
 ) -> tuple[float, float, float]:
     """Grid-search region thresholds on validation, no ET policy applied yet."""
-    best, best_cfg = -1.0, (0.40, 0.40, 0.40)
+    from brats_gbm.eval.metrics import dice_score
 
+    # Binarise once per (region, threshold) rather than once per full
+    # combination: the grid has |ET|x|TC|x|WT| points but only |ET|+|TC|+|WT|
+    # distinct thresholdings, which cuts the sweep from minutes to seconds.
+    masks = {
+        pid: {
+            0: {t: prob[0].astype(np.float32) > t for t in ET_GRID},
+            1: {t: prob[1].astype(np.float32) > t for t in TC_GRID},
+            2: {t: prob[2].astype(np.float32) > t for t in WT_GRID},
+        }
+        for pid, prob in val_probs.items()
+    }
+
+    best, best_cfg = -1.0, (0.40, 0.40, 0.40)
     for et_t in ET_GRID:
         for tc_t in TC_GRID:
             for wt_t in WT_GRID:
-                preds = {}
-                for pid, prob in val_probs.items():
-                    p = pp.apply_thresholds(prob.astype(np.float32), et_t, tc_t, wt_t)
-                    preds[pid] = pp.enforce_hierarchy(p)
-                score = mean_dice(preds, val_gt)
+                scores = []
+                for pid, gt in val_gt.items():
+                    m = masks[pid]
+                    wt = m[2][wt_t]
+                    tc = m[1][tc_t] & wt
+                    et = m[0][et_t] & tc
+                    scores.append((
+                        dice_score(et, gt[0])
+                        + dice_score(tc, gt[1])
+                        + dice_score(wt, gt[2])
+                    ) / 3.0)
+                score = float(np.mean(scores))
                 if score > best:
                     best, best_cfg = score, (et_t, tc_t, wt_t)
 
+    at_edge = [r for r, t, g in
+               zip(("ET", "TC", "WT"), best_cfg, (ET_GRID, TC_GRID, WT_GRID))
+               if t == min(g)]
     print(f"    thresholds ET={best_cfg[0]:.2f} TC={best_cfg[1]:.2f} "
           f"WT={best_cfg[2]:.2f}  (val mean Dice {best:.4f})")
+    if at_edge:
+        print(f"    note: {', '.join(at_edge)} selected the grid minimum — the "
+              f"optimum may lie lower")
     return best_cfg
 
 
