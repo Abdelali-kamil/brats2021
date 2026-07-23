@@ -99,8 +99,20 @@ SETUPS: dict[str, dict] = {
     },
     "ensemble_top5": {
         "checkpoints": sorted((ROOT / "checkpoints" / "upenn_v3_topk").glob("*.pth")),
-        "description": "Probability-average of the top-5 validation checkpoints",
+        "description": "Probability-average of the top-5 validation checkpoints (v3)",
         "preprocessing": "upenn",
+    },
+    # v4: fine-tuned under the same convention as the BraTS checkpoint it
+    # resumes from, so no capacity is spent undoing a channel permutation.
+    "upenn_v4_best": {
+        "checkpoints": [ROOT / "checkpoints" / "v4" / "upenn_v3_best.pth"],
+        "description": "Fine-tuned with matched BraTS preprocessing, best EMA checkpoint",
+        "preprocessing": "brats",
+    },
+    "ensemble_v4_top5": {
+        "checkpoints": sorted((ROOT / "checkpoints" / "v4" / "topk").glob("*.pth")),
+        "description": "Probability-average of the top-5 matched-preprocessing checkpoints",
+        "preprocessing": "brats",
     },
 }
 

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from brats_gbm.model import WaveletUNetPlusPlus
 from brats_gbm.splits import upenn_split, assert_disjoint
+from brats_gbm.data.upenn import PREPROCESSING, normalise
 
 # ============================================================
 # CONFIG
@@ -113,10 +114,25 @@ def crop_or_pad(arr: np.ndarray, target: tuple) -> np.ndarray:
 # DATASET
 # ============================================================
 class UPENNDataset(Dataset):
-    def __init__(self, data_dir: str, subject_ids: list, do_augment: bool = False):
+    """UPenn training crops.
+
+    `preprocessing` must match the checkpoint being fine-tuned from. The BraTS
+    segmentor was trained on [t1, t1ce, t2, flair] with percentile min-max;
+    feeding it z-scored [flair, t1, t1ce, t2] hands it a channel permutation
+    and a different intensity scale, so fine-tuning has to spend capacity
+    undoing that before it can learn anything about the new cohort. Matching
+    the source convention is the scientifically correct default here.
+    """
+
+    def __init__(self, data_dir: str, subject_ids: list, do_augment: bool = False,
+                 preprocessing: str = "brats"):
         self.data_dir = Path(data_dir)
         self.subject_ids = list(subject_ids)
         self.do_augment = do_augment
+        if preprocessing not in PREPROCESSING:
+            raise ValueError(f"unknown preprocessing {preprocessing!r}")
+        self.preprocessing = preprocessing
+        self.suffixes, self.normaliser = PREPROCESSING[preprocessing]
 
     def __len__(self):
         return len(self.subject_ids)
@@ -130,22 +146,11 @@ class UPENNDataset(Dataset):
     def __getitem__(self, idx: int):
         sub_id = self.subject_ids[idx]
 
-        flair = self._load_mod(sub_id, "FLAIR")
-        t1    = self._load_mod(sub_id, "T1w")
-        t1ce  = self._load_mod(sub_id, "ce-gd_T1w")
-        t2    = self._load_mod(sub_id, "T2w")
-        seg   = self._load_mod(sub_id, "seg")
+        seg = self._load_mod(sub_id, "seg")
 
-        # [4, D, H, W]
-        img = np.stack([flair, t1, t1ce, t2], axis=0)
-
-        # z-score within brain mask
-        for c in range(4):
-            mask = img[c] > 0
-            if mask.sum() > 0:
-                img[c] = (img[c] - img[c][mask].mean()) / (img[c][mask].std() + 1e-8)
-                img[c][~mask] = 0.0
-
+        # Channel order and normaliser both come from the declared convention.
+        img = np.stack([self._load_mod(sub_id, s) for s in self.suffixes], axis=0)
+        img = normalise(img, self.normaliser)
         img = crop_or_pad(img, SPATIAL_SIZE)
 
         # BraTS regions
@@ -292,6 +297,9 @@ def main():
     ap.add_argument("--epochs", type=int, default=NUM_EPOCHS)
     ap.add_argument("--save-dir", default=str(ROOT / "checkpoints"))
     ap.add_argument("--nifti-dir", default=UPENN_NIFTI_DIR)
+    ap.add_argument("--preprocessing", default="brats", choices=list(PREPROCESSING),
+                    help="input convention; must match the resumed checkpoint "
+                         "(default: brats, matching RESUME_FROM)")
     args = ap.parse_args()
 
     NUM_EPOCHS = args.epochs
@@ -315,11 +323,16 @@ def main():
     print(f"Loss weights ET/TC/WT : {CHANNEL_WEIGHTS}")
     print(f"Batch={BATCH_SIZE}, GradAccum={GRAD_ACCUM_STEPS}, AMP={USE_AMP}")
     print(f"Save dir : {save_dir}")
+    print(f"Preproc  : {args.preprocessing} "
+          f"(order {PREPROCESSING[args.preprocessing][0]}, "
+          f"{PREPROCESSING[args.preprocessing][1]})")
     print(f"Subjects -> Train:{len(train_subs)} Val:{len(val_subs)} "
           f"Held-out:{len(held)} (never loaded here)")
 
-    train_ds = UPENNDataset(args.nifti_dir, train_subs, do_augment=True)
-    val_ds   = UPENNDataset(args.nifti_dir, val_subs, do_augment=False)
+    train_ds = UPENNDataset(args.nifti_dir, train_subs, do_augment=True,
+                            preprocessing=args.preprocessing)
+    val_ds   = UPENNDataset(args.nifti_dir, val_subs, do_augment=False,
+                            preprocessing=args.preprocessing)
 
     train_loader = DataLoader(
         train_ds,
