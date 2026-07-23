@@ -32,8 +32,6 @@ from brats_gbm.model import WaveletUNetPlusPlus  # noqa: E402
 NIFTI = ROOT / "upenn_nifti"
 CKPT = ROOT / "checkpoints" / "upenn_v3_best.pth"
 RESULTS = ROOT / "results" / "upenn" / "per_case_upenn_v3_best.csv"
-SELECTION = ROOT / "results" / "upenn" / "validation_selection.csv"
-SUMMARY = ROOT / "results" / "upenn" / "segmentation_summary.csv"
 OUTDIR = ROOT / "results" / "upenn" / "figures"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,23 +39,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # The fine-tuned checkpoint was trained under the UPenn convention.
 PREPROC = "upenn"
 
-# Fallback thresholds if the validation-selected ones are unavailable.
-DEFAULT_THR = (0.40, 0.40, 0.40)
-
-
-def selected_thresholds(setup: str = "upenn_v3_best") -> tuple[float, float, float]:
-    """Reuse the thresholds evaluate_upenn.py chose on validation.
-
-    Reading them back rather than hard-coding keeps the figures showing the
-    same masks the reported Dice was computed from.
-    """
-    if SUMMARY.exists():
-        s = pd.read_csv(SUMMARY)
-        row = s[s.label == setup]
-        if len(row):
-            r = row.iloc[0]
-            return (float(r.et_threshold), float(r.tc_threshold), float(r.wt_threshold))
-    return DEFAULT_THR
+# The fixed reporting configuration — the same one scripts/evaluate_brats.py and
+# scripts/selection_sensitivity.py use. Figures must show the masks the reported
+# Dice was computed from, and the reported Dice comes from this configuration,
+# not from the validation-selected one (see docs/METHODOLOGY.md on why selecting
+# six parameters on 14 subjects overfits).
+FIXED_THR = (0.50, 0.50, 0.50)
+FIXED_ET_POLICY, FIXED_ET_MIN_VOLUME, FIXED_WT_POLICY = "min_volume", 0, "components"
 
 
 def load_subject(sub: str, suffixes) -> dict[str, np.ndarray]:
@@ -103,18 +91,21 @@ def main() -> None:
         ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck, strict=True)
     model.eval()
 
-    et_thr, tc_thr, wt_thr = selected_thresholds()
+    et_thr, tc_thr, wt_thr = FIXED_THR
     print(f"checkpoint   : {CKPT.name}")
     print(f"preprocessing: {suffixes} + {norm}")
     print(f"thresholds   : ET {et_thr} TC {tc_thr} WT {wt_thr} "
-          f"(selected on validation)\n")
+          f"(fixed reporting configuration, not tuned)\n")
 
     for sub, kind in picks:
         vols = load_subject(sub, (*suffixes, "seg"))
         img = normalise(np.stack([vols[s] for s in suffixes]), norm)
 
         prob = sliding_window_predict(model, img, DEVICE, use_tta=not args.no_tta)
-        pred_arr = postprocess(prob, et_thr, tc_thr, wt_thr).astype(np.float32)
+        pred_arr = postprocess(
+            prob, et_thr, tc_thr, wt_thr,
+            et_policy=FIXED_ET_POLICY, et_min_volume=FIXED_ET_MIN_VOLUME,
+            wt_policy=FIXED_WT_POLICY).astype(np.float32)
         pred = {"ET": pred_arr[0], "TC": pred_arr[1], "WT": pred_arr[2]}
 
         g = regions_from_seg(vols["seg"])

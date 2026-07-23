@@ -18,7 +18,206 @@ clean external evaluation in this project is UPenn-GBM.
 
 ## UPenn-GBM segmentation
 
-_Not available — run `scripts/evaluate_upenn.py`._
+Held-out test set, 29 subjects. Thresholds and the ET
+post-processing policy were selected on the 14 validation subjects;
+the test set was scored once.
+
+### Summary across setups
+
+| Setup | Preproc | Mean Dice [95% CI] | ET | TC | WT | Mean HD95 mm |
+|---|---|---|---|---|---|---|
+| `baseline_brats` | brats | 0.6968 [0.5894, 0.7928] | 0.6989 | 0.7173 | 0.6741 | 29.65 |
+| `upenn_v3_best` | upenn | 0.8070 [0.7356, 0.8648] | 0.7755 | 0.8436 | 0.8019 | 6.70 |
+| `upenn_v3_last` | upenn | 0.8056 [0.7304, 0.8649] | 0.7720 | 0.8434 | 0.8013 | 6.57 |
+| `ensemble_top5` | upenn | 0.8095 [0.7392, 0.8654] | 0.7774 | 0.8463 | 0.8049 | 6.47 |
+| `upenn_v4_best` | brats | 0.8048 [0.7346, 0.8655] | 0.7987 | 0.8441 | 0.7714 | 10.28 |
+| `ensemble_v3_v4` | brats+upenn | 0.8128 [0.7428, 0.8705] | 0.7883 | 0.8439 | 0.8063 | 7.26 |
+
+### `baseline_brats`
+
+Selected on validation: thresholds ET=0.70, TC=0.80, WT=0.80; ET policy `min_volume` (cutoff 0 voxels); WT policy `components`.
+
+Input convention: `brats` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.6989 [0.5864, 0.8000] | 3.93 [2.07, 6.34] | 2 | 2 |
+| TC | 29 | 0.7173 [0.5934, 0.8317] | 4.87 [2.99, 7.25] | 2 | 2 |
+| WT | 29 | 0.6741 [0.5758, 0.7614] | 71.98 [60.54, 82.94] | 0 | 0 |
+| MEAN | 29 | 0.6968 [0.5894, 0.7928] | 29.65 [24.74, 35.00] |  |  |
+
+### `upenn_v3_best`
+
+Selected on validation: thresholds ET=0.50, TC=0.60, WT=0.80; ET policy `min_volume` (cutoff 300 voxels); WT policy `largest`.
+
+Input convention: `upenn` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7755 [0.6912, 0.8459] | 3.85 [1.99, 6.10] | 1 | 1 |
+| TC | 29 | 0.8436 [0.7648, 0.9033] | 4.63 [2.73, 6.97] | 1 | 1 |
+| WT | 29 | 0.8019 [0.7321, 0.8633] | 10.60 [6.66, 15.00] | 0 | 0 |
+| MEAN | 29 | 0.8070 [0.7356, 0.8648] | 6.70 [4.49, 9.04] |  |  |
+
+### `upenn_v3_last`
+
+Selected on validation: thresholds ET=0.30, TC=0.30, WT=0.70; ET policy `min_volume` (cutoff 0 voxels); WT policy `components`.
+
+Input convention: `upenn` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7720 [0.6861, 0.8449] | 2.78 [1.78, 3.90] | 1 | 1 |
+| TC | 29 | 0.8434 [0.7652, 0.9027] | 3.47 [2.40, 4.66] | 1 | 1 |
+| WT | 29 | 0.8013 [0.7271, 0.8636] | 12.28 [6.75, 19.83] | 0 | 0 |
+| MEAN | 29 | 0.8056 [0.7304, 0.8649] | 6.57 [4.33, 9.21] |  |  |
+
+### `ensemble_top5`
+
+Selected on validation: thresholds ET=0.40, TC=0.40, WT=0.70; ET policy `min_volume` (cutoff 0 voxels); WT policy `components`.
+
+Input convention: `upenn` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7774 [0.6956, 0.8465] | 2.84 [1.84, 3.98] | 1 | 1 |
+| TC | 29 | 0.8463 [0.7698, 0.9042] | 3.71 [2.62, 4.98] | 1 | 1 |
+| WT | 29 | 0.8049 [0.7363, 0.8641] | 11.74 [6.51, 19.04] | 0 | 0 |
+| MEAN | 29 | 0.8095 [0.7392, 0.8654] | 6.47 [4.31, 9.07] |  |  |
+
+### `upenn_v4_best`
+
+Selected on validation: thresholds ET=0.50, TC=0.60, WT=0.50; ET policy `min_volume` (cutoff 0 voxels); WT policy `components`.
+
+Input convention: `brats` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7987 [0.7212, 0.8643] | 2.25 [1.38, 3.54] | 1 | 1 |
+| TC | 29 | 0.8441 [0.7622, 0.9137] | 3.73 [2.09, 5.74] | 0 | 0 |
+| WT | 29 | 0.7714 [0.6949, 0.8398] | 24.05 [13.58, 35.85] | 0 | 0 |
+| MEAN | 29 | 0.8048 [0.7346, 0.8655] | 10.28 [6.66, 14.33] |  |  |
+
+### `ensemble_v3_v4`
+
+Selected on validation: thresholds ET=0.50, TC=0.60, WT=0.50; ET policy `min_volume` (cutoff 0 voxels); WT policy `components`.
+
+Input convention: `brats+upenn` — the one this checkpoint was trained under.
+
+| Region | n | Dice [95% CI] | HD95 mm [95% CI] | Failed (Dice<0.01) | HD95 undefined |
+|---|---|---|---|---|---|
+| ET | 29 | 0.7883 [0.7096, 0.8568] | 2.99 [1.59, 4.74] | 0 | 0 |
+| TC | 29 | 0.8439 [0.7610, 0.9117] | 3.69 [2.22, 5.45] | 0 | 0 |
+| WT | 29 | 0.8063 [0.7450, 0.8625] | 15.10 [8.28, 22.86] | 0 | 0 |
+| MEAN | 29 | 0.8128 [0.7428, 0.8705] | 7.26 [4.77, 9.97] |  |  |
+
+### Fine-tuning versus zero-shot transfer
+
+Fine-tuning changes mean Dice by **+0.1102** (95% CI [+0.0404, +0.1896], paired over the same 29 test subjects).
+
+Both models are evaluated under the preprocessing they were
+trained with — the BraTS checkpoint under the BraTS channel
+order and min-max normalisation, the fine-tuned checkpoints
+under the UPenn convention. Feeding the BraTS checkpoint the
+UPenn convention, as an earlier version of this pipeline did,
+understates it by roughly 0.56 Dice and inflates this
+difference accordingly.
+
+The interval is from a paired bootstrap, which keeps each
+patient's two scores together and is the appropriate comparison
+when both models are scored on the same patients.
+
+### Post-processing selection
+
+Every candidate ET policy scored on validation. The selected row
+per setup is the one with the highest `val_mean_dice`.
+
+| Setup | WT policy | ET policy | Cutoff | Val mean Dice | Val ET | Val WT |
+|---|---|---|---|---|---|---|
+| `baseline_brats` | components | min_volume | 0 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | min_volume | 50 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | min_volume | 100 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | min_volume | 200 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | min_volume | 300 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | min_volume | 500 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | components | rescue | 0 | 0.8231 | 0.8110 | 0.7508 |
+| `baseline_brats` | largest | min_volume | 0 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | min_volume | 50 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | min_volume | 100 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | min_volume | 200 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | min_volume | 300 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | min_volume | 500 | 0.7357 | 0.6986 | 0.7232 |
+| `baseline_brats` | largest | rescue | 0 | 0.7357 | 0.6986 | 0.7232 |
+| `upenn_v3_best` | largest | min_volume | 300 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | min_volume | 500 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | min_volume | 200 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | min_volume | 100 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | min_volume | 50 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | min_volume | 0 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | largest | rescue | 0 | 0.8512 | 0.8080 | 0.8521 |
+| `upenn_v3_best` | components | min_volume | 300 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | min_volume | 500 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | min_volume | 100 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | min_volume | 50 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | min_volume | 0 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | min_volume | 200 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_best` | components | rescue | 0 | 0.8482 | 0.8029 | 0.8489 |
+| `upenn_v3_last` | components | min_volume | 0 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | min_volume | 50 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | min_volume | 100 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | min_volume | 200 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | min_volume | 300 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | min_volume | 500 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | components | rescue | 0 | 0.8512 | 0.8078 | 0.8514 |
+| `upenn_v3_last` | largest | min_volume | 0 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | min_volume | 50 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | min_volume | 100 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | min_volume | 200 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | min_volume | 300 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | min_volume | 500 | 0.8500 | 0.8086 | 0.8488 |
+| `upenn_v3_last` | largest | rescue | 0 | 0.8500 | 0.8086 | 0.8488 |
+| `ensemble_top5` | components | min_volume | 0 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | min_volume | 50 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | min_volume | 100 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | min_volume | 200 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | min_volume | 300 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | min_volume | 500 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | components | rescue | 0 | 0.8507 | 0.8076 | 0.8502 |
+| `ensemble_top5` | largest | min_volume | 0 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | min_volume | 50 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | min_volume | 100 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | min_volume | 200 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | min_volume | 300 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | min_volume | 500 | 0.8499 | 0.8097 | 0.8471 |
+| `ensemble_top5` | largest | rescue | 0 | 0.8499 | 0.8097 | 0.8471 |
+| `upenn_v4_best` | components | min_volume | 0 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | min_volume | 50 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | min_volume | 100 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | min_volume | 200 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | min_volume | 300 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | min_volume | 500 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | components | rescue | 0 | 0.8532 | 0.8259 | 0.8358 |
+| `upenn_v4_best` | largest | min_volume | 0 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | min_volume | 50 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | min_volume | 100 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | min_volume | 200 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | min_volume | 300 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | min_volume | 500 | 0.8491 | 0.8173 | 0.8393 |
+| `upenn_v4_best` | largest | rescue | 0 | 0.8491 | 0.8173 | 0.8393 |
+| `ensemble_v3_v4` | components | min_volume | 0 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | min_volume | 50 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | min_volume | 100 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | min_volume | 200 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | min_volume | 300 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | min_volume | 500 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | components | rescue | 0 | 0.8639 | 0.8287 | 0.8594 |
+| `ensemble_v3_v4` | largest | min_volume | 0 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | min_volume | 50 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | min_volume | 100 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | min_volume | 200 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | min_volume | 300 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | min_volume | 500 | 0.8571 | 0.8193 | 0.8561 |
+| `ensemble_v3_v4` | largest | rescue | 0 | 0.8571 | 0.8193 | 0.8561 |
 
 ### Cross-validation
 
@@ -44,19 +243,19 @@ thresholds fitted on cross-fitted training-fold scores.
 
 | Model | AUC [95% CI] | Balanced acc | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|---|
-| logreg | 0.810 [0.692, 0.910] | 0.717 | 0.782 | 0.647 | 0.787 | 0.198 |
-| random_forest | 0.893 [0.827, 0.950] | 0.778 | 0.730 | 0.829 | 0.726 | 0.202 |
+| logreg | 0.796 [0.650, 0.927] | 0.741 | 0.800 | 0.676 | 0.806 | 0.218 |
+| random_forest | 0.904 [0.836, 0.962] | 0.778 | 0.785 | 0.771 | 0.785 | 0.230 |
 
 ### Sensitivity analysis — mixed provenance
 
 | Model | AUC [95% CI] | Balanced acc | Accuracy | Sensitivity | Specificity | F1 |
 |---|---|---|---|---|---|---|
-| logreg | 0.854 [0.749, 0.937] | 0.734 | 0.801 | 0.661 | 0.806 | 0.191 |
-| random_forest | 0.898 [0.837, 0.949] | 0.789 | 0.748 | 0.833 | 0.745 | 0.189 |
+| logreg | 0.836 [0.703, 0.949] | 0.765 | 0.836 | 0.689 | 0.841 | 0.227 |
+| random_forest | 0.905 [0.839, 0.961] | 0.783 | 0.784 | 0.783 | 0.784 | 0.201 |
 
 ### Recommended model
 
-**random_forest**, on the primary cohort: AUC 0.893 [0.827, 0.950], sensitivity 0.829, specificity 0.726.
+**random_forest**, on the primary cohort: AUC 0.904 [0.836, 0.962], sensitivity 0.771, specificity 0.785.
 
 F1 and positive predictive value are low because prevalence is
 about 4%: at that base rate most positive calls are false even

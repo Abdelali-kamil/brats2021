@@ -44,6 +44,60 @@ can be audited.
 > occurred, but nothing enforced that they would keep agreeing. A single
 > definition now serves both.
 
+## The reported configuration involves no selection
+
+**Primary results use a fixed configuration: threshold 0.5 in every region,
+standard connected-component cleanup, no ET volume rule, no WT
+largest-component rule.** It is identical for every setup and fitted to
+nothing.
+
+That is a retreat from the validation-selection machinery described below, and
+it was forced by evidence. Widening the threshold grid and adding the WT policy
+pushed selection to six parameters — three thresholds, ET policy, ET cutoff, WT
+policy — chosen on a 14-subject validation split. Six parameters on fourteen
+subjects does not work, and the damage is measurable. For `upenn_v3_best`:
+
+| Search space | Validation | Test |
+|---|---|---|
+| Narrow grid, no WT policy | 0.8380 | **0.8157** |
+| Wide grid + WT policy | 0.8512 ↑ | **0.8070** ↓ |
+
+Validation improved because the search found configurations fitting those 14
+subjects; test degraded because they did not generalise. The fingerprint is in
+the chosen parameters: `upenn_v3_best` was the only setup to select the unusual
+combination `WT=largest, ET cutoff 300`, and it fell furthest.
+
+`scripts/selection_sensitivity.py` scores every setup both ways:
+
+| Setup | Fixed | Validation-selected | Δ |
+|---|---|---|---|
+| `ensemble_v3_v4` | **0.8204** | 0.8128 | +0.0075 |
+| `upenn_v3_best` | 0.8156 | 0.8070 | +0.0086 |
+| `ensemble_top5` | 0.8131 | 0.8095 | +0.0036 |
+| `upenn_v4_best` | 0.8071 | 0.8048 | +0.0023 |
+| `upenn_v3_last` | 0.8060 | 0.8056 | +0.0005 |
+| `baseline_brats` | 0.6948 | 0.6968 | −0.0019 |
+
+Fixed wins on five of six. Selection was not merely failing to help; it was
+costing performance.
+
+### On the honesty of this choice
+
+Choosing a selection strategy by its test performance is test-set tuning one
+level up, and it would be self-defeating to fix one form of leakage by
+introducing another. The decision to lead with the fixed configuration rests on
+the sample-size argument — 14 subjects cannot support six selected parameters —
+which holds regardless of how the test numbers landed. The table above is
+reported so a reader can check that reasoning rather than accept it, and both
+configurations ship in `results/upenn/`.
+
+The proper remedy is not a better selection heuristic but a larger selection
+set. `scripts/crossval_upenn.py` would give 147 subjects instead of 14; it is
+implemented and unrun.
+
+Everything below describes the validation-selection machinery, which remains in
+the code and is reported as a sensitivity analysis.
+
 ## What is selected on what
 
 The distinction that matters is between parameters *fitted on validation* and
