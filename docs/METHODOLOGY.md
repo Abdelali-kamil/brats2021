@@ -87,7 +87,59 @@ test set, not a finding.
 Those scripts and every output derived from them have been removed from the
 repository. `docs/ARCHIVE.md` lists what went where.
 
-### The threshold grid, and why the baseline pins to its floor
+## Input preprocessing is a property of the checkpoint
+
+This was the most consequential error found in the project, and it invalidated
+the original headline result.
+
+The two loaders disagree about what the network's four input channels mean:
+
+| | Channel order | Normalisation |
+|---|---|---|
+| `brats_gbm/data/brats.py` (BraTS training) | `[t1, t1ce, t2, flair]` | percentile-clipped min-max to [0,1] |
+| `brats_gbm/data/upenn.py` (UPenn fine-tune + eval) | `[flair, t1, t1ce, t2]` | z-score over non-zero voxels |
+
+That is a channel permutation *and* a different intensity distribution. The
+zero-shot baseline — the BraTS-trained checkpoint applied to UPenn-GBM — was
+being fed the UPenn convention, so it received scrambled input. Measured on 5
+UPenn validation subjects with `segmentor_epoch_650`, mean Dice:
+
+| Input convention | ET | TC | WT | Mean |
+|---|---|---|---|---|
+| UPenn (what was previously used) | 0.017 | 0.121 | 0.472 | **0.203** |
+| Correct order, wrong normalisation | 0.310 | 0.389 | 0.368 | 0.356 |
+| Wrong order, correct normalisation | 0.023 | 0.130 | 0.328 | 0.160 |
+| BraTS (what it was trained on) | 0.725 | 0.846 | 0.727 | **0.766** |
+
+**Almost the entire reported BraTS-to-UPenn "domain gap" was this bug.** The
+original claim — that a BraTS model collapses to ~0.16 Dice on UPenn-GBM and
+fine-tuning recovers it to ~0.82, a gain of roughly +0.66 — does not survive.
+Given its own preprocessing the same checkpoint reaches roughly 0.77 zero-shot,
+so the genuine benefit of fine-tuning is on the order of +0.05, not +0.66.
+
+Each setup now declares its `preprocessing` in `scripts/evaluate_upenn.py`, and
+the probability cache is keyed by it so variants cannot be silently mixed.
+
+Two consequences worth stating plainly. First, the fine-tuned checkpoints were
+themselves fine-tuned under the UPenn convention, which means fine-tuning had to
+spend capacity re-learning a channel permutation; their reported numbers are
+valid, because they are evaluated under the same convention they were trained
+under, but a fine-tune started from correctly-preprocessed inputs might do
+better and has not been tried. Second, the apparent "unstripped skull causes the
+domain gap" explanation that appears in the archived code comments was a
+rationalisation of a bug.
+
+### The threshold grid, and why the baseline pinned to its floor
+
+> The analysis in this subsection was performed **before** the preprocessing bug
+> was found, so it describes the mis-fed baseline. A model receiving scrambled
+> input produces uniformly low probabilities, which is exactly why its Dice rose
+> monotonically as the threshold fell — there was no calibrated decision
+> boundary to find. With correct preprocessing the baseline is well calibrated
+> and selects an interior threshold. The subsection is kept because the grid
+> floor and the edge-detection warning it motivated are still in the code and
+> still worth having; read it as a diagnostic that pointed at the real problem,
+> not as a standing result.
 
 Region thresholds are swept on validation over
 {0.02, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50} for each of ET, TC and WT.

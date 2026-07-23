@@ -94,13 +94,26 @@ def main() -> None:
         da = RESULTS / "upenn" / "domain_adaptation.json"
         if da.exists():
             d = json.loads(da.read_text())
-            L += ["### Domain adaptation", "",
-                  f"Fine-tuning improves mean Dice by **{d['delta_mean_dice']:+.4f}** "
-                  f"(95% CI [{d['ci_low']:+.4f}, {d['ci_high']:+.4f}], paired over "
-                  f"the same {d['n_paired']} test subjects).", "",
+            delta, lo, hi = d["delta_mean_dice"], d["ci_low"], d["ci_high"]
+            L += ["### Fine-tuning versus zero-shot transfer", "",
+                  f"Fine-tuning changes mean Dice by **{delta:+.4f}** "
+                  f"(95% CI [{lo:+.4f}, {hi:+.4f}], paired over the same "
+                  f"{d['n_paired']} test subjects).", "",
+                  "Both models are evaluated under the preprocessing they were",
+                  "trained with — the BraTS checkpoint under the BraTS channel",
+                  "order and min-max normalisation, the fine-tuned checkpoints",
+                  "under the UPenn convention. Feeding the BraTS checkpoint the",
+                  "UPenn convention, as an earlier version of this pipeline did,",
+                  "understates it by roughly 0.56 Dice and inflates this",
+                  "difference accordingly.", "",
                   "The interval is from a paired bootstrap, which keeps each",
                   "patient's two scores together and is the appropriate comparison",
                   "when both models are scored on the same patients.", ""]
+            if lo <= 0 <= hi:
+                L += ["**The interval includes zero.** With 29 test subjects this",
+                      "comparison cannot establish that fine-tuning helps. Running",
+                      "`scripts/crossval_upenn.py` (147 subjects) is what would",
+                      "settle it.", ""]
 
         sel = RESULTS / "upenn" / "validation_selection.csv"
         if sel.exists():
