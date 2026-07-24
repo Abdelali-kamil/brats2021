@@ -76,6 +76,14 @@ CONFIGS = {
     "kan_fusion":    dict(use_clinical=True,  use_kan=True,  use_gnn=False, use_gate=False),
     "kan_gnn":       dict(use_clinical=True,  use_kan=True,  use_gnn=True,  use_gate=False),
     "kan_gnn_gate":  dict(use_clinical=True,  use_kan=True,  use_gnn=True,  use_gate=True),
+    # Comparison for attribution. mlp_gnn is mlp_fusion + the memory bank, with
+    # MLP encoders instead of KAN. Reading the ladder two ways then separates
+    # the sources of any gain:
+    #   mlp_fusion -> mlp_gnn   isolates the GNN with MLP encoders held fixed
+    #   mlp_gnn    -> kan_gnn   isolates KAN with the GNN held fixed
+    # so an improvement at kan_gnn can be attributed to the GNN, to KAN, or to
+    # their interaction rather than left ambiguous.
+    "mlp_gnn":       dict(use_clinical=True,  use_kan=False, use_gnn=True,  use_gate=False),
 }
 
 # Small grids on purpose: 227 subjects cannot adjudicate between many options,
@@ -119,13 +127,21 @@ def fit_transform(train: np.ndarray, *others: np.ndarray):
     return out
 
 
+def maybe_drop_imaging(cfg, a: np.ndarray) -> np.ndarray:
+    """Clinical-only control: replace imaging with a single constant column so
+    the imaging branch can contribute nothing while the architecture is
+    otherwise unchanged. Applied at every use site -- inner training, outer
+    training, memory refresh and outer scoring -- so the model is always built
+    for and fed the same 1-column input. (Doing this only inside train_model,
+    as an earlier version did, left the outer-fold scoring feeding the raw
+    51-column imaging into a model built for one column.)"""
+    if cfg.get("drop_imaging"):
+        return np.zeros((a.shape[0], 1), dtype=float)
+    return a
+
+
 def train_model(cfg, hp, Xi_tr, Xc_tr, y_tr, Xi_va, Xc_va, y_va, seed):
     torch.manual_seed(seed)
-    if cfg.get("drop_imaging"):
-        # Keep the architecture identical; feed a constant so the imaging
-        # branch can contribute nothing. Isolates the clinical signal alone.
-        Xi_tr = np.zeros((Xi_tr.shape[0], 1), dtype=float)
-        Xi_va = np.zeros((Xi_va.shape[0], 1), dtype=float)
     use_clin = cfg["use_clinical"]
     n_clin = Xc_tr.shape[1] if use_clin else 0
 
@@ -206,6 +222,7 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
                     a, b = tr_idx[i_tr], tr_idx[i_va]
                     Xi_a, Xi_b = fit_transform(X_img[a], X_img[b])
                     Xc_a, Xc_b = fit_transform(X_clin[a], X_clin[b])
+                    Xi_a, Xi_b = maybe_drop_imaging(cfg, Xi_a), maybe_drop_imaging(cfg, Xi_b)
                     _, auc = train_model(cfg, hp, Xi_a, Xc_a, y[a],
                                          Xi_b, Xc_b, y[b], SEED)
                     scores.append(auc)
@@ -217,6 +234,7 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
             # --- outer fold: fit once with the winning config, score once ---
             Xi_tr, Xi_te = fit_transform(X_img[tr_idx], X_img[te_idx])
             Xc_tr, Xc_te = fit_transform(X_clin[tr_idx], X_clin[te_idx])
+            Xi_tr, Xi_te = maybe_drop_imaging(cfg, Xi_tr), maybe_drop_imaging(cfg, Xi_te)
             model, _ = train_model(cfg, best_hp, Xi_tr, Xc_tr, y[tr_idx],
                                    Xi_te, Xc_te, y[te_idx], SEED)
             model.eval()
@@ -250,12 +268,30 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
     }
 
 
+def write_payload(results: dict, out: Path, y, X_img, X_clin) -> None:
+    """Persist all completed configs atomically.
+
+    Written via a temp file and rename so an interruption mid-write cannot
+    leave a truncated, unparseable JSON on disk. `oof_prob` is dropped to keep
+    the file small; every summary metric is retained.
+    """
+    payload = {k: {kk: vv for kk, vv in v.items() if kk != "oof_prob"}
+               for k, v in results.items() if k != "cohort"}
+    payload["cohort"] = {"n": int(len(y)), "n_positive": int(y.sum()),
+                         "n_imaging": X_img.shape[1], "n_clinical": X_clin.shape[1]}
+    tmp = out.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2))
+    tmp.replace(out)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cohort", default=str(COHORT))
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--repeats", type=int, default=N_REPEATS)
     ap.add_argument("--configs", nargs="*", default=list(CONFIGS))
+    ap.add_argument("--force", action="store_true",
+                    help="recompute configs even if already present in the output file")
     args = ap.parse_args()
 
     df = pd.read_csv(args.cohort)
@@ -266,33 +302,55 @@ def main() -> None:
     print(f"protocol : nested CV, {OUTER_FOLDS} outer x {INNER_FOLDS} inner, "
           f"{args.repeats} repeats\n")
 
-    results = {}
-    for name in args.configs:
-        print(f"[{name}]", flush=True)
-        results[name] = run_config(name, CONFIGS[name], X_img, X_clin, y, args.repeats)
-        r = results[name]
-        extra = (f"  graph_reliance {r['graph_reliance_mean']:.3f}"
-                 if r["graph_reliance_mean"] is not None else "")
-        print(f"  AUC {r['auc']:.3f} [{r['auc_ci_low']:.3f}, {r['auc_ci_high']:.3f}]"
-              f"{extra}\n", flush=True)
-
     out = Path(args.out_dir) / "kan_gnn_ablation.json"
-    payload = {k: {kk: vv for kk, vv in v.items() if kk != "oof_prob"}
-               for k, v in results.items()}
-    payload["cohort"] = {"n": int(len(y)), "n_positive": int(y.sum()),
-                         "n_imaging": X_img.shape[1], "n_clinical": X_clin.shape[1]}
-    out.write_text(json.dumps(payload, indent=2))
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    # Resume support. Reload whatever a previous (possibly interrupted) run
+    # already saved so completed configs are not recomputed. Combined with the
+    # per-config write below, an interruption now costs at most the single
+    # config in flight -- never the whole run, which is what happened before.
+    results: dict = {}
+    if out.exists() and not args.force:
+        try:
+            prev = json.loads(out.read_text())
+            prev.pop("cohort", None)
+            results = prev
+        except json.JSONDecodeError:
+            print(f"warning: could not parse {out}; starting fresh")
+
+    def already_done(name: str) -> bool:
+        # Reuse only if it was computed at the same repeat count; a config saved
+        # by an earlier smoke run at fewer repeats must be recomputed.
+        r = results.get(name)
+        return bool(r) and "auc" in r and r.get("repeats") == args.repeats
+
+    for name in args.configs:
+        if already_done(name):
+            r = results[name]
+            print(f"[{name}] already saved at repeats={args.repeats} "
+                  f"(AUC {r['auc']:.3f}) -- skipping", flush=True)
+            continue
+        print(f"[{name}]", flush=True)
+        res = run_config(name, CONFIGS[name], X_img, X_clin, y, args.repeats)
+        res["repeats"] = args.repeats
+        results[name] = res
+        extra = (f"  graph_reliance {res['graph_reliance_mean']:.3f}"
+                 if res["graph_reliance_mean"] is not None else "")
+        print(f"  AUC {res['auc']:.3f} [{res['auc_ci_low']:.3f}, "
+              f"{res['auc_ci_high']:.3f}]{extra}", flush=True)
+        write_payload(results, out, y, X_img, X_clin)   # persist immediately
+        print(f"  saved -> {out}\n", flush=True)
 
     print("=" * 68)
     print(f"{'config':<18}{'AUC [95% CI]':<28}{'vs previous rung':>20}")
     print("=" * 68)
-    prev = None
+    prev_auc = None
     for name in args.configs:
         r = results[name]
-        delta = "" if prev is None else f"{r['auc'] - prev:+.3f}"
+        delta = "" if prev_auc is None else f"{r['auc'] - prev_auc:+.3f}"
         print(f"{name:<18}{r['auc']:.3f} [{r['auc_ci_low']:.3f}, "
               f"{r['auc_ci_high']:.3f}]{delta:>20}")
-        prev = r["auc"]
+        prev_auc = r["auc"]
     print(f"\nWrote {out}")
 
 

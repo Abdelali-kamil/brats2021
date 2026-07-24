@@ -1,10 +1,10 @@
 {
   "imaging_only": {
-    "auc": 0.531047302641987,
-    "auc_ci_low": 0.4532232385554644,
-    "auc_ci_high": 0.6077367839580011,
-    "auc_per_repeat_mean": 0.531047302641987,
-    "auc_per_repeat_sd": 0.0,
+    "auc": 0.5359911406423036,
+    "auc_ci_low": 0.4626652393770381,
+    "auc_ci_high": 0.6138027548693448,
+    "auc_per_repeat_mean": 0.5387069556504772,
+    "auc_per_repeat_sd": 0.026822888432519162,
     "graph_reliance_mean": null,
     "hp_selected": [
       {
@@ -31,8 +31,665 @@
         "hidden": 8,
         "lr": 0.01,
         "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
       }
-    ]
+    ],
+    "repeats": 3
+  },
+  "mlp_fusion": {
+    "auc": 0.6286188894162316,
+    "auc_ci_low": 0.5521893123446562,
+    "auc_ci_high": 0.7006793074916102,
+    "auc_per_repeat_mean": 0.6040974529346622,
+    "auc_per_repeat_sd": 0.03902205626560056,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      }
+    ],
+    "repeats": 3
+  },
+  "kan_fusion": {
+    "auc": 0.5616990982439487,
+    "auc_ci_low": 0.4868944835350408,
+    "auc_ci_high": 0.6345451506331489,
+    "auc_per_repeat_mean": 0.5495965828191741,
+    "auc_per_repeat_sd": 0.028390849656110485,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      }
+    ],
+    "repeats": 3
+  },
+  "kan_gnn": {
+    "auc": 0.5725359911406424,
+    "auc_ci_low": 0.4945721573597319,
+    "auc_ci_high": 0.6483029815632801,
+    "auc_per_repeat_mean": 0.5555687391235563,
+    "auc_per_repeat_sd": 0.008727422442214123,
+    "graph_reliance_mean": 0.25405542850494384,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      }
+    ],
+    "repeats": 3
+  },
+  "kan_gnn_gate": {
+    "auc": 0.5849549121974371,
+    "auc_ci_low": 0.5077121953099628,
+    "auc_ci_high": 0.661137051896944,
+    "auc_per_repeat_mean": 0.5555555555555557,
+    "auc_per_repeat_sd": 0.03260043933890442,
+    "graph_reliance_mean": 0.2527708292007446,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      }
+    ],
+    "repeats": 3
+  },
+  "clinical_only": {
+    "auc": 0.5492801771871539,
+    "auc_ci_low": 0.46999507064120477,
+    "auc_ci_high": 0.6255583338311972,
+    "auc_per_repeat_mean": 0.5393002162105152,
+    "auc_per_repeat_sd": 0.004889202224222007,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      }
+    ],
+    "repeats": 3
+  },
+  "mlp_gnn": {
+    "auc": 0.5679481094763488,
+    "auc_ci_low": 0.49140224196111576,
+    "auc_ci_high": 0.6458298895415473,
+    "auc_per_repeat_mean": 0.5533407161314138,
+    "auc_per_repeat_sd": 0.026486067008015625,
+    "graph_reliance_mean": 0.26508778433005015,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 10
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 10
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10
+      }
+    ],
+    "repeats": 3
   },
   "cohort": {
     "n": 227,
