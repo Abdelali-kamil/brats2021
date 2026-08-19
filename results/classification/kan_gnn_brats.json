@@ -1,0 +1,653 @@
+{
+  "mlp": {
+    "auc": 0.6170253743560113,
+    "auc_ci_low": 0.5681464318557421,
+    "auc_ci_high": 0.6633090073987442,
+    "auc_per_repeat_mean": 0.6037162758598553,
+    "auc_per_repeat_sd": 0.006184703606723128,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3
+      }
+    ],
+    "repeats": 3
+  },
+  "kan": {
+    "auc": 0.6016539072656364,
+    "auc_ci_low": 0.5526905775660917,
+    "auc_ci_high": 0.6481267536560975,
+    "auc_per_repeat_mean": 0.5808897876643074,
+    "auc_per_repeat_sd": 0.003649744817568346,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      }
+    ],
+    "repeats": 3
+  },
+  "kan_transformer": {
+    "auc": 0.6451923539891185,
+    "auc_ci_low": 0.5990256861689838,
+    "auc_ci_high": 0.6922725027535799,
+    "auc_per_repeat_mean": 0.605678334697546,
+    "auc_per_repeat_sd": 0.034602867104450825,
+    "graph_reliance_mean": null,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "l1": 0.001
+      }
+    ],
+    "repeats": 3
+  },
+  "kan_gnn": {
+    "auc": 0.6147503490779528,
+    "auc_ci_low": 0.5682188840685697,
+    "auc_ci_high": 0.6618272454592389,
+    "auc_per_repeat_mean": 0.5911133580496574,
+    "auc_per_repeat_sd": 0.01843698607887734,
+    "graph_reliance_mean": 0.2594663977622986,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      }
+    ],
+    "repeats": 3
+  },
+  "full": {
+    "auc": 0.6240430449227212,
+    "auc_ci_low": 0.5748116357904094,
+    "auc_ci_high": 0.6697901777472725,
+    "auc_per_repeat_mean": 0.5961569326078933,
+    "auc_per_repeat_sd": 0.0128151709246365,
+    "graph_reliance_mean": 0.25412822564442955,
+    "hp_selected": [
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      }
+    ],
+    "repeats": 3
+  },
+  "external_upenn": {
+    "auc": 0.5370590096503718,
+    "auc_ci_low": 0.45960310654559866,
+    "auc_ci_high": 0.6119370131773639,
+    "n": 227,
+    "n_positive": 98
+  },
+  "upenn_multimodal": {
+    "auc": 0.598639455782313,
+    "auc_ci_low": 0.5225125427065298,
+    "auc_ci_high": 0.6707725012221261,
+    "auc_per_repeat_mean": 0.5719559141486052,
+    "auc_per_repeat_sd": 0.018454330044656322,
+    "graph_reliance_mean": 0.26302405397097267,
+    "hp_selected": [
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 10,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.003,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.3,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 8,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 10,
+        "l1": 0.0
+      },
+      {
+        "hidden": 16,
+        "lr": 0.01,
+        "dropout": 0.5,
+        "k": 5,
+        "l1": 0.001
+      }
+    ],
+    "repeats": 3
+  },
+  "cohort": {
+    "primary": "BraTS2021_MGMT",
+    "primary_n": 577,
+    "primary_positives": 301,
+    "n_features": 51,
+    "n_region_tokens": 3,
+    "external": "UPenn-GBM_MGMT"
+  }
+}

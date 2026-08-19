@@ -406,6 +406,124 @@ No hyperparameter search is performed. With this many positives a grid search
 would overfit the selection itself, so both models are specified a priori and
 only the decision threshold is fitted.
 
+## The KAN + Transformer + GNN module: BraTS primary, UPenn external
+
+`scripts/ablation_kan_gnn.py` and `brats_gbm/gnn.py` implement the deep
+classification module (KAN encoders, a region-token Transformer branch, a
+retrieval-augmented memory-bank GNN, and adaptive gated fusion). Its **primary
+task is BraTS 2021 MGMT methylation** — the only classification label BraTS 2021
+carries; there is no tumour-grade label, so grading is not attempted. UPenn-GBM
+is used **only for external validation**.
+
+Two constraints are forced by the data and are stated rather than worked around.
+BraTS 2021 ships no clinical metadata, so on the primary task the module is
+**imaging-only**: the clinical encoder and the gate have nothing to fuse, and
+are exercised only on the UPenn cohort. And MGMT-from-MRI is a task with
+contested signal, so a near-chance result is an expected, legitimate outcome.
+
+The primary ablation is nested 5×3 cross-validation, 3 repeats, on the 577-case
+BraTS cohort, restricted to the 51 radiomic features shared with UPenn so the
+representation is identical to the external test. Point estimates with 95%
+bootstrap CIs (`results/classification/kan_gnn_brats.json`):
+
+| Configuration | AUC [95% CI] |
+|---|---|
+| MLP (baseline) | 0.617 [0.568, 0.663] |
+| KAN | 0.602 [0.553, 0.648] |
+| KAN + Transformer | 0.645 [0.599, 0.692] |
+| KAN + GNN | 0.615 [0.568, 0.662] |
+| KAN + Transformer + GNN (full) | 0.624 [0.575, 0.670] |
+
+Every interval overlaps every other; the mean 95% CI half-width is ±0.047, and
+no contrast between rungs exceeds it. The full module (0.624) is not
+distinguishable from the plain MLP (0.617); KAN does not beat MLP, matching the
+parameter-count argument in `kan.py`; the memory bank draws ~25% of its
+representation from neighbours (`graph_reliance` ≈ 0.25) but that does not become
+an AUC gain. These BraTS numbers sit where the radiomic baselines do
+(best AUC 0.583, logistic regression) and where the RSNA-MICCAI 2021 challenge
+landed (~0.62).
+
+**External validation.** The BraTS-trained full model, applied to the 227-subject
+UPenn MGMT cohort on the shared feature space, scores **0.537 [0.460, 0.612]** —
+an interval spanning chance. The weak BraTS-internal signal does not transfer.
+UPenn feature provenance differs (predicted rather than expert masks), which is
+itself part of what external validation exposes.
+
+**Multimodal reference.** Because clinical covariates exist only for UPenn, the
+imaging+clinical gated variant can be shown only there: nested CV on UPenn gives
+**0.599 [0.523, 0.671]**, no better than BraTS imaging-only. Adding clinical data
+and the gate does not rescue the task.
+
+The reported conclusion is therefore a negative one, and it is reported as such:
+the module runs, the leakage controls hold, and MGMT methylation is not
+recoverable from these features at a level that clears chance out of sample. No
+configuration is selected on the quantity being reported.
+
+## The downsampling ablation: DWT vs max-pooling
+
+The paper's segmentation contribution is a single architectural change — a fixed
+Haar DWT replacing max-pooling in the encoder — so the claim rests on comparing
+against an otherwise-identical max-pooling backbone. `scripts/run_ablation.sh`
+runs that comparison.
+
+**The baseline is width-matched, not a plain swap.** The DWT concatenates four
+sub-bands, so every encoder block receives 4C channels; plain max-pooling emits
+C. Swapping the operator alone therefore also removes 34% of the parameters
+(6.87M vs 10.40M), and any resulting gap would confound capacity with the
+frequency content the claim is actually about. `WaveletUNetPlusPlus(downsample=
+"maxpool_matched")` pools over the same two in-plane axes and then applies a 1x1
+projection back to 4C, so both arms present identically shaped tensors at every
+encoder level and sit at 10.48M vs 10.40M parameters — a 0.8% difference.
+
+**Both arms are retrained.** The released `segmentor_epoch_650.pth` is a bare
+state_dict carrying no optimiser state, seed, epoch count or configuration, no
+training log survives, and the training script could not run as released (see
+the import defect below), so its protocol cannot be reconstructed and matched.
+Comparing a freshly trained baseline against it would not be a controlled
+experiment. Both arms are therefore trained from scratch under one recorded
+protocol, on the identical seed-42 1000/251 partition, and this pair is used
+**only** for the ablation. Every other number in the project continues to come
+from the original checkpoint, which is untouched.
+
+Training settings are identical across arms and unchanged from the rest of the
+project: AdamW at 2e-4, `ReduceLROnPlateau` on validation Dice (factor 0.5,
+patience 3, floor 1e-7), focal+Dice loss, effective batch 8, mixed precision,
+min-max normalisation, deterministic 128^3 centre crops and no augmentation.
+Only `--downsample` differs. Scoring uses the reported evaluation pipeline
+(sliding window with Gaussian blending, 8-flip TTA, fixed threshold 0.5,
+standard component cleanup) with patient-level bootstrap intervals.
+
+**Epoch budget: 200, matched, best-validation checkpoint reported.** This was
+not the initial setting and the correction is worth recording. `train_brats.py`
+defaults to `--epochs 750`, but that is a *resume* target: the original run
+continued an existing epoch-650 checkpoint for a further 100 epochs. Carried
+over as a from-scratch budget it is roughly an order of magnitude too large for
+this schedule. The max-pooling arm reached its best validation Dice (0.8199) at
+**epoch 43** and its 1e-7 learning-rate floor at **epoch 76**, then oscillated
+between 0.773 and 0.801 — noise around a converged model — for 150 further
+epochs. Running to 750 would have added ~53 h per arm at a learning rate too
+small to change the weights. 200 epochs clears convergence with a wide margin
+while keeping the two arms matched; `patience=3` is aggressive enough that
+eleven halvings fit between epochs 31 and 76.
+
+**An import defect blocked training entirely.** `brats_gbm/data/brats.py` used a
+bare `from image import ...`, which resolves only when `brats_gbm/data/` happens
+to be on `sys.path` — which `train_brats.py` never arranged. An
+`except ImportError` swallowed the failure and printed a warning, so it surfaced
+much later as a `NameError` inside a DataLoader worker. Every other module in
+the repository imports those helpers as `from brats_gbm.data.image import ...`;
+this file was the sole exception and `train_brats.py` its only consumer, so
+BraTS training could not run from the repository as it stood. Now fixed to match
+the rest of the codebase, with the fallback left to raise rather than swallow.
+
+Two further consequences are worth recording. Because the released checkpoint
+cannot have been produced by the code as released, its training protocol is
+genuinely unknown, and the Methods section describes the current code rather
+than a verified history. And every checkpoint written from now on embeds the
+configuration that produced it — operator, seed, optimiser, schedule, loss,
+normalisation, augmentation state, split sizes, torch version, timestamp — so
+this particular gap cannot recur.
+
 ## Known limitations
 
 1. BraTS2021 performance is internal validation, not a clean test set.
@@ -419,3 +537,6 @@ only the decision threshold is fitted.
 5. Both cohorts are glioblastoma-enriched, so the IDH1-mutant prevalence here
    is far below what a general glioma population would show. Positive
    predictive value in particular will not transfer.
+6. The KAN + Transformer + GNN module does not exceed a plain MLP on BraTS MGMT
+   and transfers to UPenn at chance. This is reported as a negative result; it
+   is not evidence that the architecture is useful for this task.

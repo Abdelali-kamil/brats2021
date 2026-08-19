@@ -133,8 +133,11 @@ class ClinicalImagingKANGNN(nn.Module):
         use_kan: bool = False,
         use_gnn: bool = False,
         use_gate: bool = False,
+        use_transformer: bool = False,
+        region_slices: list[tuple[int, int]] | None = None,
         k: int = 8,
         dropout: float = 0.3,
+        n_heads: int = 2,
         grid_size: int = 3,
         spline_order: int = 3,
     ):
@@ -154,6 +157,28 @@ class ClinicalImagingKANGNN(nn.Module):
         self.img_enc = encoder(n_imaging, hidden)
         self.clin_enc = encoder(n_clinical, hidden) if n_clinical > 0 else None
 
+        # Transformer branch (paper V-F). The imaging features carry an
+        # anatomical grouping -- every radiomic value belongs to ET, TC or WT
+        # (plus a small block of cross-region ratios). `region_slices` names
+        # those contiguous column groups, so self-attention runs over a short
+        # sequence of *region tokens* rather than over one flat vector, which is
+        # the only construction that gives a Transformer something to attend
+        # across on tabular input. Its pooled output is added residually to the
+        # imaging embedding, matching the proposal's f_comb = f_trans + f_kan.
+        # Disabled unless at least two regions are supplied.
+        self.use_transformer = bool(
+            use_transformer and region_slices and len(region_slices) >= 2)
+        if self.use_transformer:
+            self.region_slices = list(region_slices)
+            self.tok_proj = nn.ModuleList(
+                [nn.Linear(e - s, hidden) for (s, e) in self.region_slices])
+            layer = nn.TransformerEncoderLayer(
+                d_model=hidden, nhead=n_heads, dim_feedforward=hidden * 2,
+                dropout=dropout, batch_first=True, activation="gelu")
+            self.transformer = nn.TransformerEncoder(layer, num_layers=1)
+        else:
+            self.transformer = None
+
         fused_dim = hidden * (2 if n_clinical > 0 else 1)
         if use_gate and n_clinical > 0:
             # Adaptive gated fusion (proposal 3.1): a per-sample weight over the
@@ -172,6 +197,12 @@ class ClinicalImagingKANGNN(nn.Module):
 
     def embed(self, x_img: torch.Tensor, x_clin: torch.Tensor | None) -> torch.Tensor:
         h = self.img_enc(x_img)
+        if self.transformer is not None:
+            tokens = torch.stack(
+                [proj(x_img[:, s:e])
+                 for proj, (s, e) in zip(self.tok_proj, self.region_slices)],
+                dim=1)  # [n, n_regions, hidden]
+            h = h + self.transformer(tokens).mean(dim=1)  # residual: f_comb = f_trans + f_kan
         if self.clin_enc is not None and x_clin is not None:
             c = self.clin_enc(x_clin)
             if self.gate is not None:

@@ -173,7 +173,14 @@ def probs_for_checkpoint(
     silently reusing maps across variants would reintroduce the mismatch this
     field exists to prevent.
     """
-    cache_dir = CACHE_DIR / f"{ckpt.stem}__{dataset.preprocessing}" / split_name
+    stem = ckpt.stem
+    if "crossval" in ckpt.parts:
+        # Every fold saves "upenn_v3_best.pth". Without the fold directory in
+        # the key, all five folds and the main v3 checkpoint share one cache
+        # and serve each other's predictions — which is how the 2026-08-10
+        # crossval run scored fold 0 with the original v3's cached maps.
+        stem = f"{ckpt.parent.name}__{stem}"
+    cache_dir = CACHE_DIR / f"{stem}__{dataset.preprocessing}" / split_name
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     out: dict[str, np.ndarray] = {}
@@ -376,7 +383,13 @@ def main() -> None:
         SETUPS[f"crossval_{fold_dir}"] = {
             "checkpoints": [ckpt],
             "description": f"Cross-validation {fold_dir}, best inner-validation checkpoint",
-            "preprocessing": "upenn",
+            # Fold checkpoints are fine-tuned by crossval_upenn.py through
+            # train_upenn.py's default --preprocessing, which is "brats"
+            # (matched to the BraTS base checkpoint). Evaluating them under
+            # "upenn" re-creates the audit's channel-order mismatch: the
+            # 2026-08-10 crossval run did exactly that and collapsed to 0.17
+            # pooled Dice from healthy 0.85 training-time validation.
+            "preprocessing": "brats",
         }
     else:
         train_subs, val_subs, test_subs = upenn_split(args.nifti_dir)

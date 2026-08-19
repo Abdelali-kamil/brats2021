@@ -84,6 +84,12 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--checkpoint", default=str(CKPT),
+                    help="checkpoint to evaluate (default: the released segmentor)")
+    ap.add_argument("--downsample", default=None,
+                    choices=["dwt", "maxpool_matched"],
+                    help="encoder downsampling arm; read from the checkpoint's "
+                         "config block when omitted, else 'dwt'")
     args = ap.parse_args()
 
     train_ids, val_ids = brats_split(str(DATA))
@@ -100,13 +106,26 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
-    ck = torch.load(str(CKPT), map_location=DEVICE, weights_only=False)
-    model.load_state_dict(
-        ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck, strict=True)
+    ckpt_path = Path(args.checkpoint)
+    ck = torch.load(str(ckpt_path), map_location=DEVICE, weights_only=False)
+
+    # Prefer the arm recorded alongside the weights; fall back to the default so
+    # the released bare-state_dict checkpoint keeps working untouched.
+    arm = args.downsample
+    if arm is None:
+        arm = (ck.get("config", {}) or {}).get("downsample", "dwt") \
+            if isinstance(ck, dict) else "dwt"
+
+    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3, downsample=arm).to(DEVICE)
+    if isinstance(ck, dict):
+        state = ck.get("model_state", ck.get("model_state_dict", ck))
+    else:
+        state = ck
+    model.load_state_dict(state, strict=True)
     model.eval()
 
-    print(f"checkpoint    : {CKPT.name}")
+    print(f"checkpoint    : {ckpt_path.name}")
+    print(f"downsampling  : {arm}")
     print(f"partition     : {args.partition}  ({len(cases)} cases)")
     print(f"preprocessing : {BRATS_ORDER} + percentile min-max")
     print(f"threshold     : {THR} (fixed, not tuned)")

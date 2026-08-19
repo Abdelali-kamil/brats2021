@@ -1,39 +1,50 @@
 #!/usr/bin/env python3
-"""Ablation and nested-CV hyperparameter search for the KAN + GNN module.
+"""BraTS 2021 MGMT classification with the KAN + Transformer + GNN module.
 
-Ablation ladder. Each rung differs from the one below by exactly one component,
-so any change in score is attributable to that component:
+Primary task
+------------
+MGMT promoter methylation on **BraTS 2021** (n=577, features from expert
+segmentations, 301 methylated / 276 not). This is the project's primary
+classification dataset. It is the *only* classification label BraTS 2021
+carries: the challenge provides MGMT status, not a tumour-grade label, so
+"tumour grading" is not a task that exists for this cohort and is not attempted.
 
-  1. imaging_only        imaging features -> MLP -> head
-  2. mlp_fusion          + clinical features, MLP encoders, concat fusion
-  3. kan_fusion          + KAN encoders in place of MLP      (Innovation 2)
-  4. kan_gnn             + memory bank over training patients (Innovation 3)
-  5. kan_gnn_gate        + adaptive gated fusion              (proposal 3.1)
+External validation
+--------------------
+The BraTS-trained model is applied to the **UPenn-GBM** MGMT cohort (n=227) as
+an independent generalisation test, on the 51 radiomic features the two cohorts
+share. UPenn is never used to train or select the primary model.
 
-Why nested cross-validation
----------------------------
-Hyperparameters are chosen in an inner loop over the training split only; the
-outer fold is scored once with the winning configuration and never influences
-selection. Flat CV -- tuning and reporting on the same folds -- is what produced
-the selection overfitting found earlier in this project, where validation rose
-0.838 -> 0.851 while test fell 0.816 -> 0.807. With 227 subjects and five
-architecture variants the same trap is wide open, and nested CV is the only
-honest way to report "we tuned it".
+Two honest constraints, both forced by the data
+------------------------------------------------
+1. BraTS 2021 ships no clinical metadata, so on the primary task the module is
+   *imaging-only*: the clinical encoder and the adaptive gate have nothing to
+   fuse. The multimodal (imaging + clinical) branch and the gate are therefore
+   demonstrated only on the UPenn cohort, which does carry age / sex / GTR --
+   reported as a secondary external-cohort analysis, not as the primary result.
+2. Predicting MGMT from MRI is a task with contested signal: the RSNA-MICCAI
+   2021 challenge that produced these labels was won at ~0.62 AUC, and the
+   project's own radiomic random forest sits at ~0.58. A near-chance result
+   from this module is a legitimate, expected outcome and is reported as such.
+   Nothing here is tuned on the quantity being reported.
 
-The cost is real: outer x inner x grid x epochs. It is affordable here because
-the models are small and the cohort is tiny.
+Ablation ladder (imaging-only, BraTS primary)
+---------------------------------------------
+  mlp              imaging MLP encoder -> head
+  kan              KAN encoder in place of MLP                 (Innovation 2)
+  kan_transformer  + region-token Transformer branch           (paper V-F)
+  kan_gnn          + retrieval-augmented memory bank           (Innovation 3)
+  full             KAN + Transformer + GNN
 
-Leakage controls, all enforced in code
---------------------------------------
-  * Standardisation and median imputation are fit on the training split only
-    and applied to validation/test.
-  * The memory bank is built from training embeddings only and rebuilt for
-    every fold. Test patients never enter it.
-  * When embedding training data for the bank, `exclude_self=True` stops a node
-    being its own neighbour.
+Leakage controls (unchanged from the audited protocol)
+------------------------------------------------------
+  * Standardisation / imputation fit on the training split only.
+  * Nested CV: hyperparameters chosen in an inner loop over training folds; the
+    outer fold is scored once and never influences selection.
+  * The memory bank holds training-patient embeddings only, rebuilt per fold;
+    `exclude_self` stops a node being its own neighbour. For external
+    validation the bank holds BraTS embeddings and UPenn patients query into it.
   * Graph edges use feature similarity; labels are never consulted.
-  * Class balance is handled with a positive-class loss weight computed from
-    the training split alone.
 """
 from __future__ import annotations
 
@@ -56,55 +67,84 @@ sys.path.insert(0, str(ROOT))
 from brats_gbm.eval.stats import bootstrap_ci  # noqa: E402
 from brats_gbm.gnn import ClinicalImagingKANGNN  # noqa: E402
 
-COHORT = ROOT / "results" / "classification" / "upenn_mgmt_cohort.csv"
+BRATS_COHORT = ROOT / "results" / "classification" / "brats_mgmt_features.csv"
+UPENN_COHORT = ROOT / "results" / "classification" / "upenn_mgmt_cohort.csv"
 OUT_DIR = ROOT / "results" / "classification"
+
+# Columns that are identifiers, labels or clinical covariates, never imaging.
+NON_FEATURE = {"case_id", "patient_id", "mask_source", "mgmt_label",
+               "idh1_label", "idh1_raw", "age", "gender_m", "gtr_over90"}
 CLINICAL_COLS = ["age", "gender_m", "gtr_over90"]
-NON_FEATURE = {"patient_id", "mask_source", "idh1_label", "idh1_raw", "mgmt_label"}
+REGIONS = ("ET", "TC", "WT")
 
 SEED = 42
 OUTER_FOLDS, INNER_FOLDS, N_REPEATS = 5, 3, 3
-MAX_EPOCHS, PATIENCE = 200, 25
+MAX_EPOCHS, PATIENCE = 150, 20
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Imaging-only ablation rungs. use_gate needs clinical data, so it is off for
+# every BraTS rung; it is switched on only in the UPenn multimodal analysis.
 CONFIGS = {
-    # Essential control. If clinical-only matches or beats the fusion rungs,
-    # then "multimodal fusion" is really clinical prediction with imaging
-    # riding along, and every downstream gain must be attributed accordingly.
-    "clinical_only": dict(use_clinical=True,  use_kan=False, use_gnn=False,
-                          use_gate=False, drop_imaging=True),
-    "imaging_only":  dict(use_clinical=False, use_kan=False, use_gnn=False, use_gate=False),
-    "mlp_fusion":    dict(use_clinical=True,  use_kan=False, use_gnn=False, use_gate=False),
-    "kan_fusion":    dict(use_clinical=True,  use_kan=True,  use_gnn=False, use_gate=False),
-    "kan_gnn":       dict(use_clinical=True,  use_kan=True,  use_gnn=True,  use_gate=False),
-    "kan_gnn_gate":  dict(use_clinical=True,  use_kan=True,  use_gnn=True,  use_gate=True),
-    # Comparison for attribution. mlp_gnn is mlp_fusion + the memory bank, with
-    # MLP encoders instead of KAN. Reading the ladder two ways then separates
-    # the sources of any gain:
-    #   mlp_fusion -> mlp_gnn   isolates the GNN with MLP encoders held fixed
-    #   mlp_gnn    -> kan_gnn   isolates KAN with the GNN held fixed
-    # so an improvement at kan_gnn can be attributed to the GNN, to KAN, or to
-    # their interaction rather than left ambiguous.
-    "mlp_gnn":       dict(use_clinical=True,  use_kan=False, use_gnn=True,  use_gate=False),
+    "mlp":             dict(use_clinical=False, use_kan=False, use_gnn=False,
+                            use_transformer=False, use_gate=False),
+    "kan":             dict(use_clinical=False, use_kan=True,  use_gnn=False,
+                            use_transformer=False, use_gate=False),
+    "kan_transformer": dict(use_clinical=False, use_kan=True,  use_gnn=False,
+                            use_transformer=True,  use_gate=False),
+    "kan_gnn":         dict(use_clinical=False, use_kan=True,  use_gnn=True,
+                            use_transformer=False, use_gate=False),
+    "full":            dict(use_clinical=False, use_kan=True,  use_gnn=True,
+                            use_transformer=True,  use_gate=False),
 }
 
-# Small grids on purpose: 227 subjects cannot adjudicate between many options,
-# and a large grid would simply relocate the overfitting into the inner loop.
-GRID = {
-    "hidden": [8, 16],
-    "lr": [3e-3, 1e-2],
-    "dropout": [0.3, 0.5],
-}
+GRID = {"hidden": [8, 16], "lr": [3e-3, 1e-2], "dropout": [0.3, 0.5]}
 GNN_GRID = {"k": [5, 10]}
 KAN_GRID = {"l1": [0.0, 1e-3]}
 
+# Fixed, a-priori configuration for the external-validation model, so the UPenn
+# numbers are never a function of anything fitted on UPenn. Small and heavily
+# regularised, consistent with what the BraTS inner loop favours at this n.
+EXT_HP = {"hidden": 8, "lr": 1e-2, "dropout": 0.5, "k": 10, "l1": 1e-3}
+EXT_ENSEMBLE = 5
 
-def prepare(df: pd.DataFrame):
-    img_cols = [c for c in df.columns
-                if c not in NON_FEATURE and c not in CLINICAL_COLS
-                and pd.api.types.is_numeric_dtype(df[c])]
-    X_img = df[img_cols].to_numpy(float)
-    X_clin = df[CLINICAL_COLS].to_numpy(float)
-    y = df["mgmt_label"].to_numpy(int)
-    return X_img, X_clin, y, img_cols
+
+def region_tokenize(cols: list[str]) -> tuple[list[str], list[tuple[int, int]]]:
+    """Order feature columns by anatomical region and return contiguous slices.
+
+    Every radiomic column is named `<REGION>_<...>`; grouping by region gives
+    the Transformer a short sequence of region tokens to attend across. Any
+    column not matching ET/TC/WT (e.g. cross-region ratios) is collected into a
+    trailing 'global' token so nothing is silently dropped.
+    """
+    order: list[str] = []
+    slices: list[tuple[int, int]] = []
+    idx = 0
+    for r in REGIONS:
+        grp = [c for c in cols if c.split("_")[0] == r]
+        if not grp:
+            continue
+        order.extend(grp)
+        slices.append((idx, idx + len(grp)))
+        idx += len(grp)
+    rest = [c for c in cols if c not in order]
+    if rest:
+        order.extend(rest)
+        slices.append((idx, idx + len(rest)))
+    return order, slices
+
+
+def load_brats():
+    df = pd.read_csv(BRATS_COHORT)
+    df = df[df.mgmt_label.notna()].reset_index(drop=True)
+    df["mgmt_label"] = df["mgmt_label"].astype(int)
+    return df
+
+
+def load_upenn():
+    df = pd.read_csv(UPENN_COHORT)
+    df = df[df.mgmt_label.notna()].reset_index(drop=True)
+    df["mgmt_label"] = df["mgmt_label"].astype(int)
+    return df
 
 
 def fit_transform(train: np.ndarray, *others: np.ndarray):
@@ -127,45 +167,38 @@ def fit_transform(train: np.ndarray, *others: np.ndarray):
     return out
 
 
-def maybe_drop_imaging(cfg, a: np.ndarray) -> np.ndarray:
-    """Clinical-only control: replace imaging with a single constant column so
-    the imaging branch can contribute nothing while the architecture is
-    otherwise unchanged. Applied at every use site -- inner training, outer
-    training, memory refresh and outer scoring -- so the model is always built
-    for and fed the same 1-column input. (Doing this only inside train_model,
-    as an earlier version did, left the outer-fold scoring feeding the raw
-    51-column imaging into a model built for one column.)"""
-    if cfg.get("drop_imaging"):
-        return np.zeros((a.shape[0], 1), dtype=float)
-    return a
+def _t(a):
+    return torch.tensor(a, dtype=torch.float32, device=DEVICE)
 
 
-def train_model(cfg, hp, Xi_tr, Xc_tr, y_tr, Xi_va, Xc_va, y_va, seed):
+def train_model(cfg, hp, Xi_tr, Xc_tr, y_tr, Xi_va, Xc_va, y_va,
+                region_slices, seed):
     torch.manual_seed(seed)
-    use_clin = cfg["use_clinical"]
-    n_clin = Xc_tr.shape[1] if use_clin else 0
+    use_clin = cfg.get("use_clinical", False)
+    n_clin = Xc_tr.shape[1] if (use_clin and Xc_tr is not None) else 0
+    use_tf = cfg.get("use_transformer", False)
 
     model = ClinicalImagingKANGNN(
         n_imaging=Xi_tr.shape[1], n_clinical=n_clin, hidden=hp["hidden"],
-        use_kan=cfg["use_kan"], use_gnn=cfg["use_gnn"], use_gate=cfg["use_gate"],
-        k=hp.get("k", 8), dropout=hp["dropout"])
+        use_kan=cfg["use_kan"], use_gnn=cfg["use_gnn"],
+        use_gate=cfg.get("use_gate", False), use_transformer=use_tf,
+        region_slices=region_slices if use_tf else None,
+        k=hp.get("k", 8), dropout=hp["dropout"]).to(DEVICE)
 
-    ti = torch.tensor(Xi_tr, dtype=torch.float32)
-    tc = torch.tensor(Xc_tr, dtype=torch.float32) if use_clin else None
-    vi = torch.tensor(Xi_va, dtype=torch.float32)
-    vc = torch.tensor(Xc_va, dtype=torch.float32) if use_clin else None
-    ty = torch.tensor(y_tr, dtype=torch.float32)
+    ti, vi = _t(Xi_tr), _t(Xi_va)
+    tc = _t(Xc_tr) if n_clin else None
+    vc = _t(Xc_va) if n_clin else None
+    ty = _t(y_tr)
 
-    pos_weight = torch.tensor([(len(y_tr) - y_tr.sum()) / max(1, y_tr.sum())],
-                              dtype=torch.float32)
+    pos_weight = _t([(len(y_tr) - y_tr.sum()) / max(1, y_tr.sum())])
     lossf = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     opt = torch.optim.Adam(model.parameters(), lr=hp["lr"], weight_decay=1e-4)
 
     best_auc, best_state, bad = -1.0, None, 0
-    for epoch in range(MAX_EPOCHS):
+    for _ in range(MAX_EPOCHS):
         model.train()
         if cfg["use_gnn"]:
-            model.refresh_memory(ti, tc)          # training embeddings only
+            model.refresh_memory(ti, tc)
         opt.zero_grad()
         out = model(ti, tc, exclude_self=cfg["use_gnn"])
         loss = lossf(out, ty)
@@ -178,10 +211,9 @@ def train_model(cfg, hp, Xi_tr, Xc_tr, y_tr, Xi_va, Xc_va, y_va, seed):
         model.eval()
         with torch.no_grad():
             if cfg["use_gnn"]:
-                model.refresh_memory(ti, tc)      # bank stays training-only
-            p = torch.sigmoid(model(vi, vc)).numpy()
+                model.refresh_memory(ti, tc)
+            p = torch.sigmoid(model(vi, vc)).cpu().numpy()
         auc = roc_auc_score(y_va, p) if len(np.unique(y_va)) > 1 else 0.5
-
         if auc > best_auc:
             best_auc, bad = auc, 0
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
@@ -206,14 +238,23 @@ def hp_grid(cfg):
         yield dict(zip(keys, combo))
 
 
-def run_config(name, cfg, X_img, X_clin, y, repeats):
+def predict(model, cfg, Xi, Xc, bank_i=None, bank_c=None):
+    model.eval()
+    with torch.no_grad():
+        if cfg["use_gnn"] and bank_i is not None:
+            model.refresh_memory(_t(bank_i), _t(bank_c) if bank_c is not None else None)
+        xc = _t(Xc) if (cfg.get("use_clinical") and Xc is not None) else None
+        return torch.sigmoid(model(_t(Xi), xc)).cpu().numpy()
+
+
+def run_config(name, cfg, X_img, X_clin, y, region_slices, repeats):
+    """Nested-CV out-of-fold AUC for one ablation rung on the primary cohort."""
     oof = np.zeros((repeats, len(y)))
     chosen, graph_reliance = [], []
 
     for rep in range(repeats):
         outer = StratifiedKFold(OUTER_FOLDS, shuffle=True, random_state=SEED + rep)
         for tr_idx, te_idx in outer.split(X_img, y):
-            # --- inner loop: choose hyperparameters on training data only ---
             inner = StratifiedKFold(INNER_FOLDS, shuffle=True, random_state=SEED)
             best_hp, best_score = None, -1.0
             for hp in hp_grid(cfg):
@@ -222,31 +263,25 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
                     a, b = tr_idx[i_tr], tr_idx[i_va]
                     Xi_a, Xi_b = fit_transform(X_img[a], X_img[b])
                     Xc_a, Xc_b = fit_transform(X_clin[a], X_clin[b])
-                    Xi_a, Xi_b = maybe_drop_imaging(cfg, Xi_a), maybe_drop_imaging(cfg, Xi_b)
-                    _, auc = train_model(cfg, hp, Xi_a, Xc_a, y[a],
-                                         Xi_b, Xc_b, y[b], SEED)
+                    _, auc = train_model(cfg, hp, Xi_a, Xc_a, y[a], Xi_b, Xc_b, y[b],
+                                         region_slices, SEED)
                     scores.append(auc)
                 m = float(np.mean(scores))
                 if m > best_score:
                     best_score, best_hp = m, hp
             chosen.append(dict(best_hp))
 
-            # --- outer fold: fit once with the winning config, score once ---
             Xi_tr, Xi_te = fit_transform(X_img[tr_idx], X_img[te_idx])
             Xc_tr, Xc_te = fit_transform(X_clin[tr_idx], X_clin[te_idx])
-            Xi_tr, Xi_te = maybe_drop_imaging(cfg, Xi_tr), maybe_drop_imaging(cfg, Xi_te)
             model, _ = train_model(cfg, best_hp, Xi_tr, Xc_tr, y[tr_idx],
-                                   Xi_te, Xc_te, y[te_idx], SEED)
-            model.eval()
-            with torch.no_grad():
-                ti = torch.tensor(Xi_tr, dtype=torch.float32)
-                tc = torch.tensor(Xc_tr, dtype=torch.float32) if cfg["use_clinical"] else None
-                if cfg["use_gnn"]:
-                    model.refresh_memory(ti, tc)
+                                   Xi_te, Xc_te, y[te_idx], region_slices, SEED)
+            if cfg["use_gnn"]:
+                model.eval()
+                with torch.no_grad():
+                    model.refresh_memory(_t(Xi_tr),
+                                         _t(Xc_tr) if cfg.get("use_clinical") else None)
                     graph_reliance.append(model.gconv.neighbour_weight)
-                te_i = torch.tensor(Xi_te, dtype=torch.float32)
-                te_c = torch.tensor(Xc_te, dtype=torch.float32) if cfg["use_clinical"] else None
-                oof[rep, te_idx] = torch.sigmoid(model(te_i, te_c)).numpy()
+            oof[rep, te_idx] = predict(model, cfg, Xi_te, Xc_te, Xi_tr, Xc_tr)
         print(f"    repeat {rep + 1}/{repeats} done", flush=True)
 
     mean_prob = oof.mean(axis=0)
@@ -255,7 +290,6 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
     boot = [roc_auc_score(y[s], mean_prob[s])
             for s in (rng.integers(0, len(y), len(y)) for _ in range(2000))
             if len(np.unique(y[s])) > 1]
-
     return {
         "auc": float(roc_auc_score(y, mean_prob)),
         "auc_ci_low": float(np.percentile(boot, 2.5)),
@@ -264,93 +298,168 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
         "auc_per_repeat_sd": float(np.std(per_repeat)),
         "graph_reliance_mean": float(np.mean(graph_reliance)) if graph_reliance else None,
         "hp_selected": chosen,
-        "oof_prob": mean_prob.tolist(),
     }
 
 
-def write_payload(results: dict, out: Path, y, X_img, X_clin) -> None:
-    """Persist all completed configs atomically.
+def external_validate(cfg, X_tr, y_tr, X_te, y_te, region_slices, seed_base=SEED):
+    """Train on ALL BraTS with a fixed config, score once on UPenn.
 
-    Written via a temp file and rename so an interruption mid-write cannot
-    leave a truncated, unparseable JSON on disk. `oof_prob` is dropped to keep
-    the file small; every summary metric is retained.
+    An ensemble over a few seeds (each with its own internal early-stopping
+    split carved from BraTS only) stabilises the estimate without ever touching
+    UPenn for selection. The memory bank, when used, holds BraTS embeddings and
+    UPenn patients query into it -- the inductive setting the bank was built for.
     """
-    payload = {k: {kk: vv for kk, vv in v.items() if kk != "oof_prob"}
-               for k, v in results.items() if k != "cohort"}
-    payload["cohort"] = {"n": int(len(y)), "n_positive": int(y.sum()),
-                         "n_imaging": X_img.shape[1], "n_clinical": X_clin.shape[1]}
-    tmp = out.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2))
-    tmp.replace(out)
+    probs = []
+    for s in range(EXT_ENSEMBLE):
+        rng = np.random.default_rng(seed_base + s)
+        perm = rng.permutation(len(y_tr))
+        n_val = max(1, int(0.15 * len(y_tr)))
+        va, tr = perm[:n_val], perm[n_val:]
+        Xi_tr, Xi_va, Xi_te = fit_transform(X_tr[tr], X_tr[va], X_te)
+        model, _ = train_model(cfg, EXT_HP, Xi_tr, None, y_tr[tr],
+                               Xi_va, None, y_tr[va], region_slices, seed_base + s)
+        # rebuild bank from the full BraTS training split for scoring
+        Xi_bank, Xi_te2 = fit_transform(X_tr, X_te)
+        probs.append(predict(model, cfg, Xi_te2, None, Xi_bank, None))
+    mean_prob = np.mean(probs, axis=0)
+    rng = np.random.default_rng(seed_base)
+    boot = [roc_auc_score(y_te[s], mean_prob[s])
+            for s in (rng.integers(0, len(y_te), len(y_te)) for _ in range(2000))
+            if len(np.unique(y_te[s])) > 1]
+    return {
+        "auc": float(roc_auc_score(y_te, mean_prob)),
+        "auc_ci_low": float(np.percentile(boot, 2.5)),
+        "auc_ci_high": float(np.percentile(boot, 97.5)),
+        "n": int(len(y_te)), "n_positive": int(y_te.sum()),
+    }
+
+
+def upenn_multimodal(X_img, X_clin, y, region_slices, repeats):
+    """Secondary analysis: the imaging+clinical gated-fusion module on UPenn.
+
+    BraTS carries no clinical data, so this is the only cohort where the gate
+    and the clinical branch can be exercised. Nested CV, clinical + imaging,
+    gate on. Reported as an external-cohort demonstration of the fusion design,
+    not as the primary result.
+    """
+    cfg = dict(use_clinical=True, use_kan=True, use_gnn=True,
+               use_transformer=True, use_gate=True)
+    return run_config("upenn_full_multimodal", cfg, X_img, X_clin, y,
+                      region_slices, repeats)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cohort", default=str(COHORT))
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--repeats", type=int, default=N_REPEATS)
     ap.add_argument("--configs", nargs="*", default=list(CONFIGS))
-    ap.add_argument("--force", action="store_true",
-                    help="recompute configs even if already present in the output file")
+    ap.add_argument("--skip-external", action="store_true")
+    ap.add_argument("--skip-upenn-multimodal", action="store_true")
+    ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
-    df = pd.read_csv(args.cohort)
-    X_img, X_clin, y, img_cols = prepare(df)
-    print(f"cohort   : n={len(y)}, {int(y.sum())} methylated "
-          f"({y.mean() * 100:.1f}%)")
-    print(f"features : {X_img.shape[1]} imaging + {X_clin.shape[1]} clinical")
-    print(f"protocol : nested CV, {OUTER_FOLDS} outer x {INNER_FOLDS} inner, "
-          f"{args.repeats} repeats\n")
-
-    out = Path(args.out_dir) / "kan_gnn_ablation.json"
+    out = Path(args.out_dir) / "kan_gnn_brats.json"
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    # Resume support. Reload whatever a previous (possibly interrupted) run
-    # already saved so completed configs are not recomputed. Combined with the
-    # per-config write below, an interruption now costs at most the single
-    # config in flight -- never the whole run, which is what happened before.
+    brats = load_brats()
+    feat_all = [c for c in brats.columns
+                if c not in NON_FEATURE and pd.api.types.is_numeric_dtype(brats[c])]
+    # Restrict to the feature space shared with UPenn so the primary ablation
+    # and the external test use an identical, comparable representation.
+    upenn = load_upenn()
+    shared = [c for c in feat_all if c in set(upenn.columns)]
+    cols, region_slices = region_tokenize(shared)
+
+    Xb = brats[cols].to_numpy(float)
+    yb = brats["mgmt_label"].to_numpy(int)
+    Xb_clin = np.zeros((len(yb), 1))  # placeholder; BraTS has no clinical data
+
+    print(f"PRIMARY  : BraTS 2021 MGMT  n={len(yb)}, "
+          f"{int(yb.sum())} methylated ({yb.mean() * 100:.1f}%)")
+    print(f"features : {len(cols)} radiomic (shared with UPenn), "
+          f"{len(region_slices)} region tokens")
+    print(f"device   : {DEVICE}")
+    print(f"protocol : nested CV {OUTER_FOLDS}x{INNER_FOLDS}, {args.repeats} repeats\n")
+
     results: dict = {}
     if out.exists() and not args.force:
         try:
-            prev = json.loads(out.read_text())
-            prev.pop("cohort", None)
-            results = prev
+            results = json.loads(out.read_text())
         except json.JSONDecodeError:
-            print(f"warning: could not parse {out}; starting fresh")
+            pass
 
-    def already_done(name: str) -> bool:
-        # Reuse only if it was computed at the same repeat count; a config saved
-        # by an earlier smoke run at fewer repeats must be recomputed.
-        r = results.get(name)
-        return bool(r) and "auc" in r and r.get("repeats") == args.repeats
+    def save():
+        payload = {k: v for k, v in results.items()}
+        payload["cohort"] = {
+            "primary": "BraTS2021_MGMT", "primary_n": int(len(yb)),
+            "primary_positives": int(yb.sum()), "n_features": len(cols),
+            "n_region_tokens": len(region_slices),
+            "external": "UPenn-GBM_MGMT",
+        }
+        tmp = out.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(payload, indent=2))
+        tmp.replace(out)
 
+    # --- primary: BraTS ablation ---
     for name in args.configs:
-        if already_done(name):
-            r = results[name]
-            print(f"[{name}] already saved at repeats={args.repeats} "
-                  f"(AUC {r['auc']:.3f}) -- skipping", flush=True)
+        if name in results and "auc" in results.get(name, {}) \
+                and results[name].get("repeats") == args.repeats and not args.force:
+            print(f"[{name}] cached (AUC {results[name]['auc']:.3f}) -- skipping")
             continue
         print(f"[{name}]", flush=True)
-        res = run_config(name, CONFIGS[name], X_img, X_clin, y, args.repeats)
+        res = run_config(name, CONFIGS[name], Xb, Xb_clin, yb, region_slices, args.repeats)
         res["repeats"] = args.repeats
         results[name] = res
         extra = (f"  graph_reliance {res['graph_reliance_mean']:.3f}"
                  if res["graph_reliance_mean"] is not None else "")
         print(f"  AUC {res['auc']:.3f} [{res['auc_ci_low']:.3f}, "
-              f"{res['auc_ci_high']:.3f}]{extra}", flush=True)
-        write_payload(results, out, y, X_img, X_clin)   # persist immediately
-        print(f"  saved -> {out}\n", flush=True)
+              f"{res['auc_ci_high']:.3f}]{extra}\n", flush=True)
+        save()
 
-    print("=" * 68)
-    print(f"{'config':<18}{'AUC [95% CI]':<28}{'vs previous rung':>20}")
-    print("=" * 68)
-    prev_auc = None
+    # --- external validation: BraTS-trained full model -> UPenn ---
+    if not args.skip_external:
+        Xu = upenn[cols].to_numpy(float)
+        yu = upenn["mgmt_label"].to_numpy(int)
+        print("[external] BraTS-trained 'full' model -> UPenn-GBM MGMT", flush=True)
+        ext = external_validate(CONFIGS["full"], Xb, yb, Xu, yu, region_slices)
+        results["external_upenn"] = ext
+        print(f"  AUC {ext['auc']:.3f} [{ext['auc_ci_low']:.3f}, "
+              f"{ext['auc_ci_high']:.3f}]  (n={ext['n']}, {ext['n_positive']} pos)\n",
+              flush=True)
+        save()
+
+    # --- secondary: UPenn multimodal (imaging + clinical + gate) ---
+    if not args.skip_upenn_multimodal:
+        Xu = upenn[cols].to_numpy(float)
+        Xu_clin = upenn[CLINICAL_COLS].to_numpy(float)
+        yu = upenn["mgmt_label"].to_numpy(int)
+        print("[upenn_multimodal] imaging + clinical gated fusion (UPenn only)",
+              flush=True)
+        res = upenn_multimodal(Xu, Xu_clin, yu, region_slices, args.repeats)
+        res["repeats"] = args.repeats
+        results["upenn_multimodal"] = res
+        print(f"  AUC {res['auc']:.3f} [{res['auc_ci_low']:.3f}, "
+              f"{res['auc_ci_high']:.3f}]\n", flush=True)
+        save()
+
+    # --- summary ---
+    print("=" * 70)
+    print(f"{'config':<20}{'AUC [95% CI]':<30}{'vs prev':>18}")
+    print("=" * 70)
+    prev = None
     for name in args.configs:
-        r = results[name]
-        delta = "" if prev_auc is None else f"{r['auc'] - prev_auc:+.3f}"
-        print(f"{name:<18}{r['auc']:.3f} [{r['auc_ci_low']:.3f}, "
-              f"{r['auc_ci_high']:.3f}]{delta:>20}")
-        prev_auc = r["auc"]
+        r = results.get(name)
+        if not r:
+            continue
+        d = "" if prev is None else f"{r['auc'] - prev:+.3f}"
+        print(f"{name:<20}{r['auc']:.3f} [{r['auc_ci_low']:.3f}, {r['auc_ci_high']:.3f}]{d:>18}")
+        prev = r["auc"]
+    if "external_upenn" in results:
+        e = results["external_upenn"]
+        print(f"{'-> UPenn (external)':<20}{e['auc']:.3f} [{e['auc_ci_low']:.3f}, {e['auc_ci_high']:.3f}]")
+    if "upenn_multimodal" in results:
+        m = results["upenn_multimodal"]
+        print(f"{'UPenn multimodal':<20}{m['auc']:.3f} [{m['auc_ci_low']:.3f}, {m['auc_ci_high']:.3f}]")
     print(f"\nWrote {out}")
 
 

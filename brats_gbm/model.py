@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 # --- 1. Discrete Wavelet Transform (DWT) Layer ---
 class DWT(nn.Module):
@@ -40,10 +41,31 @@ class ConvBlock(nn.Module):
 
 # --- 3. Wavelet U-Net++ Architecture ---
 class WaveletUNetPlusPlus(nn.Module):
-    def __init__(self, in_channels=4, n_classes=3):
+    """U-Net++ backbone whose encoder downsampling operator is selectable.
+
+    ``downsample="dwt"`` is the proposed model and the default; it reproduces
+    the original module layout exactly, so existing checkpoints load unchanged.
+
+    ``downsample="maxpool_matched"`` is the ablation baseline (paper Table IX,
+    variant A). Max-pooling halves the same two in-plane axes the Haar DWT does,
+    but emits C channels where the DWT emits 4C. A 1x1 projection restores that
+    width so every encoder block receives an identically shaped tensor under
+    both arms. Without the projection the baseline would carry 34% fewer
+    parameters (6.87M vs 10.40M) and any gap would confound model capacity with
+    the frequency content the wavelet claim is actually about; with it the two
+    arms sit at 10.48M vs 10.40M, a 0.8% difference.
+    """
+
+    def __init__(self, in_channels=4, n_classes=3, downsample="dwt"):
         super(WaveletUNetPlusPlus, self).__init__()
         nb_filter = [16, 32, 64, 128, 256]
-        self.dwt = DWT()
+        if downsample not in ("dwt", "maxpool_matched"):
+            raise ValueError(
+                "downsample must be 'dwt' or 'maxpool_matched', got %r" % (downsample,))
+        self.downsample = downsample
+        self.dwt = DWT() if downsample == "dwt" else None
+        self.expand = None if downsample == "dwt" else nn.ModuleList(
+            [nn.Conv3d(c, c * 4, kernel_size=1) for c in nb_filter[:4]])
         # --- Encoders ---
         self.conv0_0 = ConvBlock(in_channels, nb_filter[0])
         self.conv1_0 = ConvBlock(nb_filter[0]*4, nb_filter[1]) 
@@ -65,12 +87,20 @@ class WaveletUNetPlusPlus(nn.Module):
         self.up = nn.Upsample(scale_factor=(1, 2, 2), mode='trilinear', align_corners=True)
         self.final = nn.Conv3d(nb_filter[0], n_classes, kernel_size=1)
 
+    def _down(self, x, level):
+        """Halve the two in-plane axes, emitting 4C channels either way."""
+        if self.downsample == "dwt":
+            return self.dwt(x)
+        # Depth is kept at full resolution to match the DWT, hence (1, 2, 2).
+        pooled = F.max_pool3d(x, kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        return self.expand[level](pooled)
+
     def forward(self, input):
         x0_0 = self.conv0_0(input)
-        x1_0 = self.conv1_0(self.dwt(x0_0))
-        x2_0 = self.conv2_0(self.dwt(x1_0))
-        x3_0 = self.conv3_0(self.dwt(x2_0))
-        x4_0 = self.conv4_0(self.dwt(x3_0))
+        x1_0 = self.conv1_0(self._down(x0_0, 0))
+        x2_0 = self.conv2_0(self._down(x1_0, 1))
+        x3_0 = self.conv3_0(self._down(x2_0, 2))
+        x4_0 = self.conv4_0(self._down(x3_0, 3))
 
         x0_1 = self.conv0_1(torch.cat([x0_0, self.up(x1_0)], 1))
         x1_1 = self.conv1_1(torch.cat([x1_0, self.up(x2_0)], 1))

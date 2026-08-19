@@ -1,0 +1,208 @@
+% Thesis figures & tables — verified numbers (checked against source 2026-07-29).
+% Requires: \usepackage{graphicx,booktabs}   (siunitx/threeparttable optional)
+% Put the PDFs from results/figures/ on your graphics path, e.g.:
+%   \graphicspath{{figures/}}
+% All figures are vector PDF; \includegraphics without extension picks them up.
+%
+% Sources: segmentation from results/brats/summary_internal_validation_recomputed.csv
+% and results/upenn/ (via docs/RESULTS.md); classification from
+% results/classification/kan_gnn_brats.json, mgmt_results.json, idh1_results.json.
+% Consistent with paper_wavelet_unetpp_checked.tex.
+%
+% HONESTY NOTES baked into captions (delete only if your supervisor prefers):
+%   * UPenn 0.8204 is the TEST-selected config; the leak-free validation-selected
+%     estimate is 0.8128 [0.743, 0.871].
+%   * IDH1 0.896 is the patient-level BOOTSTRAP AUC (wide CI, 17 positives);
+%     the cross-val mean is 0.881 [0.867, 0.893].
+%   * BraTS numbers are the recomputed surface-based held-out values; they
+%     supersede the older figures still printed in docs/RESULTS.md.
+%   * MGMT is a BraTS-2021-primary task; UPenn-GBM is external validation only.
+%     The KAN+Transformer+GNN result is NEGATIVE and is reported as such: it does
+%     not separate from a plain MLP baseline and transfers at chance. No
+%     configuration is selected on the reported quantity, so no row is bolded.
+
+% ======================================================================
+% FIGURES
+% ======================================================================
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.86\textwidth]{fig_architecture_implemented}
+  \caption[Implemented pipeline]{\textbf{Implemented two-stage pipeline.}
+  \emph{Stage 1} — a Wavelet U-Net++ (Haar-DWT downsampling, dense nested skip
+  connections) segments the tumour into three nested regions
+  (ET~$\subseteq$~TC~$\subseteq$~WT); trained on BraTS 2021, applied to
+  UPenn-GBM. \emph{Stage 2} — 51 radiomic features extracted from the predicted
+  mask and the MRI are encoded (KAN \emph{or} MLP) with a region-token
+  Transformer branch, optionally refined by a retrieval-augmented memory-bank
+  GNN, and classified for MGMT methylation. Dashed blocks are ablation toggles
+  or components exercised only on UPenn-GBM: BraTS 2021 ships no clinical
+  metadata, so on the primary task the module is imaging-only and the clinical
+  encoder and adaptive gate are inactive. The diagram reflects the code as run;
+  the learned lesion/slice/global encoders of the original proposal remain
+  unimplemented and are not drawn.}
+  \label{fig:architecture}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\textwidth]{fig1_ablation_auc_forest}
+  \caption[MGMT ablation: AUC by configuration]{\textbf{MGMT-methylation
+  discrimination by configuration} on the primary cohort, BraTS 2021 ($n=577$;
+  301 methylated, 52.2\%), imaging-only on the 51 radiomic features shared with
+  UPenn-GBM, nested $5\times3$ cross-validation, 3 repeats. Points are mean
+  held-out AUC; whiskers are 95\% confidence intervals. Every primary-cohort
+  interval overlaps every other (mean 95\% CI half-width $\pm0.047$): the added
+  components do not separate from the MLP baseline, and external transfer to
+  UPenn-GBM is at chance.}
+  \label{fig:forest}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\textwidth]{fig2_attribution}
+  \caption[Component attribution]{\textbf{Component attribution via controlled
+  one-factor contrasts.} \textbf{(a)} $\Delta$AUC contrasts, each isolating one
+  change with the others held fixed; positive favours the more complex model.
+  The grey band is the mean 95\% CI half-width ($\pm0.047$). No internal
+  contrast clears it — KAN $-$ MLP ($-0.015$), $+$~Transformer ($+0.044$),
+  $+$~memory-bank GNN ($+0.013$), and full module $-$ MLP baseline ($+0.007$)
+  all lie inside the noise band — while external transfer to UPenn-GBM is
+  negative ($-0.087$). \textbf{(b)} Graph reliance: the memory bank draws
+  ${\approx}25\%$ of the fused representation from neighbours, yet this does not
+  translate into an AUC gain in panel~(a).}
+  \label{fig:attribution}
+\end{figure}
+
+% ======================================================================
+% TABLES
+% ======================================================================
+
+\begin{table}[t]
+  \centering
+  \caption[BraTS 2021 segmentation]{\textbf{BraTS 2021 segmentation}, held-out
+  internal-validation partition ($n=251$). Dice and HD95 (mm) with 95\% CIs,
+  recomputed under the current surface-based protocol.}
+  \label{tab:brats-seg}
+  \begin{tabular}{lcc}
+    \toprule
+    Region & DSC~[95\% CI] & HD95~mm~[95\% CI] \\
+    \midrule
+    ET   & 0.8564~[0.830, 0.880] & 3.24~[2.49, 4.15] \\
+    TC   & 0.8915~[0.866, 0.914] & 4.82~[3.58, 6.28] \\
+    WT   & 0.9006~[0.884, 0.915] & 10.17~[8.07, 12.49] \\
+    \midrule
+    Mean & \textbf{0.8828}~[0.864, 0.899] & 6.20~[5.20, 7.29] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption[UPenn-GBM external segmentation]{\textbf{UPenn-GBM external-test
+  segmentation} ($n=29$), best configuration (\texttt{ensemble\_v3\_v4}).
+  \emph{Note:} this configuration was selected on the test set; the leak-free
+  validation-selected estimate is mean DSC $0.8128$~[0.743, 0.871].}
+  \label{tab:upenn-seg}
+  \begin{tabular}{lcc}
+    \toprule
+    Region & DSC~[95\% CI] & HD95~mm~[95\% CI] \\
+    \midrule
+    ET   & 0.7976~[0.726, 0.859] & 2.93~[1.61, 4.58] \\
+    TC   & 0.8572~[0.785, 0.914] & 3.87~[2.34, 5.72] \\
+    WT   & 0.8063~[0.745, 0.863] & 15.10~[8.28, 22.86] \\
+    \midrule
+    Mean & \textbf{0.8204}~[0.759, 0.872] & 7.30~[4.72, 10.10] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption[MGMT ablation]{\textbf{MGMT-methylation ablation.} Primary task is
+  BraTS 2021 ($n=577$; 301 methylated, 52.2\%), imaging-only on the 51 radiomic
+  features shared with UPenn-GBM, nested $5\times3$ CV, 3 repeats; 95\% CIs by
+  patient-level bootstrap. UPenn-GBM rows are external validation only. Graph
+  reliance is the mean weight the graph convolution places on memory-bank
+  neighbours. All primary-cohort CIs overlap (mean half-width $\pm0.047$); no
+  configuration is selected on the reported quantity, so no row is marked best.}
+  \label{tab:mgmt-ablation}
+  \begin{tabular}{lccc}
+    \toprule
+    Configuration & AUC & 95\% CI & Graph reliance \\
+    \midrule
+    \multicolumn{4}{l}{\emph{Primary — BraTS 2021 ($n=577$), imaging-only}} \\
+    MLP (baseline)                 & 0.617 & [0.568, 0.663] & --- \\
+    KAN                            & 0.602 & [0.553, 0.648] & --- \\
+    KAN + Transformer              & 0.645 & [0.599, 0.692] & --- \\
+    KAN + GNN                      & 0.615 & [0.568, 0.662] & 0.259 \\
+    KAN + Transformer + GNN (full) & 0.624 & [0.575, 0.670] & 0.254 \\
+    \midrule
+    \multicolumn{4}{l}{\emph{External validation — UPenn-GBM ($n=227$)}} \\
+    Full model, BraTS $\rightarrow$ UPenn & 0.537 & [0.460, 0.612] & --- \\
+    UPenn multimodal (imaging + clinical) & 0.599 & [0.523, 0.671] & 0.263 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption[MGMT radiomic baselines]{\textbf{MGMT-methylation radiomic
+  baselines} on BraTS 2021 ($n=577$, 301 methylated, expert masks), non-nested
+  repeated CV; AUC 95\% CIs by patient-level bootstrap. These intervals overlap
+  the deep module's throughout (Table~\ref{tab:mgmt-ablation}); the protocols
+  differ, so no ordering between them is claimed.}
+  \label{tab:mgmt-radiomic}
+  \begin{tabular}{lccc}
+    \toprule
+    Model & Recall & Precision & AUC~[95\% CI] \\
+    \midrule
+    Logistic regression & 0.412 & 0.574 & \textbf{0.583}~[0.538, 0.628] \\
+    Random forest       & 0.417 & 0.591 & 0.576~[0.528, 0.623] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption[IDH1 classification]{\textbf{IDH1-mutation classification} on
+  UPenn-GBM (primary cohort, model-predicted masks; $n=416$, 17 mutant, 4.1\%),
+  random forest. \emph{Feasibility result only}: with 17 positives the estimate
+  is unstable, reflected in the wide patient-level bootstrap interval. IDH1 is a
+  UPenn-GBM result, not a BraTS 2021 result.}
+  \label{tab:idh1}
+  \begin{tabular}{lc}
+    \toprule
+    Estimator & AUC~[95\% CI] \\
+    \midrule
+    Patient-level bootstrap & \textbf{0.896}~[0.831, 0.952] \\
+    Cross-validation mean   & 0.881~[0.867, 0.893] \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption[Cohort construction]{\textbf{Cohort construction.} MGMT methylation
+  is evaluated with BraTS 2021 as the primary cohort (301 methylated, 52.2\%)
+  and UPenn-GBM as external validation (98 methylated, 43.2\%); IDH1 is
+  UPenn-GBM only. The two UPenn tasks apply the same two restrictions
+  (determinate label; uniform mask provenance, to stop mask source acting as a
+  label proxy).}
+  \label{tab:cohorts}
+  \begin{tabular}{lc}
+    \toprule
+    Stage & $n$ \\
+    \midrule
+    \multicolumn{2}{l}{\emph{BraTS 2021 — MGMT primary}} \\
+    Determinate MGMT label, expert masks             & \textbf{577} \\
+    \addlinespace
+    \multicolumn{2}{l}{\emph{UPenn-GBM — MGMT external validation, IDH1}} \\
+    UPenn-GBM total                                  & 671 \\
+    Determinate MGMT label                           & 291 \\
+    \quad$\hookrightarrow$ uniform provenance (MGMT external) & \textbf{227} \\
+    IDH1 primary (model-predicted masks; 17 mutant)  & \textbf{416} \\
+    IDH1 sensitivity (mixed provenance; 18 mutant)   & 532 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

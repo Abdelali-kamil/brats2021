@@ -9,7 +9,9 @@ clean external test in this project is UPenn-GBM. See docs/METHODOLOGY.md.
 import os
 import sys
 import glob
+import json
 import argparse
+import datetime
 import random
 import traceback
 from pathlib import Path
@@ -167,6 +169,12 @@ def main():
     parser.add_argument("--clip-norm", type=float, default=2.0)
     parser.add_argument("--weight-channels", nargs=3, type=float, default=[1.0, 1.0, 1.0])
     parser.add_argument("--save-dir", type=str, default="checkpoints")
+    parser.add_argument("--downsample", type=str, default="dwt",
+                        choices=["dwt", "maxpool_matched"],
+                        help="encoder downsampling operator; 'maxpool_matched' is "
+                             "the Table IX ablation baseline (variant A)")
+    parser.add_argument("--tag", type=str, default="segmentor",
+                        help="checkpoint basename; <tag>_best.pth / <tag>_last.pth")
     
     # HARDCODED TO START DIRECTLY FROM YOUR BEST 650 CHECKPOINT
     parser.add_argument("--resume", type=str, default="checkpoints/segmentor_epoch_650.pth")
@@ -227,7 +235,7 @@ def main():
     )
 
     # Model/optim
-    model = WaveletUNetPlusPlus().to(device)
+    model = WaveletUNetPlusPlus(downsample=args.downsample).to(device)
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -270,6 +278,36 @@ def main():
             start_epoch = 650
             
         print(f"[INFO] start_epoch={start_epoch}, best_metric={best_metric:.4f}")
+
+    # Provenance. The released segmentor_epoch_650.pth is a bare state_dict with
+    # no record of how it was produced, which left its training protocol
+    # unverifiable after the fact. Every checkpoint written from here carries the
+    # configuration that produced it so that can never recur.
+    run_config = {
+        "downsample": args.downsample,
+        "tag": args.tag,
+        "seed": args.seed,
+        "optimizer": "AdamW",
+        "lr": args.lr,
+        "scheduler": "ReduceLROnPlateau(mode=max, factor=0.5, patience=3, min_lr=1e-7)",
+        "loss": "WeightedFocalDiceLoss(gamma=2.0, alpha_bce=1.0, alpha_dice=1.0)",
+        "weight_channels": list(args.weight_channels),
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "accum_steps": args.accum_steps,
+        "effective_batch": max(1, args.batch_size) * max(1, args.accum_steps),
+        "clip_norm": args.clip_norm,
+        "amp": bool(use_amp),
+        "patch": [128, 128, 128],
+        "normalisation": "minmax",
+        "augmentation": "none (get_datasets defaults: training=False, data_aug=False)",
+        "n_train": len(train_dataset),
+        "n_val": len(val_dataset),
+        "resumed_from": args.resume or None,
+        "torch": torch.__version__,
+        "started": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
+    print("[INFO] run config:\n" + json.dumps(run_config, indent=2))
 
     # Train
     accum_steps = max(1, args.accum_steps)
@@ -351,24 +389,29 @@ def main():
         else:
             val_metric = None
 
-        # Save last
+        # Persist last, and best-so-far. Writing one checkpoint per epoch costs
+        # ~125 MB each (weights + AdamW state), i.e. ~94 GB over a 750-epoch run,
+        # which does not fit on this machine alongside a second training arm.
+        # Resume needs `last`; evaluation needs `best`; nothing needs the rest.
         ckpt = {
             "epoch": epoch,
             "model_state": model.state_dict(),
             "optim_state": optimizer.state_dict(),
             "scaler_state": scaler.state_dict() if scaler is not None else None,
             "val_metric": val_metric,
+            "best_metric": best_metric,
+            "config": run_config,
         }
 
-        # 1. Save this exact epoch continuously like your screenshot
-        epoch_path = os.path.join(args.save_dir, f"segmentor_epoch_{epoch}.pth")
-        torch.save(ckpt, epoch_path)
-        print(f"[INFO] Saved: {epoch_path}")
+        last_path = os.path.join(args.save_dir, f"{args.tag}_last.pth")
+        torch.save(ckpt, last_path)
 
-        # 2. Track the best score in the console (Optional but helpful)
         if val_metric is not None and val_metric > best_metric:
             best_metric = val_metric
-            print(f"[INFO] 🏆 New high score! Best Mean Dice is now: {best_metric:.4f}")
+            ckpt["best_metric"] = best_metric
+            best_path = os.path.join(args.save_dir, f"{args.tag}_best.pth")
+            torch.save(ckpt, best_path)
+            print(f"[INFO] New best mean Dice {best_metric:.4f} -> {best_path}")
 
     print("[INFO] Training complete.")
 

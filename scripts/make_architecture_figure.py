@@ -2,15 +2,22 @@
 """Architecture diagram of the *implemented* pipeline (thesis Methods figure).
 
 Draws what the code actually builds — verified against brats_gbm/model.py and
-brats_gbm/gnn.py — NOT the original proposal. Deliberately omits the Transformer
-branch and the learned lesion/slice/global encoders, which were never built.
+brats_gbm/gnn.py. The classification module now includes the region-token
+Transformer branch of paper V-F; the learned lesion/slice/global encoders of the
+original proposal are still not built and are not drawn.
+
+Primary classification task is BraTS 2021 MGMT methylation, which is
+imaging-only: BraTS ships no clinical metadata, so the clinical encoder and the
+adaptive gate are exercised only on the UPenn-GBM external-validation cohort.
+Those two boxes are drawn dashed and labelled accordingly.
 
 Stage 1  Wavelet U-Net++ (DWT downsampling) -> 3-region mask (ET/TC/WT)
-Stage 2  51 radiomic features (+ 3 clinical) -> KAN|MLP encoders -> concat/LN
-         -> [adaptive gated fusion] -> [memory-bank GNN] -> linear head -> MGMT
+Stage 2  51 radiomic features (+ 3 clinical, UPenn only)
+         -> KAN|MLP encoder (+ region-token Transformer) -> [concat / gate / LN]
+         -> [memory-bank GNN] -> linear head -> P(MGMT methylated)
 
-Boxes with a dashed outline are ablation toggles (GNN = rungs 4-5, gate = rung 5);
-the imaging and clinical encoders are KAN *or* MLP, swapped across the ablation.
+Dashed boxes are ablation toggles or external-cohort-only components; the
+imaging and clinical encoders are KAN *or* MLP, swapped across the ablation.
 
 Output: results/figures/fig_architecture_implemented.{pdf,png}
 """
@@ -75,7 +82,7 @@ def stage(y0, y1, title, subtitle):
 stage(63.5, 98, "Stage 1 — Segmentation",
       "trained on BraTS2021 · applied to UPenn-GBM")
 stage(2, 61, "Stage 2 — MGMT-methylation classification",
-      "per-patient imaging + clinical fusion")
+      "primary: BraTS 2021 (imaging)")
 
 # ---- Stage 1 ------------------------------------------------------------
 box(50, 86, 56, 6.6,
@@ -95,8 +102,8 @@ box(28, 50, 40, 8.2,
     "Radiomics extraction\n51 features  (shape / intensity / texture)",
     fill=SURFACE, edge=AQUA, fs=9.2)
 box(74, 50, 40, 8.2,
-    "Clinical tabular  ·  3 features\nage,  sex,  GTR > 90%",
-    fill=SURFACE, edge=ORANGE, fs=9.2)
+    "Clinical tabular  ·  3 features\nage, sex, GTR > 90%  (UPenn only)",
+    fill=SURFACE, edge=ORANGE, dashed=True, fs=9.0)
 arrow(46, 63.4, 30, 54.4)                            # mask -> radiomics
 ax.text(33.5, 61.9, "mask + MRI", fontsize=8, color=MUTED, ha="right",
         va="center", style="italic")
@@ -105,10 +112,10 @@ ax.text(74, 58.4, "external input", fontsize=8, color=MUTED, ha="center",
 arrow(74, 57.8, 74, 54.3)
 
 # ---- encoders ----------------------------------------------------------
-box(28, 40, 34, 7.4, "Imaging encoder\n(KAN  or  MLP)",
-    fill="#f2f4f7", edge=INK2, fs=9.2)
-box(74, 40, 34, 7.4, "Clinical encoder\n(KAN  or  MLP)",
-    fill="#f2f4f7", edge=INK2, fs=9.2)
+box(28, 40, 34, 7.8, "Imaging encoder (KAN | MLP)\n+ region-token Transformer",
+    fill="#f2f4f7", edge=INK2, fs=8.6)
+box(74, 40, 34, 7.8, "Clinical encoder (KAN | MLP)\n(UPenn only)",
+    fill="#f2f4f7", edge=INK2, dashed=True, fs=8.8)
 arrow(28, 45.9, 28, 43.9)
 arrow(74, 45.9, 74, 43.9)
 
@@ -121,14 +128,14 @@ arrow(74, 36.3, 57, 34.3, rad=0.12)
 box(51, 22.5, 50, 7.0,
     "Adaptive gated fusion\nper-sample imaging ⇄ clinical weight",
     fill=SURFACE, edge=VIOLET, dashed=True, fs=9.0)
-ax.text(78.5, 22.5, "rung 5", fontsize=8, color=VIOLET, ha="left", va="center",
-        fontweight="bold")
+ax.text(78.5, 22.5, "UPenn only", fontsize=8, color=VIOLET, ha="left",
+        va="center", fontweight="bold")
 arrow(51, 27.9, 51, 26.1)
 
 box(51, 13.5, 58, 7.4,
-    "Memory-bank GNN\nGraphConv  ·  k = 8 neighbours  ·  memory → query",
+    "Memory-bank GNN\nGraphConv  ·  k ∈ {5, 10} neighbours  ·  memory → query",
     fill=SURFACE, edge=VIOLET, dashed=True, fs=9.0)
-ax.text(82.5, 13.5, "rungs 4–5", fontsize=8, color=VIOLET, ha="left",
+ax.text(82.5, 13.5, "ablation toggle", fontsize=8, color=VIOLET, ha="left",
         va="center", fontweight="bold")
 arrow(51, 19.0, 51, 17.3)
 
@@ -143,10 +150,11 @@ ax.add_patch(FancyBboxPatch((3, -3.6), 94, 4.2,
 ax.plot([7, 12], [-1.4, -1.4], color=INK2, lw=1.6, solid_capstyle="round")
 ax.text(13, -1.4, "always active", fontsize=8.3, color=INK2, va="center")
 ax.plot([31, 36], [-1.4, -1.4], color=VIOLET, lw=1.6, ls=(0, (4, 2.5)))
-ax.text(37, -1.4, "ablation toggle", fontsize=8.3, color=INK2, va="center")
-ax.text(60, -1.4,
+ax.text(37, -1.4, "ablation toggle / UPenn only", fontsize=8.3, color=INK2,
+        va="center")
+ax.text(66, -1.4,
         "Encoders are KAN or MLP (swapped across the ablation).",
-        fontsize=8.3, color=MUTED, va="center", style="italic")
+        fontsize=7.8, color=MUTED, va="center", style="italic")
 ax.set_ylim(-5, 100)
 
 ax.text(3, 99.4, "Implemented pipeline", fontsize=13.5, fontweight="bold",

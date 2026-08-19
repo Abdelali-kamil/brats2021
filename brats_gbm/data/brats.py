@@ -6,9 +6,15 @@ from torch.utils.data.dataset import Dataset
 import random 
 
 try:
-    from image import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
+    # Package-qualified, matching how every other module imports these helpers.
+    from brats_gbm.data.image import (
+        pad_or_crop_image, irm_min_max_preprocess, zscore_normalise)
 except ImportError:
-    print("⚠️ Warning: image.py helpers not found. Ensure they are in the same directory.")
+    # Fallback for running this file directly, with brats_gbm/data/ on sys.path.
+    # Left to raise if it also fails: swallowing the error here previously turned
+    # a missing import into a NameError inside a DataLoader worker at train time.
+    from image import (
+        pad_or_crop_image, irm_min_max_preprocess, zscore_normalise)
 
 class Brats(Dataset):
     def __init__(self, patients_dir, training=True, data_aug=False, no_seg=False, normalisation="minmax"):

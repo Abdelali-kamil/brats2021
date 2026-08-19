@@ -47,6 +47,7 @@ scripts/                   entry points, all argparse-driven
   verify_no_leakage.py     assert every data-integrity property
   watch.sh                 follow a running pipeline stage
   run_pipeline.sh          full pipeline, end to end
+  run_ablation.sh          downsampling ablation: DWT vs max-pooling (paper Table IX)
 
 tests/                     pytest suite for metrics, post-processing, splits
 metadata/                  UPenn-GBM clinical CSV (65 KB, committed)
@@ -122,8 +123,17 @@ why validation selection was abandoned.
 
 ```bash
 python scripts/extract_radiomic_features.py    # GPU, ~1.5 h for 629 subjects
-python scripts/train_classifier_idh1.py        # CPU, ~3 min
+python scripts/train_classifier_idh1.py        # UPenn IDH1 radiomic, CPU, ~3 min
+python scripts/train_classifier_mgmt.py        # BraTS MGMT radiomic, CPU, ~3 min
+python scripts/ablation_kan_gnn.py             # KAN+Transformer+GNN: BraTS MGMT primary
+                                               #   + UPenn external validation (GPU)
 ```
+
+The KAN+Transformer+GNN module (`brats_gbm/gnn.py`) is trained and evaluated on
+**BraTS 2021 MGMT** as the primary task; UPenn-GBM is used only for external
+validation. Because BraTS ships no clinical metadata, the module is imaging-only
+on the primary task, and the clinical/gated-fusion branch is exercised only on
+the UPenn cohort. See `docs/METHODOLOGY.md`.
 
 ### Training from scratch
 
@@ -165,8 +175,17 @@ test set.
 **UPenn-GBM**, 29 held-out test subjects — best setup `ensemble_v3_v4` at mean
 Dice **0.8204** [0.7587, 0.8716], against **0.6948** for zero-shot transfer.
 
-**IDH1 classification**, 416 subjects with 17 positives — random forest,
-AUC ~0.89. Underpowered; read the intervals, not the point estimates.
+**IDH1 classification** (UPenn-GBM), 416 subjects with 17 positives — random
+forest, AUC ~0.89. Underpowered; read the intervals, not the point estimates.
+
+**BraTS2021 MGMT classification** (primary classification task) — best radiomic
+baseline (logistic regression) AUC **0.583** [0.538, 0.628] (random forest 0.576).
+The deep KAN+Transformer+GNN module reaches **0.624** [0.575, 0.670],
+statistically indistinguishable from a plain MLP (0.617) and in the same weak
+range as the radiomic baselines, and transfers to UPenn-GBM at **chance**
+(0.537 [0.460, 0.612]). MGMT is not recoverable from these features out of
+sample; this is reported as a negative result, consistent with the known
+difficulty of the task.
 
 Figures for both cohorts: `results/FIGURES.md`.
 

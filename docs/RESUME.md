@@ -1,76 +1,108 @@
 # Where to pick up
 
-Last session: 2026-07-24.
+Last session: 2026-07-27.
 
-## Check the ablation first
+## What changed this session
 
-It was left running detached and should have finished overnight.
+The deep classification module was **redesigned to be BraTS-2021-primary**, in
+line with the project's scope (BraTS is the main dataset; UPenn-GBM is external
+validation only). Previously the KAN+GNN ablation ran only on UPenn MGMT, which
+inverted that scope. The current state:
 
-```bash
-cd ~/brats2021
-tail -30 logs/ablation_kan_gnn.log        # did it finish?
-cat results/classification/kan_gnn_ablation.json
-```
+- `brats_gbm/gnn.py` — `ClinicalImagingKANGNN` now includes a region-token
+  **Transformer branch** (paper §V-F) and treats the clinical branch as
+  optional, so it runs imaging-only on BraTS and multimodal on UPenn.
+- `scripts/ablation_kan_gnn.py` — rewritten. Primary task is **BraTS 2021 MGMT**
+  (n=577, imaging-only, 51 features shared with UPenn), nested 5×3 CV. Adds a
+  **UPenn external-validation** leg and a UPenn-only multimodal reference.
+- Results in `results/classification/kan_gnn_brats.json` (the old
+  `kan_gnn_ablation.json` is the superseded UPenn-only run).
+- Figures regenerated: `results/figures/fig1_ablation_auc_forest.*`,
+  `fig2_attribution.*`, `fig_architecture_implemented.*`.
 
-The final table prints at the end of the log. If the log stops mid-way without
-a summary table, the job died — rerun with `python scripts/ablation_kan_gnn.py`.
-There is no checkpointing, so a rerun starts from scratch (~2 h).
+## Results (final)
 
-## Results as of the last update
+BraTS 2021 MGMT, nested 5×3 CV, 3 repeats:
 
-Ablation ladder, UPenn MGMT (n=227, 98 methylated, nested CV):
+| Rung | AUC [95% CI] |
+|---|---|
+| MLP (baseline) | 0.617 [0.568, 0.663] |
+| KAN | 0.602 [0.553, 0.648] |
+| KAN + Transformer | 0.645 [0.599, 0.692] |
+| KAN + GNN | 0.615 [0.568, 0.662] |
+| KAN + Transformer + GNN (full) | 0.624 [0.575, 0.670] |
 
-| Rung | AUC [95% CI] | Δ |
-|---|---|---|
-| `imaging_only` | 0.536 [0.463, 0.614] | — |
-| `mlp_fusion` | **0.629** [0.552, 0.701] | +0.093 |
-| `kan_fusion` | 0.562 [0.487, 0.635] | −0.067 |
-| `kan_gnn` | pending | |
-| `kan_gnn_gate` | pending | |
+- External BraTS→UPenn (full model): **0.537 [0.460, 0.612]** — chance.
+- UPenn multimodal (imaging+clinical+gate): **0.599 [0.523, 0.671]**.
 
-Two findings so far. Clinical variables (age, sex, GTR) carry the signal —
-imaging alone sits at chance. And **KAN underperformed the plain MLP**, which
-the parameter count predicted: KAN is 8–10× larger at 54 input features, and
-n=227 cannot support that.
+**Reading:** all BraTS intervals overlap (mean 95% CI half-width ±0.047); the
+full module does not beat the plain MLP; KAN ≤ MLP; the memory bank contributes
+~25% of the representation but no AUC; external transfer is at chance. This is a
+negative result and is reported as one, consistent with MGMT-from-MRI being a
+weak-signal task (radiomic RF 0.583; RSNA-MICCAI 2021 winner ~0.62).
 
-## Next steps, in priority order
+## In flight (started 2026-07-29)
 
-1. **`clinical_only` control** — already added to `CONFIGS`. Minutes to run:
-   ```bash
-   python scripts/ablation_kan_gnn.py --configs clinical_only
-   ```
-   This is the decisive control. If it matches `mlp_fusion` (~0.63), then the
-   imaging branch contributes nothing and "multimodal fusion" is really
-   clinical prediction. Every downstream claim depends on this number.
+**Downsampling ablation — DWT vs width-matched max-pooling** (paper Table IX).
+`bash scripts/run_ablation.sh` trains both arms from scratch on the seed-42
+1000/251 split at a matched 200-epoch budget, then scores each through the
+reported evaluation pipeline. Progress:
+`tail -F logs/ablation_ablation_{maxpool,dwt}.log`; outputs land in
+`results/brats/ablation/`. Re-running skips arms that already have a
+`*_best.pth` (set `FORCE=1` to redo). Protocol in `docs/METHODOLOGY.md`.
 
-2. **`mlp_gnn` rung** — not yet added. The ladder confounds two changes at
-   rung 4: it adds the GNN on top of an encoder that is already underperforming.
-   Adding MLP+GNN isolates the memory bank against the *best* encoder instead of
-   the worst. Add to `CONFIGS` in `scripts/ablation_kan_gnn.py`:
-   ```python
-   "mlp_gnn": dict(use_clinical=True, use_kan=False, use_gnn=True, use_gate=False),
-   ```
+- **Arm A (max-pooling): done.** Best mean Dice **0.8199 at epoch 43**
+  (`checkpoints/ablation/ablation_maxpool_best.pth`). Trained 199 epochs before
+  being stopped — see below.
+- **Arm B (DWT): running**, started 2026-07-30 12:05, ~19 h for 200 epochs, then
+  ~4–8 h of TTA evaluation for both arms. Expect results 2026-07-31.
 
-3. **Lesion Encoder** (proposal §2.2(2), the cheap half). The segmentor's
-   `conv4_0` bottleneck is 256×D×H×W; mask-pooling it gives a learned 256-d
-   per-patient embedding without training anything new. Slots into the same
-   harness as an extra imaging-feature source and directly tests whether learned
-   features beat the 54 radiomics at the `imaging_only` rung. Hours, not weeks.
+The epoch budget was cut from 750 to 200 mid-experiment. `--epochs 750` in
+`train_brats.py` is a *resume* target (the original run continued an epoch-650
+checkpoint by 100 epochs); as a from-scratch budget it is ~10x too large here.
+Arm A peaked at epoch 43 and hit its 1e-7 LR floor at epoch 76, then sat in
+noise for 150 epochs. Continuing would have burned ~53 h per arm to no effect.
+Both arms now get 200 epochs and the best-validation checkpoint is reported.
 
-4. **ViT Global Encoder**, then **joint segmentation-classification
-   optimisation** (Innovation 4). Both substantially larger.
+When it lands, fill in Table IX of the paper — the max-pooling row is currently
+a red `TBD` placeholder — and remove the red note in the Ablation section. Do
+not pre-write the conclusion: a result where max-pooling matches or beats the
+DWT is a real possibility and should be reported as found.
 
-## Outstanding from earlier (paused at your request)
+**Two defects fixed this session, both pre-existing:**
 
-- **Proposal §5.2 correction.** The reported 0.8974 mean DSC is pooled over the
-  1000 training cases. Held-out is **0.8828** [0.8638, 0.8992]. HD95 values also
-  need the surface-based definition: 3.24 / 4.82 / 10.17 mm, not 2.04 / 1.56 /
-  1.97. See `docs/METHODOLOGY.md`.
-- **nnU-Net baseline** on the same 251-case split. No comparison numbers
-  currently exist that were computed on this project's own split.
+- `brats_gbm/data/brats.py` used a bare `from image import ...` that never
+  resolved under `train_brats.py`, behind an `except ImportError` that swallowed
+  it. BraTS training could not run from the repository at all. Fixed to the
+  package-qualified import every other module uses.
+- `train_brats.py` wrote a full ~125 MB checkpoint every epoch (~94 GB per run,
+  more than the free space allows for two runs) and never saved a distinct
+  best. Now writes `<tag>_best.pth` / `<tag>_last.pth` only, each carrying the
+  full run configuration.
+
+The released `segmentor_epoch_650.pth` therefore cannot have been produced by
+the code as it stands, so its training protocol is unverifiable. Reported
+results are unaffected — the checkpoint is untouched and its evaluation
+reproduces to 1.1e-16 — but the paper's Methods section describes current code,
+not a confirmed history.
+
+## Outstanding
+
+- **BraTS k-fold cross-validation** for a fold-level mean ± std in paper
+  Table VI — deferred by decision until the ablation lands. ~10 days at 5 folds
+  × 750 epochs. Requires an inner validation split per fold for LR scheduling
+  and checkpoint choice, so fold scores stay genuinely held out. Table VI
+  currently carries a caption note explaining why our row has no ±.
+- **nnU-Net segmentation baseline** on this project's 251-case split — still no
+  comparison numbers computed on the project's own split.
+- **UPenn 5-fold cross-validation** (`scripts/crossval_upenn.py`) — implemented,
+  verified (`--dry-run`), not trained (~10–14 GPU-hours). Would tighten the
+  segmentation intervals from n=29 to n=147.
+- The learned lesion/slice/global encoders of the original proposal remain
+  unbuilt; the module uses radiomic features, not segmentation-encoder
+  bottleneck features. Documented in `scripts/make_architecture_figure.py`.
 
 ## Repository state
 
-Clean. All segmentation and classification results final and committed.
-`python -m pytest tests/ -q` → 46 pass. `python scripts/verify_no_leakage.py`
-→ 21 checks pass. `./scripts/watch.sh status` shows any running job.
+`python -m pytest tests/ -q` → 46 pass. Segmentation results unchanged and
+final. Classification redesigned and rerun this session.
