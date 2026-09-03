@@ -94,10 +94,45 @@ class Brats(Dataset):
         }
 
     def augment(self, img, lbl):
-        if random.random() > 0.5:
-            img, lbl = np.flip(img, axis=2).copy(), np.flip(lbl, axis=2).copy()
-        if random.random() > 0.5:
-            img, lbl = np.flip(img, axis=3).copy(), np.flip(lbl, axis=3).copy()
+        """Spatial and intensity augmentation for training patches.
+
+        Spatial transforms are axis-aligned — flips on all three axes and
+        90-degree rotations in plane — so they need no interpolation, cannot
+        blur a label boundary, and cost nothing measurable in the loader. The
+        crop is cubic (128^3), so a rotation in any plane keeps the shape.
+        Image and label are transformed together; a transform applied to one
+        and not the other would silently destroy the correspondence, which
+        `tests/test_augmentation.py` asserts against.
+
+        Intensity transforms act on the image only, per channel, because the
+        four modalities are normalised independently.
+        """
+        # Spatial — image and label together.
+        for axis in (1, 2, 3):  # z, y, x; axis 0 is channel/region
+            if random.random() < 0.5:
+                img = np.flip(img, axis=axis)
+                lbl = np.flip(lbl, axis=axis)
+        k = random.randint(0, 3)
+        if k:
+            img = np.rot90(img, k=k, axes=(2, 3))
+            lbl = np.rot90(lbl, k=k, axes=(2, 3))
+
+        # flip/rot90 return views over the original buffer; the intensity
+        # transforms below write in place, so a contiguous copy is required.
+        img = np.ascontiguousarray(img, dtype=np.float32)
+        lbl = np.ascontiguousarray(lbl)
+
+        # Intensity — image only, independently per modality.
+        for c in range(img.shape[0]):
+            if random.random() < 0.5:
+                img[c] = img[c] * random.uniform(0.9, 1.1) + random.uniform(-0.1, 0.1)
+            if random.random() < 0.3:
+                lo, hi = float(img[c].min()), float(img[c].max())
+                if hi > lo:
+                    scaled = (img[c] - lo) / (hi - lo)
+                    img[c] = scaled ** random.uniform(0.7, 1.5) * (hi - lo) + lo
+            if random.random() < 0.2:
+                img[c] = img[c] + np.random.normal(0.0, 0.02, img[c].shape)
         return img, lbl
 
     @staticmethod
@@ -123,6 +158,44 @@ def get_datasets(seed=42, debug=False, on="test"):
     print(f"📂 Found {len(patients_dir)} candidate patient folders.")
     
     return Brats(patients_dir, training=(on == "train"), normalisation="minmax", data_aug=False)
+
+
+def get_brats_train_val(data_root=None, seed=42, data_aug=True):
+    """Training and validation datasets under the three-way split.
+
+    `get_datasets` returns a single dataset built with ``training=False``, which
+    `scripts/train_brats.py` then partitioned with `random_split`. Both halves
+    therefore inherited ``training=False``, and two consequences followed that
+    were never intended:
+
+      * `pad_or_crop_image` took a *deterministic centre crop*, so every epoch
+        saw the identical 128^3 window of each volume. On 155x240x240 data that
+        is 28% of the axial plane; the periphery was never trained on, while
+        sliding-window inference is applied to all of it.
+      * ``data_aug=False`` was hardcoded, so `Brats.augment` never ran.
+
+    This function builds the two partitions separately so each gets the flags it
+    should have: random cropping and augmentation for training, and the
+    deterministic centre crop with no augmentation for validation, so model
+    selection is not measured through a moving target.
+
+    Returns ``(train_dataset, val_dataset, test_ids)``. The test ids are
+    returned rather than a dataset: nothing in training may touch them.
+    """
+    from brats_gbm.splits import assert_disjoint, brats_split_3way
+
+    root = pathlib.Path(data_root or "/home/kamilabdelali/brats2021/data").resolve()
+    train_ids, val_ids, test_ids = brats_split_3way(str(root), seed=seed)
+    assert_disjoint(train=train_ids, val=val_ids, test=test_ids)
+
+    def dirs(ids):
+        return sorted((root / i for i in ids), key=lambda p: p.name)
+
+    train_dataset = Brats(
+        dirs(train_ids), training=True, data_aug=data_aug, normalisation="minmax")
+    val_dataset = Brats(
+        dirs(val_ids), training=False, data_aug=False, normalisation="minmax")
+    return train_dataset, val_dataset, sorted(test_ids)
 
 
 if __name__ == "__main__":

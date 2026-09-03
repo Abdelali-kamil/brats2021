@@ -26,7 +26,7 @@ from torch.utils.data import DataLoader, random_split
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from brats_gbm.data.brats import get_datasets
+from brats_gbm.data.brats import get_brats_train_val
 from brats_gbm.data.collate import custom_collate
 from brats_gbm.model import WaveletUNetPlusPlus
 
@@ -175,10 +175,26 @@ def main():
                              "the Table IX ablation baseline (variant A)")
     parser.add_argument("--tag", type=str, default="segmentor",
                         help="checkpoint basename; <tag>_best.pth / <tag>_last.pth")
-    
-    # HARDCODED TO START DIRECTLY FROM YOUR BEST 650 CHECKPOINT
-    parser.add_argument("--resume", type=str, default="checkpoints/segmentor_epoch_650.pth")
-    
+    parser.add_argument("--data-aug", dest="data_aug", action="store_true", default=True,
+                        help="spatial and intensity augmentation on the training "
+                             "split (default: on)")
+    parser.add_argument("--no-data-aug", dest="data_aug", action="store_false",
+                        help="disable augmentation; reproduces the pre-2026-09 "
+                             "training procedure")
+    parser.add_argument("--scheduler", type=str, default="cosine",
+                        choices=["cosine", "plateau"],
+                        help="cosine anneals over --epochs; 'plateau' is the "
+                             "previous ReduceLROnPlateau behaviour")
+
+    # Empty by default: this must be an explicit choice. It previously defaulted
+    # to checkpoints/segmentor_epoch_650.pth, so a run intended to start from
+    # scratch silently continued that checkpoint instead, and its "from-scratch"
+    # result would have been nothing of the kind.
+    parser.add_argument("--resume", type=str, default="",
+                        help="checkpoint to resume from; empty means train from "
+                             "scratch")
+
+
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--eval-every", type=int, default=1)
     args = parser.parse_args()
@@ -199,18 +215,14 @@ def main():
         print(f"[INFO] CUDA: {torch.version.cuda}")
         print(f"[INFO] GPU: {torch.cuda.get_device_name(device)}")
 
-    # Dataset
-    ds = get_datasets()
-    if isinstance(ds, (tuple, list)) and len(ds) >= 2:
-        train_dataset, val_dataset = ds[0], ds[1]
-    else:
-        n = len(ds)
-        train_n = int(0.8 * n)
-        val_n = n - train_n
-        train_dataset, val_dataset = random_split(
-            ds, [train_n, val_n], generator=torch.Generator().manual_seed(args.seed)
-        )
-        print(f"[INFO] Split dataset: train={train_n}, val={val_n}")
+    # Dataset. The split comes from brats_gbm.splits, the single source of truth,
+    # rather than a second random_split here that happened to agree with it.
+    train_dataset, val_dataset, test_ids = get_brats_train_val(
+        seed=args.seed, data_aug=args.data_aug)
+    print(f"[INFO] Split: train={len(train_dataset)}, val={len(val_dataset)}, "
+          f"test={len(test_ids)} (test is held out, never scored here)")
+    print(f"[INFO] Augmentation: {'on' if args.data_aug else 'OFF'} | "
+          f"train crop: random | val crop: centre (deterministic)")
 
     num_workers = auto_num_workers(args.num_workers)
     pin_memory = (device.type == "cuda")
@@ -238,9 +250,20 @@ def main():
     model = WaveletUNetPlusPlus(downsample=args.downsample).to(device)
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="max", factor=0.5, patience=3, min_lr=1e-7
-    )
+    # ReduceLROnPlateau drove the learning rate to its 1e-7 floor by epoch 76 in
+    # the Table IX ablation and the remaining ~120 epochs changed nothing. Cosine
+    # anneals over the whole budget instead, so late epochs still train.
+    if args.scheduler == "cosine":
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, args.epochs - args.start_epoch), eta_min=1e-7
+        )
+        scheduler_desc = (f"CosineAnnealingLR(T_max={max(1, args.epochs - args.start_epoch)}, "
+                          f"eta_min=1e-7)")
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", factor=0.5, patience=3, min_lr=1e-7
+        )
+        scheduler_desc = "ReduceLROnPlateau(mode=max, factor=0.5, patience=3, min_lr=1e-7)"
 
     use_amp = (device.type == "cuda")
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
@@ -289,7 +312,7 @@ def main():
         "seed": args.seed,
         "optimizer": "AdamW",
         "lr": args.lr,
-        "scheduler": "ReduceLROnPlateau(mode=max, factor=0.5, patience=3, min_lr=1e-7)",
+        "scheduler": scheduler_desc,
         "loss": "WeightedFocalDiceLoss(gamma=2.0, alpha_bce=1.0, alpha_dice=1.0)",
         "weight_channels": list(args.weight_channels),
         "epochs": args.epochs,
@@ -300,7 +323,15 @@ def main():
         "amp": bool(use_amp),
         "patch": [128, 128, 128],
         "normalisation": "minmax",
-        "augmentation": "none (get_datasets defaults: training=False, data_aug=False)",
+        "augmentation": (
+            "flips(z,y,x p=0.5) + rot90(in-plane) + per-channel intensity "
+            "scale/shift(p=0.5) + gamma(p=0.3) + gaussian noise(p=0.2)"
+            if args.data_aug else "none"
+        ),
+        "train_crop": "random",
+        "val_crop": "centre (deterministic)",
+        "split": "brats_split_3way(seed=%d): train/val/test, test held out" % args.seed,
+        "resume_from": args.resume or "scratch",
         "n_train": len(train_dataset),
         "n_val": len(val_dataset),
         "resumed_from": args.resume or None,
@@ -385,9 +416,15 @@ def main():
         # Eval
         if epoch % max(1, args.eval_every) == 0:
             val_metric = evaluate(model, val_loader, device)
-            scheduler.step(val_metric)
         else:
             val_metric = None
+
+        # ReduceLROnPlateau steps on the validation metric; cosine steps on the
+        # epoch and must be called every epoch, including ones without an eval.
+        if args.scheduler == "cosine":
+            scheduler.step()
+        elif val_metric is not None:
+            scheduler.step(val_metric)
 
         # Persist last, and best-so-far. Writing one checkpoint per epoch costs
         # ~125 MB each (weights + AdamW state), i.e. ~94 GB over a 750-epoch run,
