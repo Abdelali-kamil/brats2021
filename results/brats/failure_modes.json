@@ -1,0 +1,50 @@
+{
+  "n": 251,
+  "et_dice_by_gt_volume": [
+    {
+      "lo": 1,
+      "hi": 100,
+      "n": 2,
+      "mean_dice_et": 0.0
+    },
+    {
+      "lo": 100,
+      "hi": 300,
+      "n": 2,
+      "mean_dice_et": 0.0
+    },
+    {
+      "lo": 300,
+      "hi": 1000,
+      "n": 4,
+      "mean_dice_et": 0.44231320823524833
+    },
+    {
+      "lo": 1000,
+      "hi": 5000,
+      "n": 37,
+      "mean_dice_et": 0.7520068015334882
+    },
+    {
+      "lo": 5000,
+      "hi": null,
+      "n": 202,
+      "mean_dice_et": 0.9027509787593487
+    }
+  ],
+  "empty_gt_et": {
+    "n": 4,
+    "mean_dice_et": 0.75
+  },
+  "tc_when_et_absent": {
+    "threshold_voxels": 300,
+    "n": 8,
+    "mean_dice_tc": 0.2747536399374503,
+    "median_dice_tc": 0.007642149431879871
+  },
+  "tc_when_et_present": {
+    "n": 243,
+    "mean_dice_tc": 0.9118208458120808,
+    "median_dice_tc": 0.9528375709548
+  }
+}
