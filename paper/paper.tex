@@ -1,0 +1,852 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\graphicspath{{results/figures/}{figures/}{./}}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{stfloats}
+\usepackage{cite}
+\usepackage{url}
+\usepackage[caption=false]{subfig}
+\usepackage{siunitx}
+\usepackage{balance}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{pifont}
+
+\hypersetup{hidelinks}
+
+\begin{document}
+
+% ============================================================
+% TITLE
+% ============================================================
+\title{Research on Integrated Deep Learning Architectures for Brain Tumor Segmentation and Classification}
+
+\author{
+\IEEEauthorblockN{Kamil Abdelali and Ruiquan Ge\textsuperscript{*}}
+\IEEEauthorblockA{Medical Image Analysis Laboratory, School of Software\\
+Hangzhou Dianzi University (HDU)\\
+Hangzhou, China\\
+\textsuperscript{*}Corresponding author: Ruiquan Ge, \texttt{REPLACE-WITH-REAL-EMAIL}}
+}
+
+\maketitle
+
+% ============================================================
+% ABSTRACT
+% ============================================================
+\begin{abstract}
+Brain tumor segmentation from multi-modal MRI and molecular biomarker classification are critical tasks in neuro-oncology. We evaluate \textbf{Wavelet U-Net++}, which integrates the Discrete Wavelet Transform (DWT) into the U-Net++ framework, replacing pooling-based downsampling with a fixed Haar wavelet decomposition so that high-frequency detail otherwise discarded by pooling is carried forward through the encoder. On the BraTS 2021 benchmark (1,251 cases), internal validation with a fixed threshold of 0.5 and no test-set tuning yields mean Dice of 0.8828 [95\% CI: 0.8638, 0.8992] across the enhancing tumor (ET: 0.8564), tumor core (TC: 0.8915), and whole tumor (WT: 0.9006) sub-regions, with a mean HD95 of 6.20\,mm. The train-minus-validation generalisation gap of $+0.0087$ [$-0.0089$, $+0.0284$] does not provide evidence of overfitting. External evaluation on the held-out UPenn-GBM cohort (29 test subjects) demonstrates a mean Dice of 0.8204 [0.759, 0.872] after fine-tuning, representing a statistically significant improvement over zero-shot transfer (0.695 $\to$ 0.820, paired improvement $+0.11$ [0.04, 0.19]); five-fold cross-validated fine-tuning over all 147 expert-segmented UPenn-GBM subjects confirms this at 0.8474 [0.8282, 0.8646] pooled out-of-fold Dice. For IDH1 mutation classification on 416 UPenn-GBM subjects (17 positives), a random-forest classifier achieves AUC of 0.896 [0.831, 0.952] with sensitivity 0.847 and specificity 0.734 under uniform mask provenance. A deep classification module (KAN encoders, a region-token Transformer branch, and a retrieval-augmented graph memory bank) is evaluated on BraTS 2021 MGMT methylation as the primary classification task, with UPenn-GBM held out for external validation. On BraTS it reaches AUC 0.624 [0.575, 0.670], statistically indistinguishable from a plain MLP baseline (0.617), and it transfers to UPenn-GBM at chance (0.537 [0.460, 0.612]); we report this negative result in full, as it is consistent with the known difficulty of predicting MGMT status from MRI. A controlled width-matched ablation found no Dice benefit from DWT downsampling relative to max-pooling and worse HD95 across all regions; the observed segmentation performance cannot therefore be attributed to the wavelet operator. We additionally document and correct seven pipeline defects --- including a preprocessing channel-order mismatch, test-set threshold tuning, and classification label leakage --- that had materially distorted earlier reported results.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Brain tumor segmentation, wavelet transform, U-Net++, BraTS 2021, UPenn-GBM, domain adaptation, MGMT methylation, IDH1 classification, deep learning, medical image analysis
+\end{IEEEkeywords}
+
+% ============================================================
+% I. INTRODUCTION
+% ============================================================
+\section{Introduction}
+
+Brain tumors are among the most life-threatening malignancies, with glioblastoma multiforme (GBM) carrying a median survival of 14--16 months under standard radiotherapy plus temozolomide~\cite{stupp2005radiotherapy}, and classified per the WHO criteria~\cite{louis2016who}. Accurate automated segmentation of tumor sub-regions from multi-parametric MRI and reliable prediction of molecular biomarkers such as IDH1 mutation status and MGMT promoter methylation~\cite{hegi2005mgmt} are essential for surgical planning, treatment response monitoring, and stratified clinical trials~\cite{menze2015multimodal}.
+
+The BraTS challenge~\cite{baid2021brats} provides the largest publicly available benchmark for brain tumor segmentation. However, most BraTS-trained models are evaluated only on the BraTS distribution, and their transferability to independent clinical cohorts remains poorly characterised. Meanwhile, reproducibility concerns in medical AI --- including test-set overfitting, data-preprocessing errors, and label-leakage in classification pipelines --- have been increasingly recognised~\cite{isensee2021nnu,varoquaux2022ml,heil2021reproducibility}.
+
+In this work, we address three complementary objectives: (1) evaluating Wavelet U-Net++, which replaces pooling-based encoder downsampling with a fixed Haar DWT so that frequency-domain boundary information is carried forward; (2) evaluating the model under a fully reproducible, non-test-tuned protocol on BraTS 2021 and on the independent UPenn-GBM cohort; and (3) providing a transparent audit of pipeline defects discovered and corrected during development.
+
+Our key contributions are:
+\begin{itemize}
+    \item \textbf{Wavelet U-Net++}: in the encoder, a fixed Haar DWT replaces max-pooling for downsampling, so the high-frequency sub-bands (edge and texture detail) that pooling discards are concatenated on the channel axis and carried into the next convolution block; the remainder of the backbone is a standard U-Net++ with nested dense skip connections.
+    \item \textbf{External validation on UPenn-GBM}: a clean held-out evaluation on 29 test subjects from an independent cohort demonstrates domain transfer and the benefit of fine-tuning, and five-fold cross-validated fine-tuning extends the evaluation to all 147 expert-segmented subjects.
+    \item \textbf{Controlled wavelet ablation}: a width-matched max-pooling baseline isolates the effect of Haar-DWT downsampling and finds no Dice improvement and consistently worse HD95 with DWT.
+    \item \textbf{IDH1 classification pipeline}: a leakage-corrected random-forest classifier on 416 UPenn-GBM subjects achieves AUC of 0.896.
+    \item \textbf{MGMT classification module} (KAN encoders + region-token Transformer + retrieval-augmented graph memory bank), evaluated on BraTS 2021 MGMT methylation as the primary task with UPenn-GBM for external validation. We report a rigorous \emph{negative} result: no component exceeds a plain MLP and out-of-cohort transfer is at chance, consistent with the contested imaging signal for MGMT.
+    \item \textbf{Transparent pipeline audit}: seven defects are identified and corrected, with their effects on reported metrics quantified.
+\end{itemize}
+
+% ============================================================
+% II. RELATED WORK
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{CNN-Based Brain Tumor Segmentation}
+
+U-Net~\cite{ronneberger2015unet} and U-Net++~\cite{zhou2018unetpp} established the encoder-decoder paradigm for medical image segmentation, and 3D U-Net~\cite{cicek2016unet3d} and V-Net~\cite{milletari2016vnet} extended it to volumetric data. The nnU-Net framework~\cite{isensee2021nnu} demonstrated that systematic training configuration often outweighs architectural novelty. SegResNet~\cite{myronenko2019segresnet} achieved top-two performance at BraTS 2019 with autoencoder regularization, and the winning BraTS 2021 entry extended nnU-Net with an enlarged network and an axial-attention decoder~\cite{luu2022extending}.
+
+\subsection{Transformer-Based Approaches}
+
+TransBTS~\cite{wang2021transbts}, UNETR~\cite{hatamizadeh2022unetr}, and Swin UNETR~\cite{hatamizadeh2022swinunetr} introduced self-attention mechanisms into segmentation pipelines. Swin UNETR achieved mean Dice of 0.891 (ET), 0.933 (WT), and 0.917 (TC) in five-fold cross-validation~\cite{hatamizadeh2022swinunetr}, representing a strong baseline.
+
+\subsection{Wavelet-Based Deep Learning}
+
+MWCNN~\cite{liu2018mwcnn} replaced pooling with wavelet transforms for image restoration, wavelet pooling has been proposed as a drop-in replacement for spatial pooling~\cite{williams2018wavelet}, and wavelet-integrated CNNs~\cite{li2020wavelet} improved noise robustness. The integration of wavelet transforms into nested architectures like U-Net++ for 3D brain tumor segmentation, and their combination with external validation, has not been previously reported.
+
+\subsection{Domain Adaptation and External Validation}
+
+Most BraTS-published methods do not report performance on external cohorts. The UPenn-GBM dataset~\cite{bakas2022upenn} provides an opportunity for genuine held-out external evaluation. Several studies have documented the sensitivity of apparent performance to preprocessing decisions~\cite{isensee2021nnu}, motivating the careful protocol we adopt here.
+
+\subsection{Molecular Classification from MRI}
+
+Radiomic~\cite{gillies2016radiomics} and deep learning features extracted from MRI have shown promise for IDH1/IDH2 mutation prediction~\cite{chang2018rnn}. However, many published results suffer from small positive-class sample sizes, label-provenance leakage, and lack of external validation.
+
+% ============================================================
+% III. RESEARCH GAP
+% ============================================================
+\section{Research Gap and Motivation}
+\label{sec:gap}
+
+Despite progress in brain tumor segmentation, several limitations remain:
+
+\begin{itemize}
+    \item \textbf{Frequency information loss}: standard pooling discards high-frequency texture details potentially relevant to tumor boundary delineation, and controlled ablations that match parameter counts between DWT and pooling variants are lacking.
+    \item \textbf{Absence of clean external validation}: most BraTS results are internal; transferability to independent clinical cohorts is underreported.
+    \item \textbf{Reproducibility deficits}: preprocessing mismatches, test-set tuning, and label leakage inflate apparent performance in published pipelines.
+    \item \textbf{Isolated task evaluation}: segmentation and molecular classification are typically evaluated separately, missing multi-task synergies.
+\end{itemize}
+
+% ============================================================
+% IV. MATERIALS AND DATASETS
+% ============================================================
+\section{Materials and Dataset Description}
+\label{sec:dataset}
+
+\subsection{BraTS 2021 Dataset}
+
+The BraTS 2021 challenge dataset~\cite{baid2021brats} comprises 1,251 annotated training cases from over 80 institutions. Each case includes four co-registered, skull-stripped MRI modalities resampled to $1\times1\times1$\,mm isotropic resolution ($240\times240\times155$ voxels): native T1 (T1), post-contrast T1 (T1ce), T2, and FLAIR (Fig.~\ref{fig:mri_modalities}).
+
+% ---- FIGURE: MRI MODALITIES ----
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.95\columnwidth]{fig_modalities_brats}
+\caption{Representative axial slices of the four MRI modalities from a BraTS 2021 case. All images are co-registered, skull-stripped, and resampled to $1 \text{ mm}^3$ isotropic resolution.}
+\label{fig:mri_modalities}
+\end{figure}
+
+Expert neuroradiologists annotated three sub-regions: necrotic/non-enhancing tumor core (NCR, label~1), peritumoral edema (ED, label~2), and GD-enhancing tumor (ET, label~4), combined into three hierarchical evaluation regions: whole tumor (WT = NCR$\cup$ED$\cup$ET), tumor core (TC = NCR$\cup$ET), and enhancing tumor (ET only).
+
+We used 1,000 cases for training and 251 cases for internal validation. \textbf{This partition also served as the model-selection set for checkpoint selection during training; it is therefore internal validation, not an independent test set.}
+
+\subsection{UPenn-GBM Dataset}
+\label{sec:upenn_dataset}
+
+The University of Pennsylvania GBM (UPenn-GBM) dataset~\cite{bakas2022upenn} contains multi-parametric MRI from patients with histopathologically confirmed GBM, acquired under a different institutional protocol from BraTS 2021. It provides both expert segmentation annotations and clinical molecular biomarker labels including IDH1 mutation status.
+
+\subsubsection{Segmentation Cohort}
+From the available annotated cases, we reserved \textbf{29 subjects as a held-out test set} prior to any model development or parameter selection. These 29 subjects were not used during training, validation, or any form of hyperparameter tuning. The remaining subjects were used for fine-tuning the BraTS-pretrained model.
+
+\subsubsection{IDH1 Classification Cohort}
+A total of \textbf{416 subjects} with confirmed IDH1 status were included, comprising \textbf{17 IDH1-positive (mutant)} and 399 IDH1-negative cases (positive prevalence: 4.1\%). To eliminate label-leakage from mask-provenance confounding (see Section~\ref{sec:audit}), only subjects with \textbf{uniform mask provenance} are included in this analysis.
+
+% ============================================================
+% V. PROPOSED METHODOLOGY
+% ============================================================
+\section{Proposed Methodology}
+\label{sec:method}
+
+\subsection{Overview}
+
+The proposed Wavelet U-Net++ architecture builds on U-Net++ with a single wavelet modification: DWT-based downsampling replaces max-pooling in the encoder, carrying high-frequency detail forward instead of discarding it. The remainder of the backbone --- the nested dense skip connections and the decoder --- is standard U-Net++. A separate classification module (KAN encoders, a region-token Transformer branch, and a retrieval-augmented graph memory bank; Section~\ref{sec:mgmt_module}) operates on segmentation-derived radiomic features to predict MGMT methylation, with BraTS 2021 as the primary task and UPenn-GBM as external validation. Fig.~\ref{fig:arch} shows the implemented pipeline.
+
+% ---- FIGURE: ARCHITECTURE ----
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{fig_architecture_implemented}
+\caption{The implemented pipeline. \textbf{Stage 1}: Wavelet U-Net++ --- Haar-DWT downsampling with nested dense skip connections --- produces the ET/TC/WT mask (trained on BraTS 2021, applied to UPenn-GBM). \textbf{Stage 2}: segmentation-derived radiomic features feed the KAN encoder with a region-token Transformer branch and a retrieval-augmented memory-bank GNN to predict MGMT methylation. Dashed boxes are ablation toggles or components exercised only on UPenn-GBM (the clinical encoder and adaptive gate); BraTS 2021 carries no clinical data, so on the primary task the module is imaging-only.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Discrete Wavelet Transform Downsampling}
+\label{sec:dwt}
+
+The wavelet modification to the U-Net++ backbone replaces max-pooling in the encoder with a fixed Haar DWT~\cite{mallat1989theory,daubechies1992ten}. For an encoder feature map $\mathbf{F}$ of shape $C\times D\times H\times W$, the transform is applied over the two in-plane axes ($H$ and $W$); the depth axis $D$ is kept at full resolution. Even/odd strided slicing along each in-plane axis, combined by the Haar sum and difference, yields four sub-bands:
+\begin{equation}
+\text{DWT}(\mathbf{F}) = \{\,\mathbf{F}_{LL},\ \mathbf{F}_{LH},\ \mathbf{F}_{HL},\ \mathbf{F}_{HH}\,\},
+\end{equation}
+where $L$ and $H$ denote the Haar low- and high-pass responses along an axis. The transform has no learnable parameters and halves the in-plane resolution. The four sub-bands are concatenated along the channel axis ($C\rightarrow 4C$) and passed to the next convolution block:
+\begin{equation}
+\mathbf{F}_{down} = \text{ConvBlock}\big(\text{Concat}(\mathbf{F}_{LL}, \mathbf{F}_{LH}, \mathbf{F}_{HL}, \mathbf{F}_{HH})\big).
+\end{equation}
+Unlike max-pooling, this discards nothing: the high-frequency sub-bands $\mathbf{F}_{LH}, \mathbf{F}_{HL}, \mathbf{F}_{HH}$, which carry edge and texture information, are carried into the next block rather than dropped. Decoder upsampling is trilinear interpolation at scale $(1,2,2)$ --- in-plane only, matching the in-plane-only downsampling --- not an inverse wavelet transform.
+
+\subsection{Nested Dense Skip Connections}
+
+Following U-Net++~\cite{zhou2018unetpp}:
+\begin{equation}
+X^{i,j} = \mathcal{H}\!\left(\left[[X^{i,k}]_{k=0}^{j-1},\, \mathcal{U}(X^{i+1,j-1})\right]\right)
+\end{equation}
+
+\subsection{MGMT Classification Module (KAN + Transformer + GNN)}
+\label{sec:mgmt_module}
+
+The classification module predicts MGMT promoter methylation. Its \textbf{primary task is BraTS 2021}; UPenn-GBM is reserved for external validation (Section~\ref{sec:mgmt_results}). BraTS 2021 carries no tumour-grade label, so grading is not a task this cohort supports and is not attempted. The module input is the per-patient radiomic feature vector $\mathbf{f}_{img}\in\mathbb{R}^{51}$ derived from the segmentation mask and standardised within the training split. BraTS 2021 ships no clinical metadata, so on the primary task the module is \emph{imaging-only}; the clinical branch and gate below are exercised only on UPenn-GBM, where age, sex and extent-of-resection are available.
+
+\subsubsection{KAN encoder}
+Following Kolmogorov--Arnold Networks~\cite{liu2024kan}, each edge applies a B-spline activation $\phi(x)=w_{base}\,\text{SiLU}(x)+w_{spline}\sum_i c_i B_i(x)$, giving the imaging embedding $\mathbf{f}_{kan}=\text{KAN}(\mathbf{f}_{img})$; a plain MLP encoder is the ablation baseline.
+
+\subsubsection{Region-token Transformer branch}
+Every radiomic value belongs to one anatomical region (ET, TC or WT), so the features are arranged as three region tokens and a single-layer Transformer encoder~\cite{vaswani2017attention} attends across them; its mean-pooled output is added residually, matching $\mathbf{f}_{comb}=\mathbf{f}_{trans}+\mathbf{f}_{kan}$:
+\begin{equation}
+\mathbf{f}_{comb} = \mathbf{f}_{kan} + \text{Pool}\big(\text{Transformer}([\mathbf{t}_{ET},\mathbf{t}_{TC},\mathbf{t}_{WT}])\big)
+\end{equation}
+
+\subsubsection{Retrieval-augmented memory bank (GNN)}
+A memory bank holds embeddings of \emph{training} patients only; a query patient attaches to its $k$ nearest bank entries by feature cosine similarity and aggregates them:
+\begin{equation}
+\mathbf{A} = \text{Softmax}\!\left(\frac{\mathbf{f}_{comb}\mathbf{M}^\top}{\sqrt{d}}\right)\mathbf{M}, \quad
+\mathbf{f}_{mem} = \text{LayerNorm}(\mathbf{f}_{comb}+\mathbf{A})
+\end{equation}
+The attention form follows graph attention networks~\cite{velickovic2018gat}, restricted to the one-directional memory-to-query edge set described above. The bank is rebuilt inside each cross-validation fold from that fold's training split; for external validation it holds BraTS embeddings while UPenn patients query into it. Message passing is one-directional (memory~$\to$~query) and query--query edges never exist, so the mechanism is inductive and leakage-free --- retrieval-augmented classification, not transductive population-graph learning.
+
+\subsubsection{Adaptive gated fusion (UPenn-GBM only)}
+Where clinical features $\mathbf{f}_{clin}$ exist, a per-sample gate forms a convex combination of the imaging and clinical streams:
+\begin{align}
+\mathbf{g} &= \text{Softmax}(\mathbf{W}_{gate}\,[\mathbf{f}_{mem}\|\mathbf{f}_{clin}]) \\
+\tilde{\mathbf{f}}_{fuse} &= g_1\,\mathbf{f}_{mem} + g_2\,\mathbf{f}_{clin}
+\end{align}
+A linear head maps the fused representation to $P(\text{MGMT methylated})$. The IDH1 results of Section~\ref{sec:upenn_results} use the separate random-forest radiomic pipeline of Section~\ref{sec:classification_setup}, not this module.
+
+\subsection{Loss Function}
+
+Training minimises a weighted sum of a focal binary cross-entropy term and a soft Dice term, applied independently to the three sigmoid-activated region channels $j\in\{\text{ET},\text{TC},\text{WT}\}$:
+\begin{equation}
+\mathcal{L} = \alpha_{f}\,\mathcal{L}_{focal} + \alpha_{d}\,\mathcal{L}_{Dice},
+\qquad \alpha_{f}=\alpha_{d}=1.0
+\end{equation}
+Writing $p_{ij}=\sigma(\hat{y}_{ij})$ for the predicted probability of voxel $i$ in channel $j$, $G_{ij}\in\{0,1\}$ for the ground truth, and $p^{t}_{ij}=p_{ij}G_{ij}+(1-p_{ij})(1-G_{ij})$ for the probability assigned to the true class,
+\begin{equation}
+\mathcal{L}_{focal} = -\frac{1}{N}\sum_{i,j} w_j\,\big(1-p^{t}_{ij}\big)^{\gamma}\,\log p^{t}_{ij},
+\qquad \gamma = 2.0
+\end{equation}
+\begin{equation}
+\mathcal{L}_{Dice} = 1 - \frac{1}{J}\sum_{j}
+\frac{2\sum_i p_{ij}G_{ij} + \epsilon}{\sum_i p_{ij} + \sum_i G_{ij} + \epsilon}
+\end{equation}
+The focal modulation down-weights well-classified voxels, which matters because the enhancing-tumour channel is sparse relative to the whole tumour. The per-channel weights $w_j$ are uniform $(1,1,1)$ for BraTS 2021 training and up-weight the tumour core and whole tumour, $(1,\,1.5,\,1.5)$, during UPenn-GBM fine-tuning.
+
+% ============================================================
+% VI. EXPERIMENTAL SETUP
+% ============================================================
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Segmentation Implementation}
+
+\begin{itemize}
+    \item \textbf{Framework}: PyTorch; \textbf{GPU}: NVIDIA A100 (80\,GB)
+    \item \textbf{Input patch size}: $128\times128\times128$ voxels
+    \item \textbf{Optimizer}: AdamW~\cite{loshchilov2019adamw}, initial LR $2\times10^{-4}$
+    \item \textbf{LR schedule}: \texttt{ReduceLROnPlateau} on validation mean Dice (factor 0.5, patience 3 epochs, floor $1\times10^{-7}$)
+    \item \textbf{Batch}: one patch per step, gradient accumulation over 8 steps (effective batch 8)
+    \item \textbf{Precision}: automatic mixed precision; gradient-norm clipping at 2.0
+    \item \textbf{Epochs}: 750
+    \item \textbf{Loss}: focal ($\gamma=2$) + soft Dice, uniform channel weights
+    \item \textbf{Wavelet family}: Haar (non-trainable)
+    \item \textbf{Inference threshold}: \textbf{0.5 fixed for all regions} (no test-set tuning)
+    \item \textbf{Post-processing}: standard connected-component cleanup; no ET volume rule; no WT largest-component policy
+\end{itemize}
+
+\subsection{Domain Adaptation to UPenn-GBM}
+
+The BraTS-pretrained model was fine-tuned on UPenn-GBM training subjects using \textbf{matched preprocessing} (UPenn channel order and normalization). Fine-tuning used AdamW at peak LR $3\times10^{-5}$ with weight decay $1\times10^{-5}$ for 80 epochs, under a 5-epoch linear warmup followed by cosine decay to $1\times10^{-6}$; the loss channel weights were $(1,\,1.5,\,1.5)$ for ET/TC/WT. Checkpoint selection was performed on the UPenn internal validation split (not the 29 held-out test subjects). Two model versions (v3, v4) trained under different augmentation conventions were ensembled for the final evaluation.
+
+\subsection{Preprocessing}
+
+Preprocessing differs between the two cohorts and is therefore stated separately.
+
+\noindent\textbf{BraTS 2021 (training and internal validation):}
+\begin{itemize}
+    \item Min--max intensity normalization per modality
+    \item Deterministic $128\times128\times128$ centre crop, zero-padded where a volume is smaller than the target along an axis
+    \item No augmentation is applied on this path
+\end{itemize}
+
+\noindent\textbf{UPenn-GBM (fine-tuning):}
+\begin{itemize}
+    \item Random axis flipping ($p=0.5$)
+    \item Random intensity shift in $(-0.1, 0.1)$ and scale in $(0.9, 1.1)$
+\end{itemize}
+
+\noindent\textbf{Channel order} is T1, T1ce, T2, FLAIR (BraTS convention), matched separately for UPenn inputs; feeding one cohort's convention to the other's checkpoint is the first defect listed in Section~\ref{sec:audit}.
+
+\subsection{IDH1 Classification Setup}
+\label{sec:classification_setup}
+
+Radiomic features were extracted from the segmentation masks using PyRadiomics~\cite{vangriethuysen2017pyradiomics}. Subjects were restricted to those with uniform mask provenance to eliminate the label-leakage artifact described in Section~\ref{sec:audit}. A random-forest classifier (100 estimators) and logistic regression comparator were trained on the non-test subjects; no threshold was optimized on the final evaluation data.
+
+\subsection{MGMT Classification Module Setup}
+\label{sec:mgmt_setup}
+
+The KAN+Transformer+GNN module (Section~\ref{sec:mgmt_module}) is trained and evaluated on \textbf{BraTS 2021 MGMT} as the primary task: 577 cases (52.2\% methylated), features from expert segmentations, restricted to the 51 radiomic features shared with UPenn-GBM so the representation is identical to the external set. Evaluation is nested $5\times3$ cross-validation with 3 repeats; hyperparameters are chosen in an inner loop on training folds only and each outer fold is scored once. Standardisation, imputation and the memory bank are fit on training folds alone. For \textbf{external validation} the BraTS-trained model is applied once to the 227-subject UPenn-GBM MGMT cohort. Because BraTS carries no clinical metadata the primary model is imaging-only; the imaging+clinical gated variant is reported only on UPenn, where clinical covariates exist. All AUC confidence intervals are patient-level bootstrap (2{,}000 resamples).
+
+\subsection{Evaluation Metrics}
+
+\textbf{Dice Similarity Coefficient (DSC):}
+\begin{equation}
+\text{Dice}(A,B) = \frac{2|A\cap B|}{|A|+|B|}
+\end{equation}
+
+\textbf{95th Percentile Hausdorff Distance (HD95)}, computed from \textbf{surface voxels} converted to millimetres using voxel spacing:
+\begin{equation}
+\text{HD}_{95}(A,B) = \max\{h_{95}(A,B),\,h_{95}(B,A)\}
+\end{equation}
+
+All 95\% confidence intervals were computed by subject-level nonparametric bootstrap with 2,000 resamples (percentile method).
+
+% ============================================================
+% VII. PIPELINE AUDIT AND CORRECTIONS
+% ============================================================
+\section{Pipeline Audit and Corrections}
+\label{sec:audit}
+
+Seven defects were identified and corrected during development. Three materially changed reported results (Table~\ref{tab:audit}).
+
+\begin{table}[!t]
+\centering
+\caption{Summary of pipeline defects and their effects on reported metrics.}
+\label{tab:audit}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{p{2.8cm}p{2.5cm}p{2.5cm}}
+\toprule
+\textbf{Defect} & \textbf{Effect} & \textbf{Prior result status} \\
+\midrule
+Preprocessing channel-order mismatch (BraTS checkpoint fed UPenn normalization) & Zero-shot Dice 0.203 instead of 0.766; fabricated domain gap of +0.66 & Invalidated \\
+\midrule
+Test-set threshold tuning (\texttt{et\_thr=0.015} fitted on test data) & ET Dice 0.931 instead of 0.856; optimistically biased estimates & Withdrawn \\
+\midrule
+Classification label leakage (mask provenance correlated 4.5$\times$ with IDH1 status) & AUC inflated by $\approx$0.044 in logistic regression & Corrected; uniform-provenance cohort reported \\
+\midrule
+Region-hierarchy ordering bug & Invalid nested-label construction & Fixed; verified by unit test \\
+\midrule
+HD95 over all voxels (not surface voxels) & Incorrect distance metric & Fixed \\
+\midrule
+\texttt{image.py} deleted during archival & Inference broken & Restored \\
+\midrule
+Random-forest resubstitution threshold & Apparent sensitivity 0.000 & Fixed; held-out evaluation used \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\textbf{The previously reported domain-adaptation gain of approximately $+$0.66 Dice does not survive correction of the preprocessing mismatch.} The 0.766 figure in Table~\ref{tab:audit} is the diagnostic measured on 5 validation subjects that first exposed the bug; the reported zero-shot baseline on the 29-subject held-out test set, under the fixed 0.5 protocol, is 0.695. After matching preprocessing conventions, fine-tuning improved this to 0.820, a paired gain of $+0.11$ [0.04, 0.19].
+
+% ============================================================
+% VIII. RESULTS AND DISCUSSION
+% ============================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{BraTS 2021 Internal Validation --- Segmentation}
+
+Table~\ref{tab:brats_results} reports segmentation performance on the 251-case BraTS 2021 internal-validation split. All results use a fixed threshold of 0.5, standard component cleanup, and no additional post-processing rules.
+
+\begin{table}[!t]
+\centering
+\caption{BraTS 2021 internal-validation segmentation results (251 cases). 95\% CIs from 2,000-sample subject-level bootstrap. Failed = cases with Dice $<0.01$. \textbf{Note: this partition also served for checkpoint selection during training and is therefore internal validation, not a clean test set.}}
+\label{tab:brats_results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Region} & \textbf{Dice [95\% CI]} & \textbf{HD95 mm [95\% CI]} & \textbf{Failed} \\
+\midrule
+ET & 0.8564 [0.830, 0.880] & 3.24 [2.49, 4.15] & 7 \\
+TC & 0.8915 [0.866, 0.914] & 4.82 [3.58, 6.28] & 5 \\
+WT & 0.9006 [0.884, 0.915] & 10.17 [8.07, 12.49] & 1 \\
+\midrule
+\textbf{Mean} & \textbf{0.8828 [0.8638, 0.8992]} & \textbf{6.20 [5.20, 7.29]} & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The train-minus-validation generalisation gap of $+0.0087$ [$-0.0089$, $+0.0284$] has a confidence interval that includes zero; therefore, \textbf{no statistically detectable train--validation generalisation gap was observed}.
+
+\subsection{BraTS 2021 MGMT Classification}
+\label{sec:mgmt_results}
+
+Table~\ref{tab:mgmt_ablation} reports the KAN+Transformer+GNN ablation on the primary BraTS 2021 MGMT task, together with the external-validation and multimodal figures; Fig.~\ref{fig:mgmt_forest} plots the same numbers.
+
+\begin{table}[!t]
+\centering
+\caption{BraTS 2021 MGMT classification (primary): KAN+Transformer+GNN ablation, nested $5\times3$ CV, 3 repeats, $n=577$ (52.2\% methylated), imaging-only on the 51 radiomic features shared with UPenn-GBM. UPenn-GBM rows are external validation only. 95\% CIs by patient-level bootstrap. No configuration is selected on the reported quantity.}
+\label{tab:mgmt_ablation}
+\begin{tabular}{lc}
+\toprule
+\textbf{Configuration} & \textbf{AUC [95\% CI]} \\
+\midrule
+MLP (baseline) & 0.617 [0.568, 0.663] \\
+KAN & 0.602 [0.553, 0.648] \\
+KAN + Transformer & 0.645 [0.599, 0.692] \\
+KAN + GNN & 0.615 [0.568, 0.662] \\
+KAN + Transformer + GNN (full) & 0.624 [0.575, 0.670] \\
+\midrule
+\multicolumn{2}{l}{\textit{External validation --- UPenn-GBM ($n=227$)}} \\
+Full model, BraTS $\rightarrow$ UPenn & 0.537 [0.460, 0.612] \\
+UPenn multimodal (imaging + clinical) & 0.599 [0.523, 0.671] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---- FIGURE: MGMT ABLATION FOREST PLOT ----
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{fig1_ablation_auc_forest}
+\caption{BraTS 2021 MGMT ablation. All primary-cohort intervals overlap (mean 95\% CI half-width $\pm$0.047); added components do not separate from the MLP baseline, and external transfer to UPenn-GBM is at chance.}
+\label{fig:mgmt_forest}
+\end{figure}
+
+\textbf{The result is negative and is reported as such.} On BraTS the full module reaches AUC 0.624 [0.575, 0.670], statistically indistinguishable from a plain MLP (0.617): every interval overlaps every other, the mean 95\% CI half-width is $\pm$0.047, and no controlled one-factor contrast exceeds this noise band (Fig.~\ref{fig:attribution}). Replacing the MLP encoder with KAN does not help (0.602), consistent with KAN's larger parameter count at this sample size; the region-token Transformer raises the point estimate (0.645) but well within noise; and the memory bank draws $\approx$25\% of its representation from neighbours yet produces no AUC gain (Fig.~\ref{fig:attribution}, panel~b). Applied to UPenn-GBM the model scores 0.537 [0.460, 0.612], an interval spanning chance, so the weak in-cohort signal does not transfer; adding clinical covariates and the gate on UPenn (0.599 [0.523, 0.671]) does not change this.
+
+% ---- FIGURE: COMPONENT ATTRIBUTION ----
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{fig2_attribution}
+\caption{Component attribution for the MGMT ablation. \textbf{(a)} Controlled one-factor $\Delta$AUC contrasts (each isolates one change, others held fixed); the grey band is the mean 95\% CI half-width ($\pm$0.047). No contrast --- KAN vs.\ MLP, adding the Transformer, adding the GNN, or the full module vs.\ baseline --- clears the noise band, and external transfer to UPenn-GBM is negative. \textbf{(b)} Graph reliance: the memory bank draws $\approx$25\% of the fused representation from neighbours, but this does not translate into an AUC gain in panel~(a).}
+\label{fig:attribution}
+\end{figure}
+
+These figures sit in the same weak range as the segmentation-derived radiomic baselines (Table~\ref{tab:brats_classification}, best AUC 0.583 [0.538, 0.628], logistic regression), whose confidence intervals overlap the module's throughout. The protocols differ --- the radiomic baselines use non-nested repeated CV --- so the two are not strictly like-for-like, and we claim no ordering between them. That an idealised radiomic classifier and a learned multi-branch module both land near 0.6, on a well-powered balanced cohort, indicates the limit is the imaging signal for MGMT rather than the model --- matching the RSNA-MICCAI 2021 radiogenomic classification challenge~\cite{baid2021brats}, won at $\sim$0.62 AUC. Table~\ref{tab:brats_classification} also lists IDH1 for reference; \textbf{IDH1 is a UPenn-GBM result, not a BraTS 2021 result}.
+
+\begin{table}[!t]
+\centering
+\caption{Radiomic molecular classification. MGMT methylation on \textbf{BraTS 2021} (n=577, 301 methylated, expert masks); IDH1 mutation on \textbf{UPenn-GBM} (n=416, 17 mutant, $\sim$4\% prevalence, uniform mask provenance). Rec = recall (sensitivity), Pre = precision (PPV). AUC 95\% CIs by patient-level bootstrap. Best per task in \textbf{bold}. The $^{\star}$ marks the recommended IDH1 classifier (random forest).}
+\label{tab:brats_classification}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Task (cohort)} & \textbf{Model} & \textbf{Rec} & \textbf{Pre} & \textbf{AUC [95\% CI]} \\
+\midrule
+\multirow{2}{*}{IDH1 (UPenn-GBM)}
+ & Random Forest$^{\star}$ & \textbf{0.847} & \textbf{0.121} & \textbf{0.896 [0.831, 0.952]} \\
+ & Logistic Reg           & 0.676 & 0.112 & 0.804 [0.682, 0.912] \\
+\midrule
+\multirow{2}{*}{MGMT (BraTS 2021)}
+ & Logistic Reg           & 0.412 & 0.574 & \textbf{0.583 [0.538, 0.628]} \\
+ & Random Forest          & \textbf{0.417} & \textbf{0.591} & 0.576 [0.528, 0.623] \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection{Comparison with State-of-the-Art on BraTS 2021}
+
+Table~\ref{tab:seg_comparison} compares our BraTS 2021 internal-validation Dice scores with published methods.
+
+\begin{table}[!t]
+\centering
+\caption{Segmentation performance comparison on BraTS 2021. Best results in \textbf{bold}. Our results are internal-validation; published baselines are from challenge/paper evaluations and may use different splits, so the comparison is indicative rather than strictly matched.}
+\label{tab:seg_comparison}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{lcccccc}
+\toprule
+\multirow{2}{*}{\textbf{Model}} &
+\multicolumn{3}{c}{\textbf{Dice} $\uparrow$} &
+\multicolumn{3}{c}{\textbf{HD95 (mm)} $\downarrow$} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+& \textbf{ET} & \textbf{WT} & \textbf{TC} & \textbf{ET} & \textbf{WT} & \textbf{TC} \\
+\midrule
+SegResNet~\cite{myronenko2019segresnet} & \textbf{0.861} & 0.917 & \textbf{0.896} & 5.42 & 6.11 & 5.79 \\
+nnU-Net~\cite{isensee2021nnu} & 0.837 & \textbf{0.926} & 0.874 & 22.44 & \textbf{3.55} & 10.56 \\
+TransBTS~\cite{wang2021transbts} & 0.795 & 0.920 & 0.882 & 16.32 & 4.98 & 4.86 \\
+UNETR~\cite{hatamizadeh2022unetr} & 0.825 & 0.890 & 0.847 & 8.79 & 14.42 & 10.22 \\
+SwinUNETR~\cite{hatamizadeh2022swinunetr} & 0.858 & \textbf{0.926} & 0.885 & 6.02 & 5.83 & \textbf{3.77} \\
+\midrule
+\textbf{Ours (Wavelet U-Net++)} & 0.8564 & 0.9006 & 0.8915 & \textbf{3.24} & 10.17 & 4.82 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\subsection{Multitask Comparison}
+
+Table~\ref{tab:multitask} compares our method against multi-task methods on segmentation. Our classification is reported separately (Section~\ref{sec:mgmt_results}), not as an entry here: it is a two-stage radiomic/feature pipeline rather than an end-to-end joint segmentation--classification model, and BraTS MGMT is a different and harder target than the classification tasks these baselines report, so a shared classification column would not be a like-for-like comparison.
+
+\begin{table*}[!t]
+\centering
+\caption{Performance comparison of multitasking methods. \textbf{I} = Image, \textbf{T} = Tabular. Segmentation results for our model are final; our method's classification is reported separately in Section~\ref{sec:mgmt_results} (BraTS MGMT), not as a joint-model entry here, because it is a two-stage rather than end-to-end pipeline. External baselines are reproduced from their source publications and may use different cohorts and splits; cross-dataset entries should be read with caution. Baseline $\pm$ values are the dispersions quoted by those publications, measured across cross-validation folds; our figures come from a single held-out split and therefore have no fold-level dispersion. The $\pm$ in our row is instead the subject-level bootstrap standard error of the mean (2,000 resamples, consistent with the 95\% CIs of Table~\ref{tab:brats_results}). Fold dispersion and a bootstrap standard error are different quantities and should not be read against each other as measures of stability.}
+\label{tab:multitask}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llccccc}
+\toprule
+\multirow{2}{*}{\textbf{Method}} &
+\multirow{2}{*}{\textbf{Modal}} &
+\multicolumn{2}{c}{\textbf{Segmentation}} &
+\multicolumn{3}{c}{\textbf{Classification}} \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+& & \textbf{Dice} $\uparrow$ & \textbf{HD95} $\downarrow$
+& \textbf{Rec} $\uparrow$ & \textbf{Pre} $\uparrow$
+& \textbf{AUC} $\uparrow$ \\
+\midrule
+\multicolumn{7}{l}{\textit{Multimodal single task}} \\
+\midrule
+XGBoost & T & -- & -- & 56.7$\pm$17.6 & 65.8$\pm$11.1 & 85.2$\pm$9.3 \\
+MMGL & I+T & -- & -- & 64.3$\pm$9.3 & 82.7$\pm$7.4 & 84.5$\pm$6.8 \\
+MMCL & I+T & -- & -- & 66.3$\pm$9.2 & 84.9$\pm$11.7 & 89.5$\pm$5.6 \\
+nnU-Net & I & 91.3$\pm$1.3 & 2.8$\pm$0.5 & -- & -- & -- \\
+\midrule
+\multicolumn{7}{l}{\textit{Multimodal multitasking}} \\
+\midrule
+SelfmedMAE & I+T & 86.9$\pm$1.8 & 6.8$\pm$0.4 & 67.9$\pm$17.4 & 80.2$\pm$16.7 & 88.8$\pm$6.3 \\
+ResGaNet & I+T & 87.5$\pm$1.2 & 4.8$\pm$0.7 & 66.3$\pm$16.2 & 84.2$\pm$19.7 & 83.4$\pm$5.6 \\
+MTANet & I+T & 88.7$\pm$1.4 & 3.3$\pm$0.4 & 62.6$\pm$16.0 & 85.1$\pm$12.0 & 89.3$\pm$6.7 \\
+\midrule
+\textbf{Wavelet U-Net++ (Ours)} & \textbf{I} & \textbf{88.28$\pm$0.9} & \textbf{6.20$\pm$0.5} & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table*}
+
+\subsection{UPenn-GBM External Evaluation}
+\label{sec:upenn_results}
+
+Table~\ref{tab:upenn_seg} presents held-out external test results on the 29 UPenn-GBM test subjects. These subjects were never used during training, validation, checkpoint selection, or any form of post-processing optimisation.
+
+\begin{table}[!t]
+\centering
+\caption{UPenn-GBM held-out test segmentation results (29 subjects). All setups use fixed threshold 0.5, no post-processing tuning. 95\% CIs from 2,000-sample subject-level bootstrap.}
+\label{tab:upenn_seg}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Setup} & \textbf{Mean Dice [95\% CI]} & \textbf{ET} & \textbf{TC} & \textbf{WT} & \textbf{HD95 mm} \\
+\midrule
+\textbf{ensemble\_v3\_v4} & \textbf{0.8204 [0.759, 0.872]} & \textbf{0.798} & \textbf{0.857} & \textbf{0.806} & 7.30 \\
+upenn\_v3\_best & 0.8156 [0.755, 0.864] & -- & -- & -- & 8.89 \\
+ensemble\_top5 & 0.8131 [0.749, 0.865] & -- & -- & -- & \textbf{6.84} \\
+upenn\_v4\_best & 0.8071 [0.740, 0.866] & -- & -- & -- & 10.22 \\
+upenn\_v3\_last & 0.8060 [0.736, 0.862] & -- & -- & -- & 6.95 \\
+\midrule
+Zero-shot BraTS & 0.6948 [0.598, 0.780] & 0.714 & 0.742 & 0.628 & 41.30 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+Fine-tuning improves substantially over zero-shot transfer: the \textbf{paired improvement is $+0.11$ [0.04, 0.19]}, with the confidence interval excluding zero, confirming a statistically significant benefit.
+
+\paragraph{Post-processing analysis} Selecting post-processing parameters on 14 validation subjects \textit{degraded} test performance: the fixed configuration outperformed the tuned configuration on 5 of 6 setups, demonstrating a classic overfitting-to-validation pattern with small cohorts.
+
+\subsection{IDH1 Mutation Classification}
+
+Table~\ref{tab:idh1} presents classification results for IDH1 mutation prediction on 416 UPenn-GBM subjects with uniform mask provenance.
+
+\begin{table}[!t]
+\centering
+\caption{IDH1 mutation classification results on UPenn-GBM (416 subjects; 17 positives; positive prevalence 4.1\%). AUC 95\% CIs by bootstrap.}
+\label{tab:idh1}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{AUC [95\% CI]} & \textbf{Bal.Acc} & \textbf{Sens} & \textbf{Spec} & \textbf{F1} \\
+\midrule
+\textbf{Random forest} & \textbf{0.896 [0.831, 0.952]} & \textbf{0.790} & \textbf{0.847} & 0.734 & \textbf{0.211} \\
+Logistic regression & 0.804 [0.682, 0.912] & 0.722 & 0.676 & \textbf{0.768} & 0.192 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+The random-forest model is the recommended final classifier. The low F1 (0.211) reflects the 4.1\% positive prevalence rather than poor discrimination. Restricting the cohort to uniform mask provenance reduced logistic-regression AUC by 0.044 --- the size of the label-leakage artifact.
+
+% ============================================================
+% IX. ABLATION STUDY
+% ============================================================
+\section{Ablation Study}
+\label{sec:ablation}
+
+The segmentation contribution of this work is a single architectural change: a fixed Haar DWT replaces max-pooling as the encoder downsampling operator (Section~\ref{sec:dwt}). Establishing what that change is worth requires a baseline that differs in nothing else, which this section reports.
+
+\subsection{Matching the Baseline}
+
+A plain operator substitution would not be a controlled comparison. The DWT concatenates four sub-bands, so every encoder block receives $4C$ channels, whereas max-pooling emits $C$. Swapping the operator alone therefore also removes 34\% of the network's parameters (6.87\,M against 10.40\,M), and any resulting difference would confound model capacity with the frequency content the wavelet claim actually concerns. Variant~(A) consequently pools over the same two in-plane axes the DWT halves --- depth is kept at full resolution in both arms --- and then applies a $1\times1$ projection back to $4C$. Both arms thus present identically shaped tensors at every encoder level and differ by 0.8\% in parameter count (10.48\,M against 10.40\,M). The nested dense decoder, the trilinear upsampling at scale $(1,2,2)$, and the training objective are shared unchanged.
+
+\subsection{Protocol}
+
+Both arms are trained from scratch under a single recorded protocol rather than reusing the checkpoint behind Section~\ref{sec:results}. That checkpoint retains no optimiser state, seed, epoch count or configuration, so its training history cannot be reconstructed and matched; a freshly trained baseline compared against it would differ in training history as well as in downsampling operator, and the contrast would not be attributable to the architecture. The pair reported here is therefore self-contained and is used only within this section. Every other result in this paper continues to come from the original checkpoint.
+
+Training is identical across the two arms: the same seed-42 1000/251 partition of BraTS 2021 used throughout this work, AdamW at $2\times10^{-4}$ with \texttt{ReduceLROnPlateau} on validation Dice (factor 0.5, patience 3, floor $1\times10^{-7}$), the focal-plus-Dice objective of Section~\ref{sec:method}, effective batch 8 by gradient accumulation, mixed precision, min--max normalisation and deterministic $128^3$ centre crops. Only the downsampling operator differs.
+
+Both arms are given a matched budget of 200 epochs, and the best-validation checkpoint of each is the one reported. That budget clears convergence by a wide margin: under this schedule the max-pooling arm reached its learning-rate floor at epoch 76 and its best validation Dice at epoch 43, after which validation scores oscillated within noise. Training further cannot alter either result, because the learning rate is by then too small to change the weights appreciably.
+
+Each trained arm is then scored under the protocol used for every segmentation result in this paper: sliding-window inference with Gaussian blending and 8-flip test-time augmentation, a fixed threshold of 0.5 applied to all regions, standard connected-component cleanup, and 95\% confidence intervals from 2{,}000-sample patient-level bootstrap.
+
+\subsection{Result}
+
+\textbf{The ablation does not support the wavelet component.} Mean Dice is indistinguishable between the two arms --- 0.8145 for max-pooling against 0.8144 for the DWT --- and the paired difference over the 251 shared cases is $-0.0000$ [$-0.0127$, $+0.0118$], an interval tightly centred on zero (Table~\ref{tab:ablation}). Resolving this by sub-region does not rescue the claim: the DWT is nominally ahead on enhancing tumour ($+0.0096$ [$-0.0059$, $+0.0255$]) and tumour core ($+0.0060$ [$-0.0102$, $+0.0218$]), both intervals spanning zero, and is \emph{worse} on whole tumour by $-0.0157$ [$-0.0303$, $-0.0017$], an interval that excludes it.
+
+The boundary metric is more decisive still, and runs against the mechanism the wavelet modification was motivated by. Replacing pooling with the DWT makes HD95 worse in every region --- enhancing tumour $+2.05$\,mm [$+0.51$, $+3.92$], tumour core $+1.83$\,mm [$+0.24$, $+3.79$], whole tumour $+4.92$\,mm [$+2.74$, $+7.35$] --- with all three intervals excluding zero. Carrying the high-frequency sub-bands forward instead of discarding them therefore did not improve boundary delineation on this cohort; under a controlled comparison it degraded it.
+
+Two properties of the comparison are worth stating explicitly, because they are what make the conclusion attributable. The arms differ by 0.8\% in parameter count, so the outcome cannot be explained by capacity. And both were trained from scratch under one protocol on the same partition, so it cannot be explained by training history --- the failure mode that made the original checkpoint unusable as a reference in the first place. What remains is the operator itself.
+
+\begin{table}[!t]
+\centering
+\caption{Downsampling ablation on the BraTS 2021 internal-validation partition (251 cases). Both variants were trained from scratch under an identical protocol and differ only in the encoder downsampling operator; parameter counts are matched to within 0.8\%, so the contrast isolates frequency content rather than capacity. 95\% patient-level bootstrap confidence intervals; the paired difference resamples each case's two scores jointly. \emph{These values come from a self-contained retrained pair and are not directly comparable to Table~\ref{tab:brats_results}}, which reports the original checkpoint.}
+\label{tab:ablation}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Variant} & \textbf{Encoder downsampling} & \textbf{Params} & \textbf{Mean Dice [95\% CI]} & \textbf{Mean HD95 mm [95\% CI]} \\
+\midrule
+(A) U-Net++ baseline & Max-pooling $+$ $1\times1$ projection & 10.48\,M & 0.8145 [0.7869, 0.8408] & \textbf{9.41 [7.79, 11.14]} \\
+(B) Wavelet U-Net++  & Haar DWT                              & 10.40\,M & 0.8144 [0.7877, 0.8399] & 13.09 [10.82, 15.51] \\
+\midrule
+\multicolumn{3}{l}{\emph{Paired difference, (B) $-$ (A)}} & $-0.0000$ [$-0.0127$, $+0.0118$] & --- \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+% ============================================================
+% X. CROSS-VALIDATION ANALYSIS
+% ============================================================
+\section{Cross-Validation Analysis}
+\label{sec:crossval}
+
+The held-out UPenn-GBM evaluation of Section~\ref{sec:upenn_results} rests on 29 subjects, which puts a roughly $\pm0.05$ half-width on its mean-Dice interval. To characterise performance over the full cohort, we ran five-fold cross-validated fine-tuning over all 147 expert-segmented UPenn-GBM subjects (\texttt{scripts/crossval\_upenn.py}). Each fold fine-tunes from the BraTS 2021 checkpoint for 80 epochs on its training partition under the checkpoint's own preprocessing convention, selects thresholds, the ET policy and the checkpoint on its 12-subject inner-validation split, and scores its test partition once. Fold assignments are frozen and verified disjoint at the subject level, so every subject is scored exactly once, by a model that never saw it and never influenced any decision affecting its own score. Unlike the fixed-0.5 protocol of Table~\ref{tab:upenn_seg}, this protocol permits per-fold post-processing selection (on inner validation only); the two are complementary rather than directly comparable.
+
+Table~\ref{tab:crossval} and Fig.~\ref{fig:crossval} report the pooled out-of-fold results. Mean Dice over the 147 subjects is 0.8474 [0.8282, 0.8646], consistent with the 29-subject held-out estimate of 0.8204 [0.759, 0.872] while roughly three times tighter. Fold-to-fold dispersion is small --- the mean-Dice standard deviation across folds is 0.021, at most 0.032 in any region --- so the result does not depend on any particular partition. No case in any region falls below Dice 0.026; under the failure criterion of Table~\ref{tab:brats_results} there are no outright failures among the 147 out-of-fold segmentations. The whole-tumour HD95 remains wide (21.98\,mm [17.46, 27.06]), consistent with the over-segmentation pattern discussed in Section~\ref{sec:qualitative}.
+
+\begin{table}[!t]
+\centering
+\caption{Five-fold cross-validated fine-tuning on UPenn-GBM: pooled out-of-fold results over all 147 expert-segmented subjects, each scored once by a model that never saw it. Thresholds, ET policy and checkpoints are selected per fold on inner validation only. 95\% CIs from 2,000-sample patient-level bootstrap; the last column is the mean $\pm$ std of the five per-fold means.}
+\label{tab:crossval}
+\begin{adjustbox}{max width=\columnwidth}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Region} & \textbf{Dice [95\% CI]} & \textbf{HD95 mm [95\% CI]} & \textbf{Fold mean $\pm$ std} \\
+\midrule
+ET & 0.8264 [0.807, 0.845] & 2.78 [2.05, 3.63] & 0.826 $\pm$ 0.018 \\
+TC & 0.8870 [0.866, 0.907] & 4.26 [3.11, 5.67] & 0.887 $\pm$ 0.017 \\
+WT & 0.8289 [0.804, 0.853] & 21.98 [17.46, 27.06] & 0.829 $\pm$ 0.032 \\
+\midrule
+\textbf{Mean} & \textbf{0.8474 [0.828, 0.865]} & \textbf{9.67 [8.06, 11.46]} & \textbf{0.847 $\pm$ 0.021} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+% ---- FIGURE: CROSS-VALIDATION BOX PLOTS ----
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{crossval_boxplot}
+\caption{Out-of-fold Dice distributions over the 147 UPenn-GBM subjects under five-fold cross-validated fine-tuning. Boxes span the interquartile range with the median marked; grey points are outlying cases, shown in full. White diamonds are the five per-fold means; their tight grouping (std $\leq 0.032$ in every region) indicates the result does not depend on any particular partition.}
+\label{fig:crossval}
+\end{figure}
+
+% ============================================================
+% XI. FAILURE ANALYSIS
+% ============================================================
+\section{Failure Analysis}
+\label{sec:failure}
+
+The mean Dice of Table~\ref{tab:brats_results} is not the typical case. On the 251 BraTS internal-validation cases the \emph{median} case scores 0.917 (ET), 0.952 (TC) and 0.948 (WT); the mean is lower because a small tail of cases fails almost completely. This section asks what that tail has in common, since a mean cannot say. The analysis uses the per-case scores already reported and ground-truth volumes read from the annotations, so it introduces no new model and no new fitting.
+
+\subsection{Enhancing tumour: a detection threshold, not a gradual decline}
+
+Table~\ref{tab:failure_size} bins the cases by ground-truth enhancing-tumour volume. Performance does not degrade smoothly as lesions shrink: it holds near 0.90 above 5{,}000 voxels, falls to 0.75 between 1{,}000 and 5{,}000, and collapses to \emph{zero} below 300 voxels --- the model does not partially segment these lesions, it fails to find them at all. The same ordering appears in the UPenn-GBM cross-validation (Section~\ref{sec:crossval}), where mean ET Dice is 0.745 at 1{,}000--5{,}000 voxels against 0.850 above 5{,}000, so the size dependence is not particular to one cohort.
+
+\begin{table}[!t]
+\caption{Enhancing-tumour Dice by ground-truth ET volume, BraTS 2021 internal validation ($n=251$) and UPenn-GBM five-fold cross-validation ($n=147$). Cases with an empty ground-truth ET are excluded here and discussed in the text. UPenn-GBM contains almost no small-ET cases, for the reason given in Section~\ref{sec:failure_limits}.}
+\label{tab:failure_size}
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{GT ET volume} & \multicolumn{2}{c}{\textbf{BraTS 2021}} & \multicolumn{2}{c}{\textbf{UPenn-GBM}} \\
+(voxels) & $n$ & Dice$_{\text{ET}}$ & $n$ & Dice$_{\text{ET}}$ \\
+\hline
+$1$--$100$        & 2   & 0.000 & 0   & --- \\
+$100$--$300$      & 2   & 0.000 & 1   & 0.740 \\
+$300$--$1{,}000$  & 4   & 0.442 & 1   & 0.298 \\
+$1{,}000$--$5{,}000$ & 37  & 0.752 & 27  & 0.745 \\
+$\geq 5{,}000$    & 202 & \textbf{0.903} & 118 & \textbf{0.850} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{The tumour core is located by locating enhancement}
+
+The more consequential pattern concerns the tumour core. Splitting the 251 cases on whether the tumour enhances at all --- taking 300 voxels of ground-truth ET as the cut, the point at which Table~\ref{tab:failure_size} shows detection has already failed --- gives a median TC Dice of \textbf{0.008} on the 8 barely-enhancing cases against \textbf{0.953} on the 243 that enhance (Fig.~\ref{fig:failure}b). This is not a graded loss of accuracy but a near-total failure, and it occurs on cores the model should segment easily: case BraTS2021\_01483 has an empty ground-truth ET and a necrotic core of 59{,}424 voxels, and scores 0.000 on TC while scoring 0.865 on whole tumour --- it localises the tumour, then fails to resolve its core.
+
+The natural reading is that the network has learned to find the core by finding enhancement, which is an efficient strategy on a cohort where most tumours enhance and a failing one where they do not. Because ET is nested inside TC in the region hierarchy, this coupling is built into the target definition and is not corrected by the hierarchy-enforcement and component post-processing described in Section~\ref{sec:experiments}.
+
+Two qualifications belong with this number rather than in a footnote. First, the \emph{mean} TC Dice for the barely-enhancing group is 0.275 rather than 0.008, because two of the eight cases have an empty ground-truth core that the model correctly predicted empty and so score 1.0; the median is the honest summary of the group and the mean is not. Second, $n=8$ makes this a characterised failure mode, not a precisely estimated effect.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{fig_failure_modes}
+\caption{Failure modes on BraTS 2021 internal validation ($n=251$). (a) Enhancing-tumour Dice against ground-truth ET volume, log scale; the black line is the bin mean. Detection collapses below roughly 1{,}000 voxels. (b) Tumour-core Dice split on whether the tumour enhances. On barely-enhancing tumours the core channel fails almost entirely (median 0.008) despite succeeding on 243 enhancing cases (median 0.953). The two barely-enhancing points at 1.0 are cases whose ground-truth core is also empty and was correctly predicted empty; they are why the group mean (0.275) overstates it and the median is reported instead.}
+\label{fig:failure}
+\end{figure}
+
+\subsection{What this analysis does and does not establish}
+\label{sec:failure_limits}
+
+The enhancement-dependence result is demonstrated on BraTS 2021 and \emph{cannot} be confirmed on UPenn-GBM with the data available. UPenn-GBM is a glioblastoma cohort, and glioblastomas almost always enhance: exactly one of its 147 cross-validated subjects has a ground-truth ET below 300 voxels, and the smallest in the cohort is 106 voxels. That single case is consistent with the pattern (TC Dice 0.332), but a cohort with one eligible subject cannot test the claim. The limitation is structural rather than incidental --- an external check would require a cohort containing lower-grade, non-enhancing gliomas, which is a different inclusion criterion, not a larger sample of the same one.
+
+We also note what the analysis rules out. The training procedure used for the released checkpoint takes a fixed centre crop of $128^3$ from each $155\times240\times240$ volume, which is 28\% of the axial plane, and one might expect peripheral lesions to be systematically missed as a result. Measured over the training partition, that crop nevertheless retains 96.8\% of tumour voxels on average (median 99.4\%), and three of the failing cases lie entirely inside it. Fixed cropping is a genuine limitation of that procedure, but it does not account for these failures; lesion size and absent enhancement do.
+
+% ============================================================
+% XII. QUALITATIVE RESULTS
+% ============================================================
+\section{Qualitative Results}
+\label{sec:qualitative}
+
+Figure~\ref{fig:qualitative} shows representative segmentations on the BraTS 2021 internal-validation split (top row) and the UPenn-GBM held-out test set (bottom row), spanning the performance range: a near-perfect case, a typical case, and a challenging case per cohort. Within each panel the three sub-images are, left to right, the input MRI slice, the expert annotation, and the model prediction. Regions are drawn as nested set-differences: enhancing tumour (ET) in blue, necrotic core (TC\,$\setminus$\,ET) in orange, and oedema (WT\,$\setminus$\,TC) in green. The challenging UPenn case (f) illustrates whole-tumour over-segmentation in the absence of a largest-component post-processing rule, consistent with the wide WT HD95 interval reported in Table~\ref{tab:upenn_seg}.
+
+\begin{figure*}[!t]
+\centering
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{brats_BraTS2021_00413}\\{\footnotesize (a) BraTS --- best (Dice 0.99)}\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{brats_BraTS2021_00773}\\{\footnotesize (b) BraTS --- typical (Dice 0.94)}\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{brats_BraTS2021_01628}\\{\footnotesize (c) BraTS --- failure (Dice 0.00)}\end{minipage}
+
+\vspace{6pt}
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{upenn_sub-330}\\{\footnotesize (d) UPenn --- best (Dice 0.97)}\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{upenn_sub-251}\\{\footnotesize (e) UPenn --- typical (Dice 0.86)}\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering\includegraphics[width=\linewidth]{upenn_sub-380}\\{\footnotesize (f) UPenn --- challenging (Dice 0.37)}\end{minipage}
+\caption{Qualitative segmentation results, best / typical / challenging (left to right) on BraTS 2021 (top) and UPenn-GBM (bottom). Each panel shows input MRI, expert annotation, and prediction. Colours are nested set-differences: \textbf{ET} (blue), necrotic core \textbf{TC\,$\setminus$\,ET} (orange), oedema \textbf{WT\,$\setminus$\,TC} (green). Per-case mean Dice is under each panel. Case (f) shows whole-tumour over-segmentation without a largest-component rule.}
+\label{fig:qualitative}
+\end{figure*}
+
+% ============================================================
+% XII. DISCUSSION
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Effectiveness of Wavelet-Based Features}
+The ET HD95 of 3.24\,mm is competitive with the published methods of Table~\ref{tab:seg_comparison}, but \textbf{we do not attribute it to the wavelet component.} An earlier version of this work read that figure as evidence that DWT downsampling improves boundary precision by carrying high-frequency detail forward instead of discarding it at each pooling step. The controlled ablation of Section~\ref{sec:ablation} does not support that reading: against a width-matched max-pooling baseline the DWT yields no Dice benefit ($-0.0000$ [$-0.0127$, $+0.0118$]) and \emph{worse} HD95 in all three regions, by $+2.05$ to $+4.92$\,mm with every interval excluding zero. Whatever accounts for the segmentation quality reported in Section~\ref{sec:results}, the evidence here does not identify the downsampling operator as the cause, and we withdraw the claim rather than qualify it.
+
+\subsection{Generalizability and Domain Shift}
+The 0.0624 Dice reduction from BraTS internal validation to UPenn external test reflects the genuine remaining domain gap after correcting preprocessing mismatches --- substantially smaller than the previously claimed difference, which was almost entirely an artifact of the channel-order error. The five-fold cross-validation of Section~\ref{sec:crossval} corroborates this on the full 147-subject cohort: pooled out-of-fold Dice of 0.8474 [0.8282, 0.8646] with fold-to-fold standard deviation of 0.021 indicates that the fine-tuned transfer result is stable across partitions rather than a property of one favourable split.
+
+\subsection{Classification Perspective}
+The IDH1 AUC of 0.896 (UPenn-GBM) is a positive signal, but rests on only 17 positive cases and should be read as warranting external validation rather than as a deployable result. MGMT tells the opposite story: on the primary BraTS 2021 cohort the KAN+Transformer+GNN module (0.624) is statistically indistinguishable from a plain MLP (0.617) and sits in the same weak range as the radiomic baselines (best 0.583), and it transfers to UPenn-GBM at chance (0.537). We report this negative result deliberately. The architectural components are not the bottleneck --- the imaging signal for MGMT is --- and presenting the elaborate module as a success on this task would repeat exactly the kind of over-claiming the pipeline audit (Section~\ref{sec:audit}) was written to prevent.
+
+\subsection{Limitations}
+\begin{itemize}
+    \item BraTS 2021 results are internal validation; the split was used for checkpoint selection.
+    \item The UPenn-GBM held-out segmentation test comprises $n=29$ subjects, so its uncertainty intervals are broad; the 147-subject cross-validation (Section~\ref{sec:crossval}) tightens them, under a protocol that permits per-fold post-processing selection on inner validation.
+    \item BraTS 2021 MGMT classification is a negative result: no module component exceeds a plain MLP, and out-of-cohort transfer to UPenn-GBM is at chance. The clinical/gated-fusion branch could be evaluated only on UPenn, as BraTS carries no clinical metadata.
+    \item BraTS 2021 carries no tumour-grade label; the only classification target evaluated on it is MGMT methylation.
+    \item Segmentation fails on small and non-enhancing lesions (Section~\ref{sec:failure}): enhancing tumour below roughly 300 voxels is not detected at all, and on the 8 barely-enhancing cases the tumour-core channel collapses to a median Dice of 0.008. The latter rests on 8 cases and could not be checked externally, because UPenn-GBM is a glioblastoma cohort and contains only one eligible subject.
+    \item IDH1 classification (UPenn-GBM) has not been externally validated.
+    \item This study does not establish clinical utility or deployment readiness.
+\end{itemize}
+
+\subsection{Future Work}
+Two wavelet components from the original design were \emph{not} implemented or evaluated in this study and are left as future work; the model reported here uses DWT downsampling only (Section~\ref{sec:dwt}). The first is a multi-scale wavelet feature-extraction module that fuses spatial and DWT features at each encoder level, $\mathbf{F}_l^{ms} = \sigma(\text{BN}(\text{Conv}(\text{Concat}(\mathbf{F}_l, \text{DWT}(\mathbf{F}_l)))))$. The second is a set of wavelet-enhanced skip connections that aggregate the high-frequency sub-bands into a texture descriptor $\mathbf{T}^l$ and inject it into the nested skip pathway, $\mathbf{F}_{skip}^l = \text{Concat}(\mathbf{F}_{enc}^l, \mathbf{F}_{dec}^{l+1}, \mathbf{T}^l)$. Both were motivated by an expected boundary-precision benefit of DWT downsampling; the controlled ablation of Section~\ref{sec:ablation} did not bear that expectation out for the downsampling operator alone, so whether frequency-domain information helps when injected at these other points is an open question rather than a foregone conclusion. Evaluating them --- together with the nnU-Net baseline on this project's split --- would settle the remaining architectural questions. As implemented and reported, however, the paper's segmentation contribution is DWT-based downsampling.
+
+% ============================================================
+% XIII. CONCLUSION
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented Wavelet U-Net++, integrating Discrete Wavelet Transform into the U-Net++ framework for frequency-aware brain tumor segmentation. Under a fully reproducible, non-test-tuned protocol, the model achieved mean Dice of 0.8828 on BraTS 2021 internal validation and 0.8204 on a held-out UPenn-GBM external test cohort, with a statistically significant fine-tuning improvement of $+0.11$ [0.04, 0.19] over zero-shot transfer; five-fold cross-validated fine-tuning over all 147 expert-segmented UPenn-GBM subjects confirmed the transfer result at 0.8474 [0.8282, 0.8646] pooled out-of-fold Dice with fold-to-fold standard deviation of 0.021. A controlled width-matched ablation nevertheless found that the wavelet downsampling operator itself provides no Dice benefit over max-pooling and degrades HD95 in every region, so we withdraw the causal architectural claim and attribute the segmentation quality to the pipeline as a whole rather than to the DWT. For molecular classification we evaluated a KAN+Transformer+GNN module on BraTS 2021 MGMT methylation as the primary task with UPenn-GBM for external validation: it reaches AUC 0.624 on BraTS --- indistinguishable from a plain MLP and in the same weak range as the radiomic baselines --- and transfers to UPenn-GBM at chance (0.537), a negative result we report in full because the limiting factor is the imaging signal for MGMT, not the architecture. IDH1 mutation classification on UPenn-GBM, by contrast, reached AUC 0.896, though on only 17 positives. Critically, seven pipeline defects were identified and corrected --- most notably a preprocessing channel-order mismatch and test-set threshold tuning --- demonstrating the importance of rigorous pipeline validation and transparent reporting in medical AI.
+
+% ============================================================
+% REFERENCES
+% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{baid2021brats}
+Baid, Ujjwal, Satyam Ghodasara, Suyash Mohan, Michel Bilello, Evan Calabrese, Errol Colak, Keyvan Farahani, et al. 2021. ``The RSNA-ASNR-MICCAI BraTS 2021 Benchmark on Brain Tumor Segmentation and Radiogenomic Classification.'' \textit{arXiv preprint} arXiv:2107.02314.
+
+\bibitem{menze2015multimodal}
+Menze, Bjoern H., Andras Jakab, Stefan Bauer, Jayashree Kalpathy-Cramer, Keyvan Farahani, Justin Kirby, Yuliya Burren, et al. 2015. ``The Multimodal Brain Tumor Image Segmentation Benchmark (BRATS).'' \textit{IEEE Transactions on Medical Imaging} 34 (10): 1993--2024.
+
+\bibitem{louis2016who}
+Louis, David N., Arie Perry, Guido Reifenberger, Andreas von Deimling, Dominique Figarella-Branger, Webster K. Cavenee, Hiroko Ohgaki, Otmar D. Wiestler, Paul Kleihues, and David W. Ellison. 2016. ``The 2016 World Health Organization Classification of Tumors of the Central Nervous System: A Summary.'' \textit{Acta Neuropathologica} 131 (6): 803--820.
+
+\bibitem{stupp2005radiotherapy}
+Stupp, Roger, Warren P. Mason, Martin J. van den Bent, Michael Weller, Barbara Fisher, Martin J. B. Taphoorn, Karl Belanger, et al. 2005. ``Radiotherapy Plus Concomitant and Adjuvant Temozolomide for Glioblastoma.'' \textit{New England Journal of Medicine} 352 (10): 987--996.
+
+\bibitem{hegi2005mgmt}
+Hegi, Monika E., Annie-Claire Diserens, Thierry Gorlia, Marie-France Hamou, Nicolas de Tribolet, Michael Weller, Johan M. Kros, et al. 2005. ``MGMT Gene Silencing and Benefit from Temozolomide in Glioblastoma.'' \textit{New England Journal of Medicine} 352 (10): 997--1003.
+
+\bibitem{ronneberger2015unet}
+Ronneberger, Olaf, Philipp Fischer, and Thomas Brox. 2015. ``U-Net: Convolutional Networks for Biomedical Image Segmentation.'' In \textit{Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)}, 234--241. Munich: Springer.
+
+\bibitem{zhou2018unetpp}
+Zhou, Zongwei, Md Mahfuzur Rahman Siddiquee, Nima Tajbakhsh, and Jianming Liang. 2018. ``UNet++: A Nested U-Net Architecture for Medical Image Segmentation.'' In \textit{Deep Learning in Medical Image Analysis and Multimodal Learning for Clinical Decision Support}, 3--11. Granada: Springer.
+
+\bibitem{cicek2016unet3d}
+Çiçek, Özgün, Ahmed Abdulkadir, Soeren S. Lienkamp, Thomas Brox, and Olaf Ronneberger. 2016. ``3D U-Net: Learning Dense Volumetric Segmentation from Sparse Annotation.'' In \textit{Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)}, 424--432. Athens: Springer.
+
+\bibitem{milletari2016vnet}
+Milletari, Fausto, Nassir Navab, and Seyed-Ahmad Ahmadi. 2016. ``V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation.'' In \textit{Proceedings of the Fourth International Conference on 3D Vision (3DV)}, 565--571. Stanford: IEEE.
+
+\bibitem{isensee2021nnu}
+Isensee, Fabian, Paul F. Jaeger, Simon A. A. Kohl, Jens Petersen, and Klaus H. Maier-Hein. 2021. ``nnU-Net: A Self-Configuring Method for Deep Learning-Based Biomedical Image Segmentation.'' \textit{Nature Methods} 18 (2): 203--211.
+
+\bibitem{luu2022extending}
+Luu, Huan Minh, and Sung-Hong Park. 2022. ``Extending nn-UNet for Brain Tumor Segmentation.'' In \textit{Brainlesion: Glioma, Multiple Sclerosis, Stroke and Traumatic Brain Injuries (BrainLes 2021)}, 173--186. Virtual Event: Springer.
+
+\bibitem{hatamizadeh2022swinunetr}
+Hatamizadeh, Ali, Vishwesh Nath, Yucheng Tang, Dong Yang, Holger R. Roth, and Daguang Xu. 2022. ``Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images.'' In \textit{Brainlesion: Glioma, Multiple Sclerosis, Stroke and Traumatic Brain Injuries (BrainLes, MICCAI Workshop)}, 272--284. Virtual Event: Springer.
+
+\bibitem{hatamizadeh2022unetr}
+Hatamizadeh, Ali, Yucheng Tang, Vishwesh Nath, Dong Yang, Andriy Myronenko, Bennett Landman, Holger R. Roth, and Daguang Xu. 2022. ``UNETR: Transformers for 3D Medical Image Segmentation.'' In \textit{Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)}, 574--584. Waikoloa: IEEE.
+
+\bibitem{wang2021transbts}
+Wang, Wenxuan, Chen Chen, Meng Ding, Hong Yu, Sen Zha, and Jiangyun Li. 2021. ``TransBTS: Multimodal Brain Tumor Segmentation Using Transformer.'' In \textit{Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)}, 109--119. Strasbourg: Springer.
+
+\bibitem{vaswani2017attention}
+Vaswani, Ashish, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, {\L}ukasz Kaiser, and Illia Polosukhin. 2017. ``Attention Is All You Need.'' In \textit{Advances in Neural Information Processing Systems 30 (NeurIPS)}, 5998--6008. Long Beach: Curran Associates.
+
+\bibitem{velickovic2018gat}
+Veli\v{c}kovi\'{c}, Petar, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro Li\`{o}, and Yoshua Bengio. 2018. ``Graph Attention Networks.'' In \textit{Proceedings of the International Conference on Learning Representations (ICLR)}. Vancouver.
+
+\bibitem{myronenko2019segresnet}
+Myronenko, Andriy. 2019. ``3D MRI Brain Tumor Segmentation Using Autoencoder Regularization.'' In \textit{Brainlesion: Glioma, Multiple Sclerosis, Stroke and Traumatic Brain Injuries (BrainLes, MICCAI Workshop)}, 311--320. Granada: Springer.
+
+\bibitem{bakas2022upenn}
+Bakas, Spyridon, Chiharu Sako, Hamed Akbari, Michel Bilello, Aristeidis Sotiras, Gaurav Shukla, Jeffrey D. Rudie, et al. 2022. ``The University of Pennsylvania Glioblastoma (UPenn-GBM) Cohort: Advanced MRI, Clinical, Genomics, \& Radiomics.'' \textit{Scientific Data} 9: 453.
+
+\bibitem{mallat1989theory}
+Mallat, Stephane G. 1989. ``A Theory for Multiresolution Signal Decomposition: The Wavelet Representation.'' \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence} 11 (7): 674--693.
+
+\bibitem{daubechies1992ten}
+Daubechies, Ingrid. 1992. \textit{Ten Lectures on Wavelets}. Philadelphia: Society for Industrial and Applied Mathematics.
+
+\bibitem{williams2018wavelet}
+Williams, Travis, and Robert Li. 2018. ``Wavelet Pooling for Convolutional Neural Networks.'' In \textit{Proceedings of the International Conference on Learning Representations (ICLR)}. Vancouver.
+
+\bibitem{liu2018mwcnn}
+Liu, Pengju, Hongzhi Zhang, Kai Zhang, Liang Lin, and Wangmeng Zuo. 2018. ``Multi-Level Wavelet-CNN for Image Restoration.'' In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW)}, 773--782. Salt Lake City: IEEE.
+
+\bibitem{li2020wavelet}
+Li, Qiufu, Linlin Shen, Sheng Guo, and Zhihui Lai. 2020. ``Wavelet Integrated CNNs for Noise-Robust Image Classification.'' In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 7243--7252. Seattle: IEEE.
+
+\bibitem{gillies2016radiomics}
+Gillies, Robert J., Paul E. Kinahan, and Hedvig Hricak. 2016. ``Radiomics: Images Are More than Pictures, They Are Data.'' \textit{Radiology} 278 (2): 563--577.
+
+\bibitem{chang2018rnn}
+Chang, Ken, Harrison X. Bai, Hao Zhou, Chang Su, Wenya Linda Bi, Ena Agbodza, Vasileios K. Kavouridis, et al. 2018. ``Residual Convolutional Neural Network for the Determination of IDH Status in Low- and High-Grade Gliomas from MR Imaging.'' \textit{Clinical Cancer Research} 24 (5): 1073--1081.
+
+\bibitem{liu2024kan}
+Liu, Ziming, Yixuan Wang, Sachin Vaidya, Fabian Ruehle, James Halverson, Marin Solja\v{c}i\'{c}, Thomas Y. Hou, and Max Tegmark. 2024. ``KAN: Kolmogorov--Arnold Networks.'' \textit{arXiv preprint} arXiv:2404.19756.
+
+\bibitem{vangriethuysen2017pyradiomics}
+van Griethuysen, Joost J. M., Andriy Fedorov, Chintan Parmar, Ahmed Hosny, Nicole Aucoin, Vivek Narayan, Regina G. H. Beets-Tan, Jean-Christophe Fillion-Robin, Steve Pieper, and Hugo J. W. L. Aerts. 2017. ``Computational Radiomics System to Decode the Radiographic Phenotype.'' \textit{Cancer Research} 77 (21): e104--e107.
+
+\bibitem{loshchilov2019adamw}
+Loshchilov, Ilya, and Frank Hutter. 2019. ``Decoupled Weight Decay Regularization.'' In \textit{Proceedings of the International Conference on Learning Representations (ICLR)}. New Orleans.
+
+\bibitem{varoquaux2022ml}
+Varoquaux, Gaël, and Veronika Cheplygina. 2022. ``Machine Learning for Medical Imaging: Methodological Failures and Recommendations for the Future.'' \textit{npj Digital Medicine} 5: 48.
+
+\bibitem{heil2021reproducibility}
+Heil, Benjamin J., Michael M. Hoffman, Florian Markowetz, Su-In Lee, Casey S. Greene, and Stephanie C. Hicks. 2021. ``Reproducibility Standards for Machine Learning in the Life Sciences.'' \textit{Nature Methods} 18 (10): 1132--1135.
+
+\end{thebibliography}
+
+\balance
+
+\end{document}

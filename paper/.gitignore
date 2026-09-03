@@ -1,0 +1,17 @@
+# Figures are assembled from results/ by collect_figures.sh, never stored here.
+figures/
+
+# LaTeX build products. paper.pdf is regenerable and is a 1.9 MB binary that
+# changes on every compile; this repository has already been rewritten once to
+# remove committed binaries.
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.xdv
+paper.pdf
