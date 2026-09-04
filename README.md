@@ -61,7 +61,7 @@ Data (`data/`, `upenn_nifti/`, `upenn_data/`), model weights (`checkpoints/`)
 and cached probability maps (`cache/`) are gitignored.
 
 ```bash
-python -m pytest tests/ -q     # 39 tests, ~2 s, no data or GPU needed
+python -m pytest tests/ -q     # 53 tests, ~2 s, no data or GPU needed
 ```
 
 ### Disk
@@ -145,17 +145,17 @@ python scripts/train_upenn.py --epochs 80 --save-dir checkpoints
 `train_upenn.py` fine-tunes from the BraTS checkpoint. It does not resume from
 an earlier UPenn checkpoint by design — see `docs/METHODOLOGY.md`.
 
-### Cross-validation (implemented, not run)
+### Cross-validation
 
 ```bash
 python scripts/crossval_upenn.py --dry-run   # verify folds, no GPU
 python scripts/crossval_upenn.py             # ~10-14 GPU-hours
 ```
 
-This evaluates all 147 expert-segmented subjects instead of 29 and is the
-single biggest available improvement to the tightness of the reported
-intervals. **No cross-validated result is reported anywhere in `results/`,**
-because the folds have not been trained.
+This evaluates all 147 expert-segmented subjects instead of 29. It has been run:
+pooled out-of-fold mean Dice is **0.8474** [0.8282, 0.8646] with a fold-to-fold
+standard deviation of 0.021, in `results/upenn/crossval/`. It tightens the
+held-out interval by roughly a factor of three.
 
 ## Results
 

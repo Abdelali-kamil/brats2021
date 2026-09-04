@@ -1,108 +1,92 @@
 # Where to pick up
 
-Last session: 2026-07-27.
+Last session: 2026-09-04.
 
-## What changed this session
+## In flight
 
-The deep classification module was **redesigned to be BraTS-2021-primary**, in
-line with the project's scope (BraTS is the main dataset; UPenn-GBM is external
-validation only). Previously the KAN+GNN ablation ran only on UPenn MGMT, which
-inverted that scope. The current state:
+**BraTS retraining with augmentation and random crops** (`aug_cosine_v1`).
+Running since 2026-09-03, resumed 2026-09-04 after a GPU fault. Follow with
+`tail -f logs/aug_cosine_v1.log`.
 
-- `brats_gbm/gnn.py` — `ClinicalImagingKANGNN` now includes a region-token
-  **Transformer branch** (paper §V-F) and treats the clinical branch as
-  optional, so it runs imaging-only on BraTS and multimodal on UPenn.
-- `scripts/ablation_kan_gnn.py` — rewritten. Primary task is **BraTS 2021 MGMT**
-  (n=577, imaging-only, 51 features shared with UPenn), nested 5×3 CV. Adds a
-  **UPenn external-validation** leg and a UPenn-only multimodal reference.
-- Results in `results/classification/kan_gnn_brats.json` (the old
-  `kan_gnn_ablation.json` is the superseded UPenn-only run).
-- Figures regenerated: `results/figures/fig1_ablation_auc_forest.*`,
-  `fig2_attribution.*`, `fig_architecture_implemented.*`.
+- 300 epochs, cosine annealing, batch 1 x accum 8 (effective batch 8, unchanged
+  from the historical configuration). Batch size is 1 rather than 2 only because
+  the GPU is shared with another user's jobs; throughput per sample is flat
+  across batch sizes on this hardware, so nothing is lost but BatchNorm sample
+  count.
+- Best so far **0.8627** mean Dice at epoch 42, on the 126-case *validation*
+  split under the training-time metric (a single centre-crop forward pass). That
+  is not comparable to the 0.8828 of Table IV, which uses sliding-window
+  inference with flip TTA and is measured on all 251 held-out cases. Expect the
+  full protocol to score higher than the training-time metric.
+- A copy of the epoch-42 checkpoint is kept at
+  `checkpoints/aug_cosine_v1_best_ep42_0.8627.backup.pth`, so this run cannot
+  leave the project worse off than it started.
 
-## Results (final)
+**Caveat on the resume.** The cosine schedule restarts its cycle at epoch 47
+rather than continuing the original 300-epoch curve, so the learning rate
+returned to 1.88e-04 and anneals over the remaining epochs. This is a warm
+restart, not an uninterrupted schedule, and the paper's methods must say so.
+Validation dipped to 0.8494/0.8433 immediately after the restart, which is
+expected. **If it has not exceeded 0.8627 by roughly epoch 100, the restart cost
+more than it gained** and the epoch-42 checkpoint is the one to keep.
 
-BraTS 2021 MGMT, nested 5×3 CV, 3 repeats:
+## When it finishes
 
-| Rung | AUC [95% CI] |
-|---|---|
-| MLP (baseline) | 0.617 [0.568, 0.663] |
-| KAN | 0.602 [0.553, 0.648] |
-| KAN + Transformer | 0.645 [0.599, 0.692] |
-| KAN + GNN | 0.615 [0.568, 0.662] |
-| KAN + Transformer + GNN (full) | 0.624 [0.575, 0.670] |
+Evaluate on the partition that has never been touched:
 
-- External BraTS→UPenn (full model): **0.537 [0.460, 0.612]** — chance.
-- UPenn multimodal (imaging+clinical+gate): **0.599 [0.523, 0.671]**.
+```bash
+python scripts/evaluate_brats.py --partition test \
+    --checkpoint checkpoints/aug_cosine_v1_best.pth --tag aug_cosine_v1_test
+```
 
-**Reading:** all BraTS intervals overlap (mean 95% CI half-width ±0.047); the
-full module does not beat the plain MLP; KAN ≤ MLP; the memory bank contributes
-~25% of the representation but no AUC; external transfer is at chance. This is a
-negative result and is reported as one, consistent with MGMT-from-MRI being a
-weak-signal task (radiomic RF 0.583; RSNA-MICCAI 2021 winner ~0.62).
+`--partition test` is the 125 cases held back by `brats_split_3way`; `val` is
+the 126 that drove selection. Their union is exactly the historical
+`internal_validation` partition, so a `test` number is directly comparable to
+the old one case for case, with the difference that nothing selected on it.
 
-## In flight (started 2026-07-29)
+For an apples-to-apples comparison, score the *released* checkpoint on the same
+partition too. Note that it selected on all 251, so its `test` score is still
+optimistic; the two are not equally clean and the paper should say which is
+which.
 
-**Downsampling ablation — DWT vs width-matched max-pooling** (paper Table IX).
-`bash scripts/run_ablation.sh` trains both arms from scratch on the seed-42
-1000/251 split at a matched 200-epoch budget, then scores each through the
-reported evaluation pipeline. Progress:
-`tail -F logs/ablation_ablation_{maxpool,dwt}.log`; outputs land in
-`results/brats/ablation/`. Re-running skips arms that already have a
-`*_best.pth` (set `FORCE=1` to redo). Protocol in `docs/METHODOLOGY.md`.
+## Completed since the last note
 
-- **Arm A (max-pooling): done.** Best mean Dice **0.8199 at epoch 43**
-  (`checkpoints/ablation/ablation_maxpool_best.pth`). Trained 199 epochs before
-  being stopped — see below.
-- **Arm B (DWT): running**, started 2026-07-30 12:05, ~19 h for 200 epochs, then
-  ~4–8 h of TTA evaluation for both arms. Expect results 2026-07-31.
-
-The epoch budget was cut from 750 to 200 mid-experiment. `--epochs 750` in
-`train_brats.py` is a *resume* target (the original run continued an epoch-650
-checkpoint by 100 epochs); as a from-scratch budget it is ~10x too large here.
-Arm A peaked at epoch 43 and hit its 1e-7 LR floor at epoch 76, then sat in
-noise for 150 epochs. Continuing would have burned ~53 h per arm to no effect.
-Both arms now get 200 epochs and the best-validation checkpoint is reported.
-
-When it lands, fill in Table IX of the paper — the max-pooling row is currently
-a red `TBD` placeholder — and remove the red note in the Ablation section. Do
-not pre-write the conclusion: a result where max-pooling matches or beats the
-DWT is a real possibility and should be reported as found.
-
-**Two defects fixed this session, both pre-existing:**
-
-- `brats_gbm/data/brats.py` used a bare `from image import ...` that never
-  resolved under `train_brats.py`, behind an `except ImportError` that swallowed
-  it. BraTS training could not run from the repository at all. Fixed to the
-  package-qualified import every other module uses.
-- `train_brats.py` wrote a full ~125 MB checkpoint every epoch (~94 GB per run,
-  more than the free space allows for two runs) and never saved a distinct
-  best. Now writes `<tag>_best.pth` / `<tag>_last.pth` only, each carrying the
-  full run configuration.
-
-The released `segmentor_epoch_650.pth` therefore cannot have been produced by
-the code as it stands, so its training protocol is unverifiable. Reported
-results are unaffected — the checkpoint is untouched and its evaluation
-reproduces to 1.1e-16 — but the paper's Methods section describes current code,
-not a confirmed history.
+- **Downsampling ablation** (paper Table IX) — done 2026-07-31. Max-pooling
+  0.8145, DWT 0.8144, paired difference -0.0000 [-0.0127, +0.0118], and DWT
+  worse on HD95 in all three regions. The wavelet claim is withdrawn in the
+  paper rather than qualified.
+- **UPenn 5-fold cross-validation** — done 2026-08-11. Pooled out-of-fold mean
+  Dice 0.8474 [0.8282, 0.8646], fold sigma 0.021, no failures among 147.
+- **Failure analysis** (paper Section XI) — `scripts/make_failure_figures.py`.
+  ET detection collapses below ~300 voxels; the tumour-core channel depends on
+  enhancement (median Dice_TC 0.008 on 8 barely-enhancing cases against 0.953 on
+  243). Cannot be checked externally: UPenn-GBM is GBM-only and has one eligible
+  subject.
+- **Training defects fixed** (2805ff2, b5e5b1e) — training ran on a fixed centre
+  crop with no augmentation; `--resume` defaulted to a checkpoint, so a
+  from-scratch run silently continued it; `torch.load` rejected the config block
+  under torch>=2.6; and resuming from `_last.pth` could overwrite a better
+  `_best.pth`.
+- **Repository history rewritten** — a 21.9 GB `data_backup.tar.gz` and 18
+  unrelated 119 MB checkpoints made the repo unpushable. 24 GB to 13 MB, all 35
+  commits preserved, tip trees verified identical, now on GitHub.
+- **Manuscript under version control** in `paper/`, previously an uncommitted
+  file in a home directory.
 
 ## Outstanding
 
-- **BraTS k-fold cross-validation** for a fold-level mean ± std in paper
-  Table VI — deferred by decision until the ablation lands. ~10 days at 5 folds
-  × 750 epochs. Requires an inner validation split per fold for LR scheduling
-  and checkpoint choice, so fold scores stay genuinely held out. Table VI
-  currently carries a caption note explaining why our row has no ±.
-- **nnU-Net segmentation baseline** on this project's 251-case split — still no
-  comparison numbers computed on the project's own split.
-- **UPenn 5-fold cross-validation** (`scripts/crossval_upenn.py`) — implemented,
-  verified (`--dry-run`), not trained (~10–14 GPU-hours). Would tighten the
-  segmentation intervals from n=29 to n=147.
+- **nnU-Net segmentation baseline** on this project's split — still no
+  comparison numbers computed on the project's own partition.
+- **BraTS k-fold cross-validation** for a fold-level mean +/- std in Table VI.
+  Table VI still carries the caption note explaining why our row has no +/-.
 - The learned lesion/slice/global encoders of the original proposal remain
-  unbuilt; the module uses radiomic features, not segmentation-encoder
-  bottleneck features. Documented in `scripts/make_architecture_figure.py`.
+  unbuilt; the classification module uses radiomic features, not
+  segmentation-encoder bottleneck features.
+- No LaTeX toolchain on this machine, so `paper/paper.tex` is syntax-checked but
+  not compiled here. Build it on Overleaf after `bash paper/collect_figures.sh`.
 
 ## Repository state
 
-`python -m pytest tests/ -q` → 46 pass. Segmentation results unchanged and
-final. Classification redesigned and rerun this session.
+`python -m pytest tests/ -q` -> 53 pass. Segmentation and classification results
+in `results/` are unchanged and final; the retraining above will add a new
+result rather than replace them.

@@ -49,7 +49,8 @@ from brats_gbm.eval.inference import sliding_window_predict  # noqa: E402
 from brats_gbm.eval.metrics import score_case  # noqa: E402
 from brats_gbm.eval.stats import print_summary, summarise_segmentation  # noqa: E402
 from brats_gbm.model import WaveletUNetPlusPlus  # noqa: E402
-from brats_gbm.splits import brats_split  # noqa: E402
+from brats_gbm.splits import (  # noqa: E402
+    assert_disjoint, brats_split, brats_split_3way)
 
 DATA = ROOT / "data"
 CKPT = ROOT / "checkpoints" / "segmentor_epoch_650.pth"
@@ -78,7 +79,13 @@ def load_case(case_id: str) -> tuple[np.ndarray, np.ndarray]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--partition", default="internal_validation",
-                    choices=["internal_validation", "train", "all"])
+                    choices=["internal_validation", "train", "all", "val", "test"],
+                    help="'internal_validation' is the historical 251-case "
+                         "held-out partition, which doubled as the model-"
+                         "selection set. 'val' and 'test' are its two halves "
+                         "under brats_split_3way: 'val' drove selection for "
+                         "models trained after 2805ff2, and 'test' is the 125 "
+                         "cases held back entirely. Report 'test'.")
     ap.add_argument("--limit", type=int, default=None,
                     help="evaluate only the first N cases (for a quick check)")
     ap.add_argument("--no-tta", action="store_true")
@@ -92,13 +99,21 @@ def main() -> None:
                          "config block when omitted, else 'dwt'")
     args = ap.parse_args()
 
-    train_ids, val_ids = brats_split(str(DATA))
+    train_ids, heldout_ids = brats_split(str(DATA))
     if args.partition == "internal_validation":
-        cases = sorted(val_ids)
+        cases = sorted(heldout_ids)
     elif args.partition == "train":
         cases = sorted(train_ids)
+    elif args.partition in ("val", "test"):
+        # The three-way split leaves the 1000 training cases untouched and
+        # divides the held-out 251, so 'val' | 'test' is exactly the historical
+        # internal-validation partition and the two are directly comparable to
+        # it, case for case.
+        tr3, val3, test3 = brats_split_3way(str(DATA))
+        assert_disjoint(train=tr3, val=val3, test=test3)
+        cases = sorted(val3 if args.partition == "val" else test3)
     else:
-        cases = sorted(train_ids | val_ids)
+        cases = sorted(train_ids | heldout_ids)
     if args.limit:
         cases = cases[:args.limit]
 
