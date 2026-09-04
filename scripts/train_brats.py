@@ -274,7 +274,11 @@ def main():
     # Resume - UNIVERSAL ADAPTER
     if args.resume and os.path.exists(args.resume):
         print(f"[INFO] Resuming from: {args.resume}")
-        ckpt = torch.load(args.resume, map_location=device)
+        # weights_only=False: these checkpoints carry the run configuration
+        # alongside the tensors, and torch >= 2.6 defaults weights_only=True,
+        # which refuses to unpickle anything but tensors. The file is one this
+        # script wrote, so the trust condition the flag guards is satisfied.
+        ckpt = torch.load(args.resume, map_location=device, weights_only=False)
         
         # Scenario 1: Standard format (has model_state, optim_state, etc.)
         if isinstance(ckpt, dict) and "model_state" in ckpt:
@@ -287,7 +291,7 @@ def main():
                 start_epoch = int(ckpt["epoch"])
             if "val_metric" in ckpt and ckpt["val_metric"] is not None:
                 best_metric = float(ckpt["val_metric"])
-                
+
         # Scenario 2: Alternative common dictionary format
         elif isinstance(ckpt, dict) and "state_dict" in ckpt:
             model.load_state_dict(ckpt["state_dict"])
@@ -300,6 +304,24 @@ def main():
             print("[WARN] Loaded raw model weights directly. Optimizer memory starting fresh.")
             start_epoch = 650
             
+        # A resume from <tag>_last.pth carries that epoch's score, which is not
+        # the best score seen. Left as the floor, the first epoch to beat *last*
+        # would overwrite <tag>_best.pth with a model worse than the one already
+        # in it, silently destroying the best result of the run. Raise the floor
+        # to whatever the existing best checkpoint actually holds.
+        best_path = os.path.join(args.save_dir, f"{args.tag}_best.pth")
+        if os.path.exists(best_path) and os.path.abspath(best_path) != os.path.abspath(args.resume):
+            try:
+                prev = torch.load(best_path, map_location="cpu", weights_only=False)
+                prev_metric = prev.get("val_metric")
+                if prev_metric is not None and float(prev_metric) > best_metric:
+                    print(f"[INFO] {args.tag}_best.pth holds {float(prev_metric):.4f} "
+                          f"(epoch {prev.get('epoch')}), better than the resumed "
+                          f"{best_metric:.4f}; keeping it as the floor.")
+                    best_metric = float(prev_metric)
+            except Exception as e:  # a corrupt best must not abort a resume
+                print(f"[WARN] could not read {best_path}: {e}")
+
         print(f"[INFO] start_epoch={start_epoch}, best_metric={best_metric:.4f}")
 
     # Provenance. The released segmentor_epoch_650.pth is a bare state_dict with
@@ -335,7 +357,10 @@ def main():
         "n_train": len(train_dataset),
         "n_val": len(val_dataset),
         "resumed_from": args.resume or None,
-        "torch": torch.__version__,
+        # str(): torch.__version__ is a TorchVersion, not a plain str, and
+        # pickling it puts a non-tensor global in the checkpoint that a
+        # weights_only load then rejects.
+        "torch": str(torch.__version__),
         "started": datetime.datetime.now().isoformat(timespec="seconds"),
     }
     print("[INFO] run config:\n" + json.dumps(run_config, indent=2))
