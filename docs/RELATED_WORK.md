@@ -10,8 +10,18 @@ networks for the BraTS2021 / UPenn-GBM segmentor.
 > **Verify before citing.** The table reproduces references collected for the
 > thesis. Venues and code URLs below are believed correct, but author lists,
 > years, page numbers and exact titles should be checked against the original
-> publication before they go into a bibliography. Two entries are flagged ⚠️
-> and are **not** citable as-is — see the notes.
+> publication before they go into a bibliography.
+
+> **Two substitutions for reproducibility.** The original list included **MMCL**
+> (an ambiguous acronym with no locatable code) and **ResGANet** (no official
+> repository). Because the paper's comparison must be *reproduced on this
+> project's own data* (see `baselines/README.md`), both are replaced by
+> methods that have official code and are at least as comparable:
+> **MMCL → DAFT** (3D image + tabular clinical fusion — exactly this project's
+> setting) and **ResGANet → Swin UNETR** (a transformer segmentation network
+> designed and validated on BraTS). If MMCL/ResGANet must remain in the paper,
+> they can only be cited from their own papers and clearly marked as *not*
+> reproduced on this cohort.
 
 ## Summary
 
@@ -19,10 +29,10 @@ networks for the BraTS2021 / UPenn-GBM segmentor.
 |---|---|---|---|
 | **XGBoost** | Tabular/clinical baseline | Chen & Guestrin, *XGBoost: A Scalable Tree Boosting System*, KDD 2016 | [github.com/dmlc/xgboost](https://github.com/dmlc/xgboost) |
 | **MMGL** | Multimodal graph disease prediction | *Multi-Modal Graph Learning for Disease Prediction*, IEEE TMI 2022 | [github.com/SsGood/MMGL](https://github.com/SsGood/MMGL) |
-| **MMCL** | Multimodal (contrastive?) — see ⚠️ | Ambiguous acronym — see note | — see note ⚠️ |
+| **DAFT** *(replaces MMCL)* | 3D image + tabular clinical fusion | Pölsterl et al., *Combining 3D Image and Tabular Data via the Dynamic Affine Feature Map Transform*, MICCAI 2021 | [github.com/ai-med/DAFT](https://github.com/ai-med/DAFT) |
 | **nnU-Net** | Segmentation baseline | Isensee et al., *nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation*, Nature Methods 2021 | [github.com/MIC-DKFZ/nnUNet](https://github.com/MIC-DKFZ/nnUNet) |
 | **SelfMedMAE** | Self-supervised pre-training (MAE) | *Self Pre-training with Masked Autoencoders for Medical Image Classification and Segmentation*, ISBI 2023 | [github.com/cvlab-stonybrook/SelfMedMAE](https://github.com/cvlab-stonybrook/SelfMedMAE) |
-| **ResGANet** | Segmentation + classification | *ResGANet: Residual Group Attention Network for medical image classification and segmentation*, Medical Image Analysis 2022 | No official repo found ⚠️ |
+| **Swin UNETR** *(replaces ResGANet)* | Transformer segmentation (BraTS) | Hatamizadeh et al., *Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images*, MICCAI BrainLes 2021 | [github.com/Project-MONAI/research-contributions](https://github.com/Project-MONAI/research-contributions) |
 | **MTANet** | Joint segmentation + classification | *MTANet: Multi-Task Attention Network for Automatic Medical Image Segmentation and Classification*, IEEE TMI 2024 | [github.com/yatingling/MTANet](https://github.com/yatingling/MTANet) |
 
 ## Notes per method
@@ -44,18 +54,18 @@ classifier — a patient arriving alone gets the same prediction as inside a
 batch. Keep that distinction if MMGL appears in the related-work section.
 Code: <https://github.com/SsGood/MMGL>.
 
-### ⚠️ MMCL — ambiguous acronym, needs disambiguation
-"MMCL" is not unique in the medical-imaging literature. Before it goes in the
-bibliography, decide which paper is meant. Plausible expansions:
+### DAFT — 3D image + tabular clinical fusion (replaces MMCL)
+Pölsterl, Wolf & Wachinger, *Combining 3D Image and Tabular Data via the Dynamic
+Affine Feature Map Transform*, MICCAI 2021. DAFT modulates a 3D CNN's feature
+maps with a patient's tabular clinical data — precisely the imaging + clinical
+fusion this project performs for MGMT/IDH prediction, which makes it a more
+directly comparable baseline than the ambiguous MMCL it replaces. Official
+PyTorch code, runnable. Code: <https://github.com/ai-med/DAFT>. Setup/run recipe:
+`baselines/daft/SETUP.md`.
 
-- **Multi-Modal Contrastive Learning** — the most likely reading given the
-  surrounding multimodal/disease-prediction methods; several distinct papers
-  use this name.
-- A specific method abbreviated MMCL in a paper you have in mind.
-
-No paper or code link is recorded here because guessing would risk citing the
-wrong work. **Please confirm the exact title/authors/venue** (or send the PDF
-or a link) and this entry will be filled in precisely.
+(The original **MMCL** entry was dropped: the acronym is ambiguous — most likely
+"Multi-Modal Contrastive Learning", used by several distinct papers — and no
+single official repository could be identified to reproduce it on this cohort.)
 
 ### nnU-Net — segmentation baseline
 Fabian Isensee, Paul F. Jaeger, Simon A. A. Kohl, Jens Petersen,
@@ -75,13 +85,19 @@ segmentation — the comparison point for pre-training strategy against this
 project's transfer-from-BraTS approach.
 Code: <https://github.com/cvlab-stonybrook/SelfMedMAE>.
 
-### ⚠️ ResGANet — no official code located
-*ResGANet: Residual Group Attention Network for medical image classification
-and segmentation*, Medical Image Analysis 2022. A residual group-attention
-backbone evaluated on both classification and segmentation. **No official
-repository was found.** Cite the paper only; if numbers are needed, they must
-come from the paper's reported tables or a re-implementation, and any
-re-implementation should be labelled as such.
+### Swin UNETR — transformer segmentation on BraTS (replaces ResGANet)
+Hatamizadeh, Nath, Tang, Yang, Roth & Xu, *Swin UNETR: Swin Transformers for
+Semantic Segmentation of Brain Tumors in MRI Images*, MICCAI BrainLes 2021. A
+Swin-transformer encoder with a U-Net-style decoder, designed and validated on
+BraTS brain-tumour segmentation, with official MONAI code (and available in MONAI
+core as `monai.networks.nets.SwinUNETR`). Chosen to replace ResGANet, which has
+no official repository and so cannot be reproduced on this project's data. Code:
+<https://github.com/Project-MONAI/research-contributions> (SwinUNETR/BRATS21).
+Setup/run recipe: `baselines/swin_unetr/SETUP.md`.
+
+(The original **ResGANet** entry — *Residual Group Attention Network for medical
+image classification and segmentation*, Medical Image Analysis 2022 — was
+dropped for lack of any official code to reproduce.)
 
 ### MTANet — joint segmentation + classification
 *MTANet: Multi-Task Attention Network for Automatic Medical Image Segmentation
@@ -94,10 +110,10 @@ Code: <https://github.com/yatingling/MTANet>.
 
 ## Grouping for a related-work section
 
-- **Segmentation:** nnU-Net (baseline), SelfMedMAE (pre-training), ResGANet,
+- **Segmentation:** nnU-Net (baseline), SelfMedMAE (pre-training), Swin UNETR,
   MTANet.
-- **Classification / fusion:** XGBoost (tabular baseline), MMGL, MMCL (⚠️),
-  and MTANet / ResGANet again for the joint-task angle.
+- **Classification / fusion:** XGBoost (tabular baseline), MMGL, DAFT
+  (image+tabular fusion), and MTANet again for the joint-task angle.
 - **Most directly comparable to this project's contributions:** MMGL vs. the
   inductive retrieval-augmented classifier (`brats_gbm/gnn.py`); MTANet vs. the
   joint segmentation–classification proposal (`docs/RESUME.md`).
@@ -137,12 +153,23 @@ Code: <https://github.com/yatingling/MTANet>.
   note      = {Verify authors; code: github.com/cvlab-stonybrook/SelfMedMAE}
 }
 
-@article{resganet2022,
-  title   = {{ResGANet}: Residual Group Attention Network for medical image
-             classification and segmentation},
-  journal = {Medical Image Analysis},
-  year    = {2022},
-  note    = {Verify authors/volume/pages; no official code repository located}
+@inproceedings{hatamizadeh2021swinunetr,
+  title     = {{Swin UNETR}: Swin Transformers for Semantic Segmentation of
+               Brain Tumors in {MRI} Images},
+  author    = {Hatamizadeh, Ali and Nath, Vishwesh and Tang, Yucheng and
+               Yang, Dong and Roth, Holger R. and Xu, Daguang},
+  booktitle = {MICCAI Brain Lesion (BrainLes) Workshop},
+  year      = {2021},
+  note      = {replaces ResGANet; code: github.com/Project-MONAI/research-contributions}
+}
+
+@inproceedings{polsterl2021daft,
+  title     = {Combining {3D} Image and Tabular Data via the Dynamic Affine
+               Feature Map Transform},
+  author    = {P{\"o}lsterl, Sebastian and Wolf, Tom Nuno and Wachinger, Christian},
+  booktitle = {MICCAI},
+  year      = {2021},
+  note      = {replaces MMCL; code: github.com/ai-med/DAFT}
 }
 
 @article{mtanet2024,
@@ -153,5 +180,5 @@ Code: <https://github.com/yatingling/MTANet>.
   note    = {Verify authors/volume/pages; code: github.com/yatingling/MTANet}
 }
 
-% MMCL: ambiguous — no entry until the exact paper is confirmed.
+% MMCL and ResGANet dropped (no reproducible official code) — see substitutions above.
 ```

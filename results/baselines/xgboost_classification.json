@@ -1,0 +1,195 @@
+{
+  "method": "XGBoost",
+  "modality": "T (tabular radiomic features)",
+  "paper": "Chen & Guestrin, XGBoost: A Scalable Tree Boosting System, KDD 2016",
+  "code": "https://github.com/dmlc/xgboost",
+  "protocol": "brats_gbm.classification.cross_validate \u2014 repeated (10x) stratified 5-fold; Recall=sensitivity, Precision=ppv, AUC=auc",
+  "tasks": {
+    "mgmt": {
+      "task": "MGMT methylation (BraTS)",
+      "features_csv": "/home/user/brats2021/results/classification/brats_mgmt_features.csv",
+      "n_features": 54,
+      "cohort": "all labelled (uniform provenance)",
+      "primary": {
+        "auc": {
+          "mean": 0.5679979777553084,
+          "ci_low": 0.5554347525157687,
+          "ci_high": 0.5789145180316818,
+          "across_repeat_sd": 0.01875419562404005
+        },
+        "balanced_accuracy": {
+          "mean": 0.5454950888343204,
+          "ci_low": 0.5336747526361404,
+          "ci_high": 0.5562302139005249,
+          "across_repeat_sd": 0.018202570385741686
+        },
+        "accuracy": {
+          "mean": 0.5374350086655112,
+          "ci_low": 0.5258232235701905,
+          "ci_high": 0.548006932409012,
+          "across_repeat_sd": 0.017834119033118687
+        },
+        "sensitivity": {
+          "mean": 0.359468438538206,
+          "ci_low": 0.34052325581395343,
+          "ci_high": 0.38006644518272426,
+          "across_repeat_sd": 0.032578473547192725
+        },
+        "specificity": {
+          "mean": 0.7315217391304347,
+          "ci_low": 0.7061503623188407,
+          "ci_high": 0.7565217391304349,
+          "across_repeat_sd": 0.04204928295485469
+        },
+        "ppv": {
+          "mean": 0.5951735664276037,
+          "ci_low": 0.5739301888670035,
+          "ci_high": 0.6154412462369648,
+          "across_repeat_sd": 0.033071116921087766
+        },
+        "f1": {
+          "mean": 0.44710150886074934,
+          "ci_low": 0.430468905391549,
+          "ci_high": 0.4634673090981802,
+          "across_repeat_sd": 0.026692505617238266
+        },
+        "auc_patient_bootstrap": {
+          "mean": 0.5736434108527132,
+          "ci_low": 0.524071669071669,
+          "ci_high": 0.6203472986221957
+        },
+        "confusion_totals": {
+          "tn": 2019,
+          "fp": 741,
+          "fn": 1928,
+          "tp": 1082
+        },
+        "degenerate": false,
+        "n": 577,
+        "n_positive": 301
+      }
+    },
+    "idh1": {
+      "task": "IDH1 mutation (UPenn-GBM)",
+      "features_csv": "/home/user/brats2021/results/classification/radiomic_features.csv",
+      "n_features": 53,
+      "cohort": "primary (model-predicted masks only)",
+      "primary": {
+        "auc": {
+          "mean": 0.8883090078136517,
+          "ci_low": 0.8701127819548871,
+          "ci_high": 0.9033473389355742,
+          "across_repeat_sd": 0.025897685013957946
+        },
+        "balanced_accuracy": {
+          "mean": 0.8169320359722837,
+          "ci_low": 0.7959702565236623,
+          "ci_high": 0.8409658337019018,
+          "across_repeat_sd": 0.03690265839471964
+        },
+        "accuracy": {
+          "mean": 0.8540865384615385,
+          "ci_low": 0.8384615384615385,
+          "ci_high": 0.8716346153846153,
+          "across_repeat_sd": 0.02642153904661338
+        },
+        "sensitivity": {
+          "mean": 0.7764705882352941,
+          "ci_low": 0.723529411764706,
+          "ci_high": 0.8294117647058824,
+          "across_repeat_sd": 0.08645257915705333
+        },
+        "specificity": {
+          "mean": 0.857393483709273,
+          "ci_low": 0.8398496240601505,
+          "ci_high": 0.8764411027568922,
+          "across_repeat_sd": 0.029472874351651298
+        },
+        "ppv": {
+          "mean": 0.19308795083491603,
+          "ci_low": 0.1751188925429167,
+          "ci_high": 0.21522828446379172,
+          "across_repeat_sd": 0.03187436467540699
+        },
+        "f1": {
+          "mean": 0.3070344278490237,
+          "ci_low": 0.28515980632811855,
+          "ci_high": 0.33153838651552875,
+          "across_repeat_sd": 0.03809144674099032
+        },
+        "auc_patient_bootstrap": {
+          "mean": 0.907857879994103,
+          "ci_low": 0.8304228353167714,
+          "ci_high": 0.9627745676846251
+        },
+        "confusion_totals": {
+          "tn": 3421,
+          "fp": 569,
+          "fn": 38,
+          "tp": 132
+        },
+        "degenerate": false,
+        "n": 416,
+        "n_positive": 17
+      },
+      "sensitivity_mixed": {
+        "auc": {
+          "mean": 0.9057176826632078,
+          "ci_low": 0.8957198443579767,
+          "ci_high": 0.9151864461738003,
+          "across_repeat_sd": 0.015384225212956978
+        },
+        "balanced_accuracy": {
+          "mean": 0.8203307392996109,
+          "ci_low": 0.8032201145698228,
+          "ci_high": 0.8345019995676609,
+          "across_repeat_sd": 0.026212055527863456
+        },
+        "accuracy": {
+          "mean": 0.8392857142857142,
+          "ci_low": 0.8169172932330827,
+          "ci_high": 0.8584586466165414,
+          "across_repeat_sd": 0.03286249762804597
+        },
+        "sensitivity": {
+          "mean": 0.8,
+          "ci_low": 0.7611111111111112,
+          "ci_high": 0.8333333333333334,
+          "across_repeat_sd": 0.05665577237325317
+        },
+        "specificity": {
+          "mean": 0.8406614785992218,
+          "ci_low": 0.8169212062256809,
+          "ci_high": 0.8610894941634243,
+          "across_repeat_sd": 0.03480750820938018
+        },
+        "ppv": {
+          "mean": 0.15351176280133855,
+          "ci_low": 0.1384497310000895,
+          "ci_high": 0.16768420633036954,
+          "across_repeat_sd": 0.02359831787896459
+        },
+        "f1": {
+          "mean": 0.2565896544381387,
+          "ci_low": 0.23488759420045566,
+          "ci_high": 0.27684912955250607,
+          "across_repeat_sd": 0.03374224271007488
+        },
+        "auc_patient_bootstrap": {
+          "mean": 0.9142888024210982,
+          "ci_low": 0.8450293974477792,
+          "ci_high": 0.9658059845559847
+        },
+        "confusion_totals": {
+          "tn": 4321,
+          "fp": 819,
+          "fn": 36,
+          "tp": 144
+        },
+        "degenerate": false,
+        "n": 532,
+        "n_positive": 18
+      }
+    }
+  }
+}

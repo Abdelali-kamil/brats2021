@@ -1,0 +1,9 @@
+group,method,modal,dice,hd95,recall,precision,auc,status,note
+single,XGBoost,T,–,–,35.9±3.3,59.5±3.3,57.4±1.9,"reproduced (MGMT, this data)",
+single,MMGL,I+T,–,–,pending,pending,pending,pending (run on server),
+single,DAFT,I+T,–,–,pending,pending,pending,pending (run on server),replaces MMCL (no official code)
+single,nnU-Net,I,pending,pending,–,–,–,pending (run on server),
+multi,SelfMedMAE,I+T,pending,pending,pending,pending,pending,pending (run on server),
+multi,Swin UNETR,I,pending,pending,–,–,–,pending (run on server),replaces ResGANet (no official code)
+multi,MTANet,I+T,pending,pending,pending,pending,pending,pending (run on server),
+ours,Wavelet U-Net++ (Ours),I,88.3±1.9,6.11±2.96,–,–,–,reproduced (this project),

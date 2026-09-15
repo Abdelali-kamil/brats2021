@@ -1,0 +1,18 @@
+# Cloned upstream repositories (fetched by fetch.sh) — never commit these.
+repos/
+
+# Per-method virtual environments.
+*/.venv/
+*/venv/
+env-*/
+
+# Bulky run artifacts (checkpoints, converted datasets, predictions).
+*/checkpoints/
+*/results/
+*/predictions/
+*/nnUNet_raw/
+*/nnUNet_preprocessed/
+*/nnUNet_results/
+*.pth
+*.pt
+*.ckpt
