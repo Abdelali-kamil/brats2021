@@ -1,0 +1,30 @@
+{
+  "task": {
+    "in_channels": 4,
+    "out_channels": 3
+  },
+  "results": {
+    "ours": {
+      "params_total": 10395987,
+      "params_trainable": 10395987,
+      "params_total_M": 10.4,
+      "config": "WaveletUNetPlusPlus(in_channels=4, n_classes=3)",
+      "source": "this repo"
+    },
+    "swin_unetr": {
+      "params_total": 62191941,
+      "params_trainable": 62191941,
+      "params_total_M": 62.19,
+      "config": "SwinUNETR(feature_size=48, roi=96^3) \u2014 BRATS21/main.py defaults",
+      "source": "monai.networks.nets (the BRATS21 recipe's model)"
+    },
+    "nnunet": {
+      "params_total": null,
+      "note": "Self-configuring: architecture is chosen by nnUNetv2_plan_and_preprocess for this dataset. Count it from the generated plan once preprocessing has run."
+    }
+  },
+  "failures": {
+    "selfmedmae": "RuntimeError: needs timm <0.9 (its pinned 2024 code calls vision_transformer.Block(drop=...), renamed to proj_drop in timm 1.x); this environment has timm 1.0.29. Build the method's own venv per baselines/selfmedmae/SETUP.md and count it there.",
+    "mtanet": "RuntimeError: not applicable to 3D BraTS: 2D-only architecture (39 Conv2d / 0 Conv3d) and __init__ requires the unshipped pretrained backbone lib/pvt_v2_b2.pth"
+  }
+}

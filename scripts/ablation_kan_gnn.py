@@ -191,6 +191,12 @@ def hp_grid(cfg):
 
 
 def run_config(name, cfg, X_img, X_clin, y, repeats):
+    if cfg.get("drop_imaging"):
+        # Drop imaging once, here, so every downstream use -- inner folds,
+        # the outer refit, and the scoring tensors below -- sees the same
+        # reduced matrix. Applying it only inside train_model left the outer
+        # loop feeding full-width imaging to a model built for one input.
+        X_img = np.zeros((len(y), 1), dtype=float)
     oof = np.zeros((repeats, len(y)))
     chosen, graph_reliance = [], []
 

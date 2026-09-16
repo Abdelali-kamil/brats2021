@@ -7,22 +7,32 @@ Modality **I**. The standard strong segmentation baseline. Needs a CUDA GPU.
 
 ```bash
 python -m venv baselines/nnunet/.venv && source baselines/nnunet/.venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cu121
+# NOTE: cu121 does NOT support this machine's RTX 5090 (Blackwell, sm_120).
+# Let pip resolve a CUDA 13 build, which is what the driver here provides.
+pip install torch
 pip install -e baselines/repos/nnunet          # the pinned clone from fetch.sh
-export nnUNet_raw=$PWD/baselines/nnunet/nnUNet_raw
-export nnUNet_preprocessed=$PWD/baselines/nnunet/nnUNet_preprocessed
-export nnUNet_results=$PWD/baselines/nnunet/nnUNet_results
-mkdir -p "$nnUNet_raw" "$nnUNet_preprocessed" "$nnUNet_results"
+source baselines/nnunet/env.sh   # paths on /mnt/data1, which has the headroom
 ```
 
 ## 2. Convert BraTS2021 to nnU-Net format
 
 nnU-Net ships a BraTS converter. From the pinned clone:
 
+nnU-Net's own `Dataset137_BraTS21.py` takes **no arguments** (it hardcodes its
+author's data path) and copies **every** case into `imagesTr` — which would put
+our 251 held-out cases into its training set. Use the wrapper instead, which
+calls nnU-Net's own label conversion and dataset-json generation but respects
+`baselines/common/brats_split_frozen.json`:
+
 ```bash
-python baselines/repos/nnunet/nnunetv2/dataset_conversion/Dataset137_BraTS21.py \
-       -i /path/to/data                      # your data/BraTS2021_XXXXX/ root
+source baselines/nnunet/env.sh          # sets the three nnUNet_* paths
+python baselines/nnunet/convert_split.py --workers 4
 ```
+
+It writes the 1000 training cases to `imagesTr`/`labelsTr` and the 251 held-out
+cases, images only, to `imagesTs`. nnU-Net therefore cannot train or select on
+a held-out case, and both scoring options (251-case internal validation or the
+125-case clean test) stay open without retraining.
 
 This writes `Dataset137_BraTS2021` with 4 channels (`_0000..0003` =
 FLAIR,T1,T1ce,T2) and **relabels ET from 4 to 3** (necrotic=1, edema=2, ET=3).
@@ -37,7 +47,7 @@ is not like-for-like.
 ## 3. Train + predict
 
 ```bash
-nnUNetv2_plan_and_preprocess -d 137 --verify_dataset_integrity
+nnUNetv2_plan_and_preprocess -d 137 --verify_dataset_integrity -np 4
 nnUNetv2_train 137 3d_fullres 0        # (repeat folds 1-4 for the ensemble, optional)
 nnUNetv2_predict -i <held_out_images_dir> -o baselines/nnunet/pred \
                  -d 137 -c 3d_fullres -f 0

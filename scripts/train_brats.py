@@ -113,6 +113,60 @@ class WeightedFocalDiceLoss(nn.Module):
         return self.alpha_bce * loss_bce + self.alpha_dice * loss_dice
 
 
+class FocalTverskyET(nn.Module):
+    """Focal-Tversky loss applied to the enhancing-tumour channel only.
+
+    ET is the weakest region and the one that drags the mean down: it is small,
+    frequently fragmented, and absent entirely in some cases. Tversky lets false
+    negatives be penalised harder than false positives (beta > alpha), and the
+    focal exponent concentrates gradient on the cases still being got wrong.
+
+    alpha=0.3 / beta=0.7 is the usual asymmetric setting for under-segmented
+    small structures; gamma=0.75 is the standard focal-Tversky exponent.
+    """
+
+    def __init__(self, channel=0, alpha=0.3, beta=0.7, gamma=0.75, eps=1e-6):
+        super().__init__()
+        self.channel, self.alpha, self.beta = channel, alpha, beta
+        self.gamma, self.eps = gamma, eps
+
+    def forward(self, logits, targets):
+        p = torch.sigmoid(logits[:, self.channel].float())
+        t = targets[:, self.channel].float()
+        dims = tuple(range(1, p.dim()))
+        tp = (p * t).sum(dims)
+        fn = ((1 - p) * t).sum(dims)
+        fp = (p * (1 - t)).sum(dims)
+        tversky = (tp + self.eps) / (tp + self.alpha * fp + self.beta * fn + self.eps)
+        return ((1 - tversky) ** self.gamma).mean()
+
+
+def compute_loss(criterion, outputs, labels, ds_weights=None, tversky=None,
+                 tversky_weight=0.0):
+    """One loss for both the single-head and deep-supervision models.
+
+    `outputs` is a tensor for the normal model, or a shallow-to-deep list when
+    deep supervision is on. Auxiliary heads get lower weight than the main one;
+    the weighted sum is normalised so the loss scale -- and therefore the
+    learning rate that was tuned against it -- does not change when the flag is
+    switched on.
+    """
+    outs = outputs if isinstance(outputs, (list, tuple)) else [outputs]
+    if ds_weights is None:
+        ds_weights = [1.0] * len(outs)
+    if len(ds_weights) != len(outs):
+        raise ValueError(f"{len(ds_weights)} weights for {len(outs)} outputs")
+
+    total = sum(w * criterion(o, labels) for w, o in zip(ds_weights, outs))
+    loss = total / sum(ds_weights)
+
+    if tversky is not None and tversky_weight > 0:
+        # Applied to the main (deepest) head only -- it is the one that runs at
+        # inference, so that is where the ET behaviour needs to be shaped.
+        loss = loss + tversky_weight * tversky(outs[-1], labels)
+    return loss
+
+
 # -------------------------
 # Eval
 # -------------------------
@@ -166,6 +220,13 @@ def main():
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--clip-norm", type=float, default=2.0)
     parser.add_argument("--weight-channels", nargs=3, type=float, default=[1.0, 1.0, 1.0])
+    parser.add_argument("--deep-supervision", action="store_true",
+                        help="auxiliary heads on the three shallower nested decoders")
+    parser.add_argument("--ds-weights", nargs=4, type=float,
+                        default=[0.25, 0.5, 0.75, 1.0],
+                        help="shallow-to-deep loss weights; normalised, so the loss scale is unchanged")
+    parser.add_argument("--tversky-et", type=float, default=0.0,
+                        help="weight of a focal-Tversky term on the ET channel (0 = off)")
     parser.add_argument("--save-dir", type=str, default="checkpoints")
     
     # HARDCODED TO START DIRECTLY FROM YOUR BEST 650 CHECKPOINT
@@ -227,8 +288,10 @@ def main():
     )
 
     # Model/optim
-    model = WaveletUNetPlusPlus().to(device)
+    model = WaveletUNetPlusPlus(deep_supervision=args.deep_supervision).to(device)
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
+    tversky = FocalTverskyET().to(device) if args.tversky_et > 0 else None
+    ds_weights = args.ds_weights if args.deep_supervision else None
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="max", factor=0.5, patience=3, min_lr=1e-7
@@ -290,10 +353,12 @@ def main():
                 if use_amp:
                     with torch.amp.autocast("cuda"):
                         outputs = model(images)
-                        loss = criterion(outputs, labels)
+                        loss = compute_loss(criterion, outputs, labels, ds_weights,
+                                            tversky, args.tversky_et)
                 else:
                     outputs = model(images)
-                    loss = criterion(outputs, labels)
+                    loss = compute_loss(criterion, outputs, labels, ds_weights,
+                                        tversky, args.tversky_et)
 
                 loss = loss / accum_steps
 

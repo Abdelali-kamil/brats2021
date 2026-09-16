@@ -40,9 +40,24 @@ class ConvBlock(nn.Module):
 
 # --- 3. Wavelet U-Net++ Architecture ---
 class WaveletUNetPlusPlus(nn.Module):
-    def __init__(self, in_channels=4, n_classes=3):
+    """U-Net++ with Haar-DWT downsampling in the encoder.
+
+    `deep_supervision` attaches auxiliary 1x1 heads to the three shallower
+    nested decoder outputs (x0_1, x0_2, x0_3). U-Net++ places all of them at
+    full resolution, so no upsampling is needed and the auxiliary logits are
+    directly comparable to the main head's.
+
+    The flag is **off by default and adds no parameters when off**, so every
+    published checkpoint still loads with strict=True. When on, the primary
+    head `self.final` is unchanged and still produces the only output used at
+    inference time -- `forward` returns the auxiliary logits during training
+    only, so evaluation code needs no modification.
+    """
+
+    def __init__(self, in_channels=4, n_classes=3, deep_supervision=False):
         super(WaveletUNetPlusPlus, self).__init__()
         nb_filter = [16, 32, 64, 128, 256]
+        self.deep_supervision = deep_supervision
         self.dwt = DWT()
         # --- Encoders ---
         self.conv0_0 = ConvBlock(in_channels, nb_filter[0])
@@ -64,6 +79,11 @@ class WaveletUNetPlusPlus(nn.Module):
         
         self.up = nn.Upsample(scale_factor=(1, 2, 2), mode='trilinear', align_corners=True)
         self.final = nn.Conv3d(nb_filter[0], n_classes, kernel_size=1)
+        # Auxiliary heads exist only when deep supervision is enabled, so the
+        # default model's state_dict is byte-identical to the published one.
+        self.ds_heads = nn.ModuleList(
+            [nn.Conv3d(nb_filter[0], n_classes, kernel_size=1) for _ in range(3)]
+        ) if deep_supervision else None
 
     def forward(self, input):
         x0_0 = self.conv0_0(input)
@@ -85,4 +105,10 @@ class WaveletUNetPlusPlus(nn.Module):
         x1_3 = self.conv1_3(torch.cat([x1_0, x1_1, x1_2, self.up(x2_2)], 1))
 
         x0_4 = self.conv0_4(torch.cat([x0_0, x0_1, x0_2, x0_3, self.up(x1_3)], 1))
-        return self.final(x0_4)
+        out = self.final(x0_4)
+        if self.ds_heads is not None and self.training:
+            # Shallow-to-deep; the caller weights them. Training only, so
+            # inference and evaluation see exactly the single-head model.
+            aux = [h(x) for h, x in zip(self.ds_heads, (x0_1, x0_2, x0_3))]
+            return aux + [out]
+        return out
