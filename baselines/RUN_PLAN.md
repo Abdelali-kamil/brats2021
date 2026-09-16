@@ -178,3 +178,65 @@ Two errors found while running it, now fixed:
   held-out cases into nnU-Net's training set. Use
   `baselines/nnunet/convert_split.py`, which calls nnU-Net's own label
   conversion and dataset-json generation but honours the frozen split.
+
+## Blocker: the pinned baseline environments predate this GPU (2026-09-16)
+
+The RTX 5090 is Blackwell, compute capability **sm_120**. Every CUDA build
+older than roughly CUDA 12.8 refuses to run on it. That collides with the
+pinned-commit policy, because these repos pin *old* CUDA:
+
+| Method | Pinned stack | Works on sm_120? |
+|---|---|---|
+| nnU-Net | SETUP.md said cu121 | **no** — pip happened to resolve cu130, which is why it installed |
+| MMGL | `torch==1.9.0+cu111`, `dgl-cu111`, `numpy==1.19.5` | **no** |
+| DAFT | conda env pinned to py37, 2020-2021 packages | **no** |
+| SelfMedMAE | needs timm <0.9 | independent problem, same class |
+
+So "run their code exactly as pinned" is **not achievable on this hardware** for
+the older methods. Their dependencies have to be modernised to reach the GPU at
+all, and that deviation must be stated in the paper -- it is a limitation of the
+comparison, not something to paper over.
+
+Two further, concrete obstacles found by reading the code:
+
+* **MMGL** imports `from dgl.dataloading import MultiLayerNeighborSampler,
+  NodeDataLoader`. `NodeDataLoader` was removed in DGL 1.0, so the pinned code
+  does not run on any modern DGL. Reproducing it means either an ancient DGL
+  (which cannot use this GPU) or editing their source (which makes the result
+  partly ours). MMGL is a population-graph model over tabular features and is
+  small, so **CPU with the old stack is a realistic third option** and avoids
+  both problems.
+* **DAFT** additionally needs `scikit-survival` (`sksurv`), but is otherwise
+  plain torch and is the more portable of the two.
+
+Recommendation: run MMGL on CPU under its own pinned stack (small model, no GPU
+needed), and DAFT on modern torch with the deviation documented. Record whichever
+choice is made in the paper's reproducibility statement.
+
+## Measured: CPU evaluation cost (2026-09-16)
+
+With the GPU down, a timed pilot of `evaluate_brats.py` gave **82 s per case**
+on CPU with TTA disabled:
+
+| Run | CPU time |
+|---|---|
+| 126-case validation, no TTA | ~2.9 h |
+| 125-case test, no TTA | ~2.8 h |
+| either partition **with 8-flip TTA** (the paper's protocol) | **~23 h** |
+
+So CPU evaluation is possible only by abandoning TTA, which would not match the
+protocol the paper reports. Wait for the GPU instead.
+
+Two fixes to `scripts/evaluate_brats.py` were needed to run it at all: it
+hardcoded `checkpoints/segmentor_epoch_650.pth` (long gone) with no override --
+now `--checkpoint` -- and it assumed a bare state_dict, where the training
+script writes the weights under `model_state`. It now accepts both.
+
+## Blocker: UPenn imaging data is not on this machine
+
+`scripts/evaluate_upenn.py` expects `upenn_nifti/`, which does not exist
+anywhere on this host. Only the clinical CSV, the derived radiomic/cohort
+tables, and old per-case result CSVs survive; the UPenn checkpoints are gone
+with the rest. **The paper's UPenn numbers (0.8204 held-out, 0.8474 five-fold)
+cannot currently be re-verified or re-run** without re-downloading UPENN-GBM.
+The tabular MGMT work is unaffected -- it runs from the committed CSVs.

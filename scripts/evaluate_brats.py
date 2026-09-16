@@ -32,6 +32,7 @@ matters.
 from __future__ import annotations
 
 import argparse
+import pathlib
 import sys
 from pathlib import Path
 
@@ -84,6 +85,8 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--checkpoint", default=str(CKPT),
+                    help="checkpoint to evaluate; the historical default no longer exists")
     args = ap.parse_args()
 
     train_ids, val_ids = brats_split(str(DATA))
@@ -101,12 +104,23 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
-    ck = torch.load(str(CKPT), map_location=DEVICE, weights_only=False)
-    model.load_state_dict(
-        ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck, strict=True)
+    ckpt_path = pathlib.Path(getattr(args, "checkpoint", CKPT))
+    if not ckpt_path.exists():
+        raise SystemExit(f"checkpoint not found: {ckpt_path}")
+    ck = torch.load(str(ckpt_path), map_location=DEVICE, weights_only=False)
+    # Checkpoints come in two shapes: a bare state_dict, or the training
+    # script's wrapper with the weights under "model_state".
+    if isinstance(ck, dict):
+        sd = next((ck[k] for k in ("model_state", "model_state_dict", "state_dict")
+                   if k in ck), ck)
+    else:
+        sd = ck
+    model.load_state_dict(sd, strict=True)
+    if isinstance(ck, dict) and "epoch" in ck:
+        print(f"checkpoint epoch: {ck['epoch']}  val_metric={ck.get('val_metric')}")
     model.eval()
 
-    print(f"checkpoint    : {CKPT.name}")
+    print(f"checkpoint    : {ckpt_path.name}")
     print(f"partition     : {args.partition}  ({len(cases)} cases)")
     print(f"preprocessing : {BRATS_ORDER} + percentile min-max")
     print(f"threshold     : {THR} (fixed, not tuned)")
