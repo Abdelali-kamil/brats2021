@@ -85,6 +85,10 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--cases", default=None, metavar="FILE_OR_LIST",
+                    help="restrict to these case ids: a comma-separated list or "
+                         "a file with one id per line. --limit takes the first N, "
+                         "which is no use when you want specific cases.")
     ap.add_argument("--save-probs", default=None, metavar="DIR",
                     help="also write the raw sigmoid probabilities per case as "
                          ".npz. Post-processing can then be re-tuned without "
@@ -101,6 +105,15 @@ def main() -> None:
         cases = sorted(train_ids)
     else:
         cases = sorted(train_ids | val_ids)
+    if args.cases:
+        src = pathlib.Path(args.cases)
+        wanted = [c.strip() for c in
+                  (src.read_text().split() if src.exists() else args.cases.split(","))
+                  if c.strip()]
+        missing = [c for c in wanted if c not in set(cases)]
+        if missing:
+            raise SystemExit(f"not in partition '{args.partition}': {missing[:5]}")
+        cases = [c for c in cases if c in set(wanted)]
     if args.limit:
         cases = cases[:args.limit]
 
