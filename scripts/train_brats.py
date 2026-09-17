@@ -165,7 +165,17 @@ def main():
     parser.add_argument("--start-epoch", type=int, default=0)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--clip-norm", type=float, default=2.0)
-    parser.add_argument("--weight-channels", nargs=3, type=float, default=[1.0, 1.0, 1.0])
+    parser.add_argument("--weight-channels", nargs=3, type=float, default=[1.0, 1.0, 1.0],
+                        help="per-channel loss weights for ET TC WT "
+                             "(e.g. 1.3 1.1 1.0 to push the harder ET/TC regions)")
+    parser.add_argument("--scheduler", choices=["plateau", "cosine"], default="plateau",
+                        help="plateau: ReduceLROnPlateau on val Dice; "
+                             "cosine: CosineAnnealingLR (better for a fine-tune push)")
+    parser.add_argument("--min-lr", type=float, default=1e-7)
+    parser.add_argument("--data-aug", dest="data_aug", action="store_true", default=True,
+                        help="enable training-time augmentation (default: on)")
+    parser.add_argument("--no-data-aug", dest="data_aug", action="store_false",
+                        help="disable training-time augmentation")
     parser.add_argument("--save-dir", type=str, default="checkpoints")
     
     # HARDCODED TO START DIRECTLY FROM YOUR BEST 650 CHECKPOINT
@@ -191,8 +201,9 @@ def main():
         print(f"[INFO] CUDA: {torch.version.cuda}")
         print(f"[INFO] GPU: {torch.cuda.get_device_name(device)}")
 
-    # Dataset
-    ds = get_datasets()
+    # Dataset — get_datasets returns (train_aug, val_deterministic) with the
+    # same seeded 80/20 split used by scripts/evaluate_brats.py.
+    ds = get_datasets(seed=args.seed, data_aug=args.data_aug)
     if isinstance(ds, (tuple, list)) and len(ds) >= 2:
         train_dataset, val_dataset = ds[0], ds[1]
     else:
@@ -230,9 +241,15 @@ def main():
     model = WaveletUNetPlusPlus().to(device)
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="max", factor=0.5, patience=3, min_lr=1e-7
-    )
+    if args.scheduler == "cosine":
+        t_max = max(1, args.epochs - args.start_epoch)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=t_max, eta_min=args.min_lr
+        )
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", factor=0.5, patience=3, min_lr=args.min_lr
+        )
 
     use_amp = (device.type == "cuda")
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
@@ -347,9 +364,14 @@ def main():
         # Eval
         if epoch % max(1, args.eval_every) == 0:
             val_metric = evaluate(model, val_loader, device)
-            scheduler.step(val_metric)
+            if args.scheduler == "plateau":
+                scheduler.step(val_metric)
         else:
             val_metric = None
+
+        # Cosine steps every epoch, independent of the eval cadence.
+        if args.scheduler == "cosine":
+            scheduler.step()
 
         # Save last
         ckpt = {

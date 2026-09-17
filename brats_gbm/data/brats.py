@@ -88,10 +88,38 @@ class Brats(Dataset):
         }
 
     def augment(self, img, lbl):
-        if random.random() > 0.5:
-            img, lbl = np.flip(img, axis=2).copy(), np.flip(lbl, axis=2).copy()
-        if random.random() > 0.5:
-            img, lbl = np.flip(img, axis=3).copy(), np.flip(lbl, axis=3).copy()
+        """On-the-fly augmentation for the training split.
+
+        `img` is [C, D, H, W] in [0, 1] (percentile min-max), `lbl` is
+        [3, D, H, W] binary. Spatial transforms are applied identically to
+        image and label; intensity transforms touch the image only, inside the
+        brain (non-zero) region so the zero background is preserved.
+        """
+        # --- Spatial: independent flips on all three spatial axes (D, H, W) ---
+        for ax in (1, 2, 3):
+            if random.random() < 0.5:
+                img = np.flip(img, axis=ax).copy()
+                lbl = np.flip(lbl, axis=ax).copy()
+
+        # --- Intensity: per-channel scale / shift / gamma inside the brain ---
+        img = np.ascontiguousarray(img)
+        for c in range(img.shape[0]):
+            brain = img[c] > 0
+            if not brain.any():
+                continue
+            vals = img[c][brain]
+            if random.random() < 0.5:                       # multiplicative scale
+                vals = vals * random.uniform(0.9, 1.1)
+            if random.random() < 0.5:                       # additive shift
+                vals = vals + random.uniform(-0.1, 0.1)
+            if random.random() < 0.5:                       # random gamma
+                vals = np.clip(vals, 0.0, None)
+                mn, mx = float(vals.min()), float(vals.max())
+                if mx > mn:
+                    g = random.uniform(0.7, 1.5)
+                    vals = ((vals - mn) / (mx - mn)) ** g * (mx - mn) + mn
+            img[c][brain] = vals
+        np.clip(img, 0.0, 1.0, out=img)
         return img, lbl
 
     @staticmethod
@@ -101,31 +129,62 @@ class Brats(Dataset):
     def __len__(self):
         return len(self.datas)
 
-# ✅ KEY FIX: default changed from "train" to "test"
-def get_datasets(seed=42, debug=False, on="test"):
-    root_path = pathlib.Path("/home/kamilabdelali/brats2021/data").resolve()
-    patients_dir = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
-    
+def _find_patient_dirs():
+    """Locate BraTS2021_* case folders, trying the known data roots in order."""
+    candidates = [
+        pathlib.Path("data").resolve(),
+        pathlib.Path("/home/kamilabdelali/brats2021/data").resolve(),
+        pathlib.Path("/home/kamilabdelali/brats2021").resolve(),
+    ]
+    for root_path in candidates:
+        dirs = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
+        if dirs:
+            print(f"📂 Found {len(dirs)} candidate patient folders under {root_path}")
+            return dirs
+    print("⚠️ No BraTS2021_* folders found in any known data root.")
+    return []
+
+
+def get_datasets(seed=42, debug=False, data_aug=True, train_frac=0.8):
+    """Return (train_dataset, val_dataset).
+
+    The split is the same seeded 80/20 partition used everywhere else in the
+    project (see brats_gbm.splits.brats_split and scripts/evaluate_brats.py), so
+    the 20% internal-validation set stays identical across training and
+    evaluation. The training split gets random crops + augmentation; the
+    validation split gets a deterministic centre crop and no augmentation.
+    """
+    import torch
+    from torch.utils.data import random_split
+
+    patients_dir = _find_patient_dirs()
     if debug:
         patients_dir = patients_dir[:10]
-        
-    if len(patients_dir) == 0:
-        print("⚠️ No folders in /data, checking main directory...")
-        root_path = pathlib.Path("/home/kamilabdelali/brats2021").resolve()
-        patients_dir = sorted([d for d in root_path.glob("BraTS2021_*") if d.is_dir()])
 
-    print(f"📂 Found {len(patients_dir)} candidate patient folders.")
-    
-    return Brats(patients_dir, training=(on == "train"), normalisation="minmax", data_aug=False)
+    n = len(patients_dir)
+    train_n = int(train_frac * n)
+    tr, va = random_split(
+        list(range(n)), [train_n, n - train_n],
+        generator=torch.Generator().manual_seed(seed),
+    )
+    train_dirs = [patients_dir[i] for i in tr.indices]
+    val_dirs = [patients_dir[i] for i in va.indices]
+
+    print(f"[INFO] BraTS split: train={len(train_dirs)}, val={len(val_dirs)} "
+          f"(data_aug={data_aug})")
+
+    train_ds = Brats(train_dirs, training=True, data_aug=data_aug, normalisation="minmax")
+    val_ds = Brats(val_dirs, training=False, data_aug=False, normalisation="minmax")
+    return train_ds, val_ds
 
 
 if __name__ == "__main__":
     print("🚀 Running brats.py Test Sequence...")
     try:
-        dataset = get_datasets()
-        print(f"📊 Total Patients: {len(dataset)}")
-        if len(dataset) > 0:
-            sample = dataset[0]
+        train_dataset, val_dataset = get_datasets()
+        print(f"📊 Train Patients: {len(train_dataset)} | Val Patients: {len(val_dataset)}")
+        if len(train_dataset) > 0:
+            sample = train_dataset[0]
             print(f"✅ Image Shape: {sample['image'].shape}")
             print(f"✅ Label Shape: {sample['label'].shape}")
         else:
