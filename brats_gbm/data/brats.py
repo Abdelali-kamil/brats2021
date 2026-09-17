@@ -6,9 +6,11 @@ from torch.utils.data.dataset import Dataset
 import random 
 
 try:
-    from image import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
+    # Normal case: imported as part of the brats_gbm package.
+    from .image import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
 except ImportError:
-    print("⚠️ Warning: image.py helpers not found. Ensure they are in the same directory.")
+    # Fallback: run as a bare script from inside brats_gbm/data/.
+    from image import pad_or_crop_image, irm_min_max_preprocess, zscore_normalise
 
 class Brats(Dataset):
     def __init__(self, patients_dir, training=True, data_aug=False, no_seg=False, normalisation="minmax"):
@@ -130,8 +132,15 @@ class Brats(Dataset):
         return len(self.datas)
 
 def _find_patient_dirs():
-    """Locate BraTS2021_* case folders, trying the known data roots in order."""
+    """Locate BraTS2021_* case folders, trying the known data roots in order.
+
+    The repo-root ``data/`` directory is tried first so this matches the
+    directory (and therefore the split) that scripts/evaluate_brats.py uses,
+    regardless of the current working directory.
+    """
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
     candidates = [
+        repo_root / "data",
         pathlib.Path("data").resolve(),
         pathlib.Path("/home/kamilabdelali/brats2021/data").resolve(),
         pathlib.Path("/home/kamilabdelali/brats2021").resolve(),

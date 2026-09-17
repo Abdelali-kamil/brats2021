@@ -103,8 +103,11 @@ def main() -> None:
 
     model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
     ck = torch.load(str(CKPT), map_location=DEVICE, weights_only=False)
-    model.load_state_dict(
-        ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck, strict=True)
+    # train_brats.py saves the weights under "model_state"; older/other
+    # checkpoints use "model_state_dict" or are a raw state dict.
+    state = (ck.get("model_state", ck.get("model_state_dict", ck))
+             if isinstance(ck, dict) else ck)
+    model.load_state_dict(state, strict=True)
     model.eval()
 
     print(f"checkpoint   : {CKPT.name}")

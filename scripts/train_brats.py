@@ -241,15 +241,6 @@ def main():
     model = WaveletUNetPlusPlus().to(device)
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
-    if args.scheduler == "cosine":
-        t_max = max(1, args.epochs - args.start_epoch)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=t_max, eta_min=args.min_lr
-        )
-    else:
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="max", factor=0.5, patience=3, min_lr=args.min_lr
-        )
 
     use_amp = (device.type == "cuda")
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
@@ -287,6 +278,25 @@ def main():
             start_epoch = 650
             
         print(f"[INFO] start_epoch={start_epoch}, best_metric={best_metric:.4f}")
+
+    # Scheduler is built after resume so cosine spans exactly the epochs that
+    # will actually run (args.epochs - start_epoch), including on a resume.
+    if args.scheduler == "cosine":
+        # A resumed optimizer state carries the decayed LR from the previous
+        # run; honour --lr as the restart peak so the fine-tune push is real.
+        for g in optimizer.param_groups:
+            g["lr"] = args.lr
+            g.pop("initial_lr", None)
+        t_max = max(1, args.epochs - start_epoch)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=t_max, eta_min=args.min_lr
+        )
+        print(f"[INFO] Cosine LR schedule over {t_max} epochs "
+              f"(lr {args.lr:.2e} -> {args.min_lr:.2e})")
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", factor=0.5, patience=3, min_lr=args.min_lr
+        )
 
     # Train
     accum_steps = max(1, args.accum_steps)

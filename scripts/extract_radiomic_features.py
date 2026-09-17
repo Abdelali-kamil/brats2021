@@ -182,9 +182,11 @@ def main():
         print(f"Loading segmentor: {CHECKPOINT}")
         model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
         _ck = torch.load(str(CHECKPOINT), map_location=DEVICE, weights_only=False)
-        model.load_state_dict(
-            _ck.get("model_state_dict", _ck) if isinstance(_ck, dict) else _ck,
-            strict=True)
+        # train_brats.py saves the weights under "model_state"; older/other
+        # checkpoints use "model_state_dict" or are a raw state dict.
+        _state = (_ck.get("model_state", _ck.get("model_state_dict", _ck))
+                  if isinstance(_ck, dict) else _ck)
+        model.load_state_dict(_state, strict=True)
         model.eval()
 
     rows = []
