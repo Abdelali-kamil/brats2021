@@ -40,24 +40,20 @@ if ! nvidia-smi -L >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. BraTS repro first -- it is the paper's critical path and gets the GPU
-#    to itself until it has settled.
-if pgrep -f "scripts/train_brats" >/dev/null 2>&1; then
-  log "BraTS training already running; leaving it alone"
+# 2. NOT resuming BraTS training. Stopped deliberately at epoch 203: the
+#    original run peaked at 195 and got worse after, this run is already past
+#    that point, and another ~8 h run on a card that faults every 8-13 h buys
+#    nothing. finish_fast.sh evaluates what we have and starts nnU-Net itself.
+#    To go back to training instead: run scripts/resume_repro.sh by hand.
+if pgrep -f "finish_fast" >/dev/null 2>&1; then
+  log "finish_fast already running; leaving it alone"
 else
-  log "starting BraTS resume watchdog"
-  setsid nohup bash "$ROOT/scripts/resume_repro.sh" \
-      >> "$ROOT/logs/resume_boot_$(date +%Y%m%d_%H%M).log" 2>&1 < /dev/null &
+  log "starting finish_fast (evaluate epoch 203, tune post-processing, then nnU-Net)"
+  setsid nohup bash "$ROOT/scripts/finish_fast.sh" \
+      >> "$ROOT/logs/finish_boot_$(date +%Y%m%d_%H%M).log" 2>&1 < /dev/null &
 fi
 
-# 3. nnU-Net second, once there is real headroom. run_overnight.sh does its own
-#    waiting and free-memory check, and continues from checkpoint_latest.
-if pgrep -f "nnUNetv2_train" >/dev/null 2>&1; then
-  log "nnU-Net already running; leaving it alone"
-else
-  log "queueing nnU-Net (continue from latest checkpoint)"
-  setsid nohup bash "$ROOT/baselines/nnunet/run_overnight.sh" \
-      >> "$ROOT/logs/nnunet_boot_$(date +%Y%m%d_%H%M).log" 2>&1 < /dev/null &
-fi
+# 3. nnU-Net is started by finish_fast.sh once the evaluations are done,
+#    so it is not launched here -- two launches would collide.
 
 log "boot resume dispatched"

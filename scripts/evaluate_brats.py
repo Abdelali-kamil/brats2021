@@ -85,6 +85,12 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--wt-policy", default="components", choices=("components", "largest"),
+                    help="whole-tumour component policy (see brats_gbm/eval/postprocess.py)")
+    ap.add_argument("--floor-mult", type=float, default=1.0,
+                    help="scale the per-region component floors. The shipped "
+                         "values (ET 5 / TC 20 / WT 50 voxels) were tuned for "
+                         "UPenn transfer, not BraTS.")
     ap.add_argument("--cases", default=None, metavar="FILE_OR_LIST",
                     help="restrict to these case ids: a comma-separated list or "
                          "a file with one id per line. --limit takes the first N, "
@@ -144,6 +150,13 @@ def main() -> None:
     print(f"threshold     : {THR} (fixed, not tuned)")
     print(f"TTA           : {not args.no_tta}\n")
 
+    if args.floor_mult != 1.0:
+        pp.MIN_VOXELS = {k: int(round(v * args.floor_mult))
+                         for k, v in pp.MIN_VOXELS.items()}
+        print(f"component floors: {pp.MIN_VOXELS}  (x{args.floor_mult})")
+    if args.wt_policy != "components":
+        print(f"WT policy       : {args.wt_policy}")
+
     rows = []
     for i, case_id in enumerate(cases, 1):
         try:
@@ -159,7 +172,7 @@ def main() -> None:
             pdir.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(pdir / f"{case_id}.npz",
                                 prob=np.asarray(prob, dtype=np.float16))
-        pred = pp.postprocess(prob, THR, THR, THR)
+        pred = pp.postprocess(prob, THR, THR, THR, wt_policy=args.wt_policy)
         row = {"Patient_ID": case_id}
         row.update(score_case(pred, gt))
         rows.append(row)
