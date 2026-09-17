@@ -240,3 +240,56 @@ tables, and old per-case result CSVs survive; the UPenn checkpoints are gone
 with the rest. **The paper's UPenn numbers (0.8204 held-out, 0.8474 five-fold)
 cannot currently be re-verified or re-run** without re-downloading UPENN-GBM.
 The tabular MGMT work is unaffected -- it runs from the committed CSVs.
+
+## Third GPU fault (2026-09-17 06:23) and what changed because of it
+
+`aug_cosine_repro1` and the nnU-Net run both died at 06:23 with the same
+`CUDA error: unspecified launch failure`. Third occurrence (2026-09-05 ep205,
+09-16 ep133, 09-17 ep208). This one came after only **8.3 h**, against 11.4 h
+and 13.7 h before -- two concurrent training jobs is the likely reason.
+
+Separately, at **10:03** an unattended upgrade installed
+**nvidia-driver 580.159.04 -> 580.178.04** while the old module was still
+loaded, so the card now also reports `Driver/library version mismatch`. That is
+*not* what caused the 06:23 crash (it happened four hours later), but it makes a
+reboot mandatory rather than merely the quickest fix. **Ask the admin to pin or
+disable unattended NVIDIA driver upgrades** -- a driver changing under a running
+job will keep causing this.
+
+Three changes made so the next fault costs less:
+
+1. **`scripts/resume_all_on_boot.sh`, wired to `@reboot` in the user crontab.**
+   On 09-16 the GPU returned at 18:02 and sat idle until 22:04 because the nohup
+   watchdog does not survive a reboot. Cron does, and needs no root (systemd
+   user services would not work here -- linger is off). It waits up to 30 min
+   for the driver, starts the BraTS resume first, then queues nnU-Net.
+2. **`run_overnight.sh` now passes `--c`** when `checkpoint_latest.pth` exists,
+   so nnU-Net continues from its 203 completed epochs instead of restarting.
+3. **`evaluate_brats.py --save-probs DIR`** writes per-case sigmoid
+   probabilities as float16 `.npz`. Post-processing can then be re-tuned without
+   re-running inference -- the gap that blocked the HD95 work below.
+
+## Measured: where our HD95 actually comes from (2026-09-17)
+
+From the completed 251-case evaluation of the epoch-94 checkpoint
+(`results/brats/per_case_repro1_ep94_val_recomputed.csv`), via
+`baselines/common/diagnose_hd95.py`:
+
+| Region | mean | **median** | worst cases (mm) |
+|---|---|---|---|
+| ET | 4.508 | **1.414** | 67.0 |
+| TC | 6.958 | **1.732** | 111.0 |
+| WT | 8.056 | **2.236** | 83.7, 82.9, 77.6, 69.7, 63.9 |
+
+The **median is 1.4-2.2 mm** -- competitive with nnU-Net's ~2.8 *mean*. The mean
+is carried by a handful of cases with components tens of millimetres from the
+tumour: the worst 10 cases contribute ~31-41% of the summed HD95 per region, and
+dropping just the worst 5 takes WT from 8.06 to 6.68.
+
+So our HD95 disadvantage is a **post-processing** problem, not a model problem.
+`brats_gbm/eval/postprocess.py` already has per-region component floors and a WT
+largest-component policy, but its docstring says these were chosen for UPenn
+cross-cohort transfer, where skull leaks into WT -- they were never tuned for
+BraTS. Next step once a GPU exists: re-run the evaluation with `--save-probs`,
+then sweep the component floors on the validation split only and apply the
+winner to test once.

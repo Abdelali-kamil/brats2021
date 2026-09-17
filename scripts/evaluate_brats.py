@@ -85,6 +85,11 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--save-probs", default=None, metavar="DIR",
+                    help="also write the raw sigmoid probabilities per case as "
+                         ".npz. Post-processing can then be re-tuned without "
+                         "re-running inference, which is what blocked the HD95 "
+                         "work on 2026-09-17.")
     ap.add_argument("--checkpoint", default=str(CKPT),
                     help="checkpoint to evaluate; the historical default no longer exists")
     args = ap.parse_args()
@@ -135,6 +140,12 @@ def main() -> None:
             continue
 
         prob = sliding_window_predict(model, img, DEVICE, use_tta=not args.no_tta)
+        if args.save_probs:
+            # float16 halves the footprint and costs nothing at threshold 0.5.
+            pdir = pathlib.Path(args.save_probs)
+            pdir.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(pdir / f"{case_id}.npz",
+                                prob=np.asarray(prob, dtype=np.float16))
         pred = pp.postprocess(prob, THR, THR, THR)
         row = {"Patient_ID": case_id}
         row.update(score_case(pred, gt))
