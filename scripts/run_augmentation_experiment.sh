@@ -32,7 +32,14 @@ UPENN_NIFTI_DIR="${UPENN_NIFTI_DIR:-upenn_nifti}"
 SKIP_UPENN="${SKIP_UPENN:-0}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_DIR="${LOG_DIR:-logs}"
-mkdir -p "$LOG_DIR" "$AUG_SAVE_DIR" results/brats results/upenn
+# Output roots (override to keep a dry-run out of the tracked results/ tree).
+BRATS_OUT="${BRATS_OUT:-results/brats}"
+UPENN_OUT="${UPENN_OUT:-results/upenn}"
+# ALLOW_CPU=1 bypasses the GPU requirement — for a CPU plumbing/dry-run only;
+# real training needs a GPU. NO_CACHE=1 forces UPenn inference to recompute.
+ALLOW_CPU="${ALLOW_CPU:-0}"
+NO_CACHE="${NO_CACHE:-0}"
+mkdir -p "$LOG_DIR" "$AUG_SAVE_DIR" "$BRATS_OUT" "$UPENN_OUT"
 
 # BRATS_DATA_DIR is read by train_brats.py/evaluate_brats.py; default to <repo>/data.
 export BRATS_DATA_DIR="${BRATS_DATA_DIR:-$ROOT/data}"
@@ -42,7 +49,10 @@ die() { echo -e "\n\033[31mERROR: $*\033[0m" >&2; exit 1; }
 
 # ---- step 0: preflight ----------------------------------------------------
 log "Step 0/5  Preflight checks"
-python - <<'PY' || die "GPU not available. This experiment needs CUDA; run it on the GPU machine."
+if [ "$ALLOW_CPU" = "1" ]; then
+  echo "  [ALLOW_CPU=1] skipping GPU requirement — CPU plumbing/dry-run only, not a real experiment"
+else
+  python - <<'PY' || die "GPU not available. This experiment needs CUDA; run it on the GPU machine (or set ALLOW_CPU=1 for a CPU plumbing dry-run)."
 import torch, sys
 ok = torch.cuda.is_available()
 print(f"  CUDA available : {ok}")
@@ -50,6 +60,7 @@ if ok:
     print(f"  GPU            : {torch.cuda.get_device_name(0)}")
 sys.exit(0 if ok else 1)
 PY
+fi
 
 [ -f "$BASE_CKPT" ] || die "base checkpoint not found: $BASE_CKPT"
 n_brats=$(find "$BRATS_DATA_DIR" -maxdepth 1 -type d -name 'BraTS2021_*' 2>/dev/null | wc -l)
@@ -85,17 +96,19 @@ echo "  augmented checkpoint: $AUG_CKPT"
 # ---- step 2: BraTS internal-validation evaluation -------------------------
 log "Step 2/5  BraTS internal-validation evaluation (baseline + augmented)"
 python scripts/evaluate_brats.py --partition internal_validation \
-    --checkpoint "$BASE_CKPT" --tag base650 \
+    --checkpoint "$BASE_CKPT" --tag base650 --out-dir "$BRATS_OUT" \
     2>&1 | tee "$LOG_DIR/eval_brats_base_${STAMP}.log"
 python scripts/evaluate_brats.py --partition internal_validation \
-    --checkpoint "$AUG_CKPT" --tag aug \
+    --checkpoint "$AUG_CKPT" --tag aug --out-dir "$BRATS_OUT" \
     2>&1 | tee "$LOG_DIR/eval_brats_aug_${STAMP}.log"
 
 # ---- step 3: UPenn zero-shot evaluation -----------------------------------
 if [ "$SKIP_UPENN" != "1" ]; then
   log "Step 3/5  UPenn zero-shot evaluation (baseline + augmented)"
+  NC=""; [ "$NO_CACHE" = "1" ] && NC="--no-cache"
   python scripts/evaluate_upenn.py \
       --nifti-dir "$UPENN_NIFTI_DIR" \
+      --out-dir "$UPENN_OUT" $NC \
       --setups baseline_brats candidate_zeroshot \
       --extra-checkpoint "$AUG_CKPT" --extra-name candidate_zeroshot \
       --extra-preproc brats \
@@ -106,29 +119,29 @@ fi
 
 # ---- step 4: per-case CSVs (produced by steps 2-3) ------------------------
 log "Step 4/5  Per-case CSVs written:"
-ls -1 results/brats/per_case_base650_recomputed.csv \
-      results/brats/per_case_aug_recomputed.csv 2>/dev/null || true
+ls -1 "$BRATS_OUT"/per_case_base650_recomputed.csv \
+      "$BRATS_OUT"/per_case_aug_recomputed.csv 2>/dev/null || true
 [ "$SKIP_UPENN" != "1" ] && ls -1 \
-      results/upenn/per_case_baseline_brats.csv \
-      results/upenn/per_case_candidate_zeroshot.csv 2>/dev/null || true
+      "$UPENN_OUT"/per_case_baseline_brats.csv \
+      "$UPENN_OUT"/per_case_candidate_zeroshot.csv 2>/dev/null || true
 
 # ---- step 5: paired A/B comparisons ---------------------------------------
 log "Step 5/5  Paired A/B comparison (augmented - baseline)"
 echo -e "\n### BraTS internal validation ###"
 python scripts/compare_runs.py \
-    --baseline  results/brats/per_case_base650_recomputed.csv \
-    --candidate results/brats/per_case_aug_recomputed.csv \
+    --baseline  "$BRATS_OUT"/per_case_base650_recomputed.csv \
+    --candidate "$BRATS_OUT"/per_case_aug_recomputed.csv \
     --name-baseline epoch650 --name-candidate augmented \
-    --out-csv results/brats/ab_augmentation_${STAMP}.csv \
+    --out-csv "$BRATS_OUT"/ab_augmentation_${STAMP}.csv \
     2>&1 | tee "$LOG_DIR/ab_brats_${STAMP}.log"
 
 if [ "$SKIP_UPENN" != "1" ]; then
   echo -e "\n### UPenn zero-shot (the generalisation question) ###"
   python scripts/compare_runs.py \
-      --baseline  results/upenn/per_case_baseline_brats.csv \
-      --candidate results/upenn/per_case_candidate_zeroshot.csv \
+      --baseline  "$UPENN_OUT"/per_case_baseline_brats.csv \
+      --candidate "$UPENN_OUT"/per_case_candidate_zeroshot.csv \
       --name-baseline zeroshot650 --name-candidate zeroshotAug \
-      --out-csv results/upenn/ab_augmentation_zeroshot_${STAMP}.csv \
+      --out-csv "$UPENN_OUT"/ab_augmentation_zeroshot_${STAMP}.csv \
       2>&1 | tee "$LOG_DIR/ab_upenn_${STAMP}.log"
 fi
 
@@ -136,11 +149,11 @@ fi
 log "DONE. Outputs:"
 echo "  checkpoint : $AUG_CKPT"
 echo "  logs       : $LOG_DIR/*_${STAMP}.log"
-echo "  BraTS      : results/brats/{summary_base650,summary_aug}_recomputed.csv  (Dice+HD95+CIs)"
-echo "               results/brats/ab_augmentation_${STAMP}.csv                  (paired Δ)"
+echo "  BraTS      : $BRATS_OUT/{summary_base650,summary_aug}_recomputed.csv  (Dice+HD95+CIs)"
+echo "               $BRATS_OUT/ab_augmentation_${STAMP}.csv                  (paired Δ)"
 if [ "$SKIP_UPENN" != "1" ]; then
-echo "  UPenn      : results/upenn/segmentation_summary.csv                      (Dice+HD95+CIs)"
-echo "               results/upenn/ab_augmentation_zeroshot_${STAMP}.csv         (paired Δ)"
+echo "  UPenn      : $UPENN_OUT/segmentation_summary.csv                      (Dice+HD95+CIs)"
+echo "               $UPENN_OUT/ab_augmentation_zeroshot_${STAMP}.csv         (paired Δ)"
 fi
 echo ""
 echo "The paired-Δ tables above are the headline before/after result. A change"
