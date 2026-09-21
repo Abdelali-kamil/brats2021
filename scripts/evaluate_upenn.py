@@ -151,10 +151,17 @@ def setup_members(spec: dict) -> list[dict]:
 # --------------------------------------------------------------------------
 # inference + caching
 # --------------------------------------------------------------------------
-def load_model(path: Path) -> torch.nn.Module:
-    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
+def load_model(path: Path, norm: str = "batch") -> torch.nn.Module:
+    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3, norm=norm).to(DEVICE)
     ckpt = torch.load(str(path), map_location=DEVICE, weights_only=False)
-    state = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
+    if isinstance(ckpt, dict):
+        # Accept every layout in this repo: evaluate/train_upenn save
+        # 'model_state_dict', train_brats saves 'model_state', some save
+        # 'state_dict', and a bare state_dict has none of these.
+        state = (ckpt.get("model_state_dict") or ckpt.get("model_state")
+                 or ckpt.get("state_dict") or ckpt)
+    else:
+        state = ckpt
     model.load_state_dict(state, strict=True)
     model.eval()
     return model
@@ -360,7 +367,27 @@ def main() -> None:
     ap.add_argument("--subject-split", default=None,
                     help="JSON with explicit {train,val,test} lists, as written "
                          "by crossval_upenn.py. Defaults to the frozen split.")
+    ap.add_argument("--extra-checkpoint", default=None,
+                    help="register an additional checkpoint as a setup (e.g. a "
+                         "newly trained BraTS checkpoint to evaluate zero-shot). "
+                         "Add its name to --setups to evaluate it.")
+    ap.add_argument("--extra-name", default="candidate_zeroshot",
+                    help="setup name for --extra-checkpoint")
+    ap.add_argument("--extra-preproc", default="brats",
+                    choices=list(PREPROCESSING),
+                    help="input convention for --extra-checkpoint (a "
+                         "BraTS-trained checkpoint is 'brats')")
     args = ap.parse_args()
+
+    if args.extra_checkpoint:
+        SETUPS[args.extra_name] = {
+            "checkpoints": [Path(args.extra_checkpoint)],
+            "description": f"custom checkpoint {Path(args.extra_checkpoint).name} "
+                           f"(zero-shot, {args.extra_preproc} convention)",
+            "preprocessing": args.extra_preproc,
+        }
+        if args.extra_name not in args.setups:
+            args.setups = list(args.setups) + [args.extra_name]
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
