@@ -39,6 +39,9 @@ UPENN_OUT="${UPENN_OUT:-results/upenn}"
 # real training needs a GPU. NO_CACHE=1 forces UPenn inference to recompute.
 ALLOW_CPU="${ALLOW_CPU:-0}"
 NO_CACHE="${NO_CACHE:-0}"
+# PREFLIGHT_ONLY=1 resolves and prints all paths, runs every check, then exits
+# BEFORE training — so paths can be confirmed before the long run.
+PREFLIGHT_ONLY="${PREFLIGHT_ONLY:-0}"
 mkdir -p "$LOG_DIR" "$AUG_SAVE_DIR" "$BRATS_OUT" "$UPENN_OUT"
 
 # BRATS_DATA_DIR is read by train_brats.py/evaluate_brats.py; default to <repo>/data.
@@ -74,6 +77,26 @@ if [ "$SKIP_UPENN" != "1" ]; then
     die "UPenn data missing; aborting before the long training run so you don't lose step 3"
   fi
   echo "  UPenn subjects : $n_upenn  (under $UPENN_NIFTI_DIR)"
+fi
+
+# Resolved absolute paths, for confirmation before the long run.
+echo ""
+echo "  Resolved paths:"
+echo "    1. repository root : $ROOT"
+echo "    2. BraTS data      : $(cd "$BRATS_DATA_DIR" 2>/dev/null && pwd || echo "$BRATS_DATA_DIR")  ($n_brats cases)"
+if [ "$SKIP_UPENN" != "1" ]; then
+  echo "    3. UPenn data      : $(cd "$UPENN_NIFTI_DIR" 2>/dev/null && pwd || echo "$UPENN_NIFTI_DIR")  (${n_upenn:-?} subjects)"
+else
+  echo "    3. UPenn data      : (SKIP_UPENN=1)"
+fi
+echo "    4. base checkpoint : $(cd "$(dirname "$BASE_CKPT")" 2>/dev/null && pwd || echo .)/$(basename "$BASE_CKPT")"
+echo "    -> train $((EPOCHS)) target epoch, augment=on, norm=batch (default)"
+echo "    -> outputs: BraTS=$BRATS_OUT  UPenn=$UPENN_OUT  logs=$LOG_DIR  ckpts=$AUG_SAVE_DIR"
+
+if [ "$PREFLIGHT_ONLY" = "1" ]; then
+  log "PREFLIGHT_ONLY=1 — all checks passed, paths resolved above. Not training."
+  echo "Re-run without PREFLIGHT_ONLY to start the real experiment."
+  exit 0
 fi
 
 # ---- step 1: augmented training -------------------------------------------
