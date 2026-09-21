@@ -173,6 +173,17 @@ def main():
     
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--eval-every", type=int, default=1)
+    parser.add_argument("--augment", action="store_true",
+                        help="Enable on-the-fly 3D augmentation (intensity + "
+                             "light spatial) on the training subset only. The "
+                             "validation subset stays deterministic and its "
+                             "subjects are identical to the frozen split.")
+    parser.add_argument("--norm", default="batch",
+                        choices=["batch", "instance", "group"],
+                        help="normalisation layer. 'instance'/'group' do not "
+                             "use batch statistics and tend to transfer better "
+                             "across cohorts; requires training from scratch "
+                             "(not compatible with a BatchNorm checkpoint).")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -192,7 +203,9 @@ def main():
         print(f"[INFO] GPU: {torch.cuda.get_device_name(device)}")
 
     # Dataset
-    ds = get_datasets()
+    if args.augment:
+        print("[INFO] Augmentation ENABLED (training subset only).")
+    ds = get_datasets(seed=args.seed, augment=args.augment)
     if isinstance(ds, (tuple, list)) and len(ds) >= 2:
         train_dataset, val_dataset = ds[0], ds[1]
     else:
@@ -227,7 +240,8 @@ def main():
     )
 
     # Model/optim
-    model = WaveletUNetPlusPlus().to(device)
+    model = WaveletUNetPlusPlus(norm=args.norm).to(device)
+    print(f"[INFO] Normalisation layer: {args.norm}")
     criterion = WeightedFocalDiceLoss(weight=args.weight_channels).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(

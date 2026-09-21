@@ -84,8 +84,26 @@ def main() -> None:
     ap.add_argument("--no-tta", action="store_true")
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--checkpoint", default=str(CKPT),
+                    help="path to the .pth checkpoint to evaluate "
+                         f"(default: {CKPT.name})")
+    ap.add_argument("--data-root", default=None,
+                    help="BraTS data directory; defaults to $BRATS_DATA_DIR "
+                         "or <repo>/data")
+    ap.add_argument("--norm", default="batch",
+                    choices=["batch", "instance", "group"],
+                    help="must match the normalisation the checkpoint was "
+                         "trained with (default: batch)")
     args = ap.parse_args()
 
+    global DATA
+    if args.data_root is not None:
+        DATA = Path(args.data_root)
+    else:
+        import os
+        DATA = Path(os.environ.get("BRATS_DATA_DIR", str(DATA)))
+
+    ckpt_path = Path(args.checkpoint)
     train_ids, val_ids = brats_split(str(DATA))
     if args.partition == "internal_validation":
         cases = sorted(val_ids)
@@ -100,13 +118,17 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3).to(DEVICE)
-    ck = torch.load(str(CKPT), map_location=DEVICE, weights_only=False)
-    model.load_state_dict(
-        ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck, strict=True)
+    model = WaveletUNetPlusPlus(in_channels=4, n_classes=3, norm=args.norm).to(DEVICE)
+    ck = torch.load(str(ckpt_path), map_location=DEVICE, weights_only=False)
+    if isinstance(ck, dict):
+        state = ck.get("model_state_dict") or ck.get("model_state") \
+            or ck.get("state_dict") or ck
+    else:
+        state = ck
+    model.load_state_dict(state, strict=True)
     model.eval()
 
-    print(f"checkpoint    : {CKPT.name}")
+    print(f"checkpoint    : {ckpt_path.name}")
     print(f"partition     : {args.partition}  ({len(cases)} cases)")
     print(f"preprocessing : {BRATS_ORDER} + percentile min-max")
     print(f"threshold     : {THR} (fixed, not tuned)")
