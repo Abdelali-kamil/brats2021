@@ -15,8 +15,12 @@ from brats_gbm.splits import BRATS_VAL_FRAC_OF_HELDOUT, assert_disjoint
 
 @pytest.fixture
 def aug():
-    """A Brats instance used only for its augment method (no data on disk)."""
-    return Brats.__new__(Brats)
+    """A Brats instance used only for its augment method (no data on disk).
+
+    __new__ skips __init__, so set the attributes the augment path reads."""
+    b = Brats.__new__(Brats)
+    b.aug_mode = "standard"
+    return b
 
 
 def _synthetic(seed=0):
@@ -128,3 +132,18 @@ def test_three_way_split_is_disjoint_and_covers_the_heldout():
     assert val | test == set(heldout), "held-out cases went missing"
     assert len(val) + len(test) == len(heldout)
     assert len(test) > 100, "test partition too small to report a number from"
+
+
+def test_strong_augment_keeps_image_and_label_aligned():
+    """Run D's strong augmentation moves image and label with the same transform."""
+    from brats_gbm.data.strong_aug import strong_augment
+    img = np.zeros((4, 32, 32, 32), dtype=np.float32)
+    lbl = np.zeros((3, 32, 32, 32), dtype=np.float32)
+    img[:, 10:20, 12:22, 8:18] = 1.0          # the image marks exactly the labelled block
+    lbl[:, 10:20, 12:22, 8:18] = 1.0
+    for _ in range(20):
+        i2, l2 = strong_augment(img.copy(), lbl.copy())
+        assert i2.shape == img.shape and l2.shape == lbl.shape
+        assert set(np.unique(l2)).issubset({0.0, 1.0})
+        if l2[2].sum() > 50:                   # label still present: image intensity sits under it
+            assert i2[3][l2[2] > 0].mean() > i2[3][l2[2] == 0].mean()
