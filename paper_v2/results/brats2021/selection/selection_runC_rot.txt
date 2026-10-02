@@ -1,0 +1,1 @@
+runC_rot 0.9027 components 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runC/runC_dwt3d_best_evaluated.pth 100 both+rot

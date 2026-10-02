@@ -1,0 +1,100 @@
+
+===== glioma (PRIMARY) =====
+        model  n     ET     TC     WT   Mean    HD95
+   ours_ep253 95 0.6983 0.7387 0.7798 0.7389 11.3765
+    ours_runA 95 0.7459 0.7884 0.8107 0.7817 11.5245
+    ours_runC 95 0.7467 0.7698 0.8160 0.7775 10.2234
+ours_runC_rot 95 0.7495 0.7732 0.8113 0.7780 10.3381
+ours_runD_rot 95 0.7519 0.7773 0.8999 0.8097  9.7725
+       nnunet 95 0.7851 0.8376 0.9225 0.8484  6.2291
+   swin_unetr 95 0.8123 0.7855 0.9103 0.8361  8.0953
+ours_ep253   vs nnunet     Dice_Mean n=95 -0.1095 [-0.1548, -0.0688] p=1.62e-11 wins 16/95 ours WORSE
+ours_ep253   vs nnunet     Dice_ET   n=95 -0.0868 [-0.1331, -0.0463] p=0.0002 wins 31/95 ours WORSE
+ours_ep253   vs nnunet     Dice_TC   n=95 -0.0989 [-0.1508, -0.0511] p=9.41e-08 wins 23/95 ours WORSE
+ours_ep253   vs nnunet     Dice_WT   n=95 -0.1427 [-0.1941, -0.0982] p=4.44e-14 wins 11/95 ours WORSE
+ours_ep253   vs swin_unetr Dice_Mean n=95 -0.0971 [-0.1412, -0.0575] p=3.46e-07 wins 22/95 ours WORSE
+ours_ep253   vs swin_unetr Dice_ET   n=95 -0.1141 [-0.1601, -0.0727] p=3.4e-08 wins 25/95 ours WORSE
+ours_ep253   vs swin_unetr Dice_TC   n=95 -0.0468 [-0.1003, +0.0047] p=0.138 wins 41/95 no sig. difference
+ours_ep253   vs swin_unetr Dice_WT   n=95 -0.1305 [-0.1801, -0.0873] p=9.12e-11 wins 19/95 ours WORSE
+ours_runA    vs nnunet     Dice_Mean n=95 -0.0667 [-0.0914, -0.0437] p=2.64e-08 wins 23/95 ours WORSE
+ours_runA    vs nnunet     Dice_ET   n=95 -0.0391 [-0.0695, -0.0118] p=0.0673 wins 42/95 ours WORSE
+ours_runA    vs nnunet     Dice_TC   n=95 -0.0492 [-0.0860, -0.0147] p=0.000202 wins 29/95 ours WORSE
+ours_runA    vs nnunet     Dice_WT   n=95 -0.1118 [-0.1508, -0.0773] p=3.74e-13 wins 14/95 ours WORSE
+ours_runA    vs swin_unetr Dice_Mean n=95 -0.0544 [-0.0777, -0.0321] p=7.2e-06 wins 31/95 ours WORSE
+ours_runA    vs swin_unetr Dice_ET   n=95 -0.0664 [-0.0986, -0.0384] p=2e-05 wins 29/95 ours WORSE
+ours_runA    vs swin_unetr Dice_TC   n=95 +0.0029 [-0.0343, +0.0401] p=0.988 wins 46/95 no sig. difference
+ours_runA    vs swin_unetr Dice_WT   n=95 -0.0996 [-0.1395, -0.0649] p=2.87e-09 wins 24/95 ours WORSE
+ours_runC    vs nnunet     Dice_Mean n=95 -0.0709 [-0.1066, -0.0398] p=5.51e-05 wins 35/95 ours WORSE
+ours_runC    vs nnunet     Dice_ET   n=95 -0.0383 [-0.0762, -0.0054] p=0.296 wins 44/95 ours WORSE
+ours_runC    vs nnunet     Dice_TC   n=95 -0.0678 [-0.1069, -0.0334] p=0.000648 wins 36/95 ours WORSE
+ours_runC    vs nnunet     Dice_WT   n=95 -0.1065 [-0.1478, -0.0690] p=1.06e-10 wins 17/95 ours WORSE
+ours_runC    vs swin_unetr Dice_Mean n=95 -0.0585 [-0.0917, -0.0300] p=0.00416 wins 39/95 ours WORSE
+ours_runC    vs swin_unetr Dice_ET   n=95 -0.0656 [-0.1030, -0.0330] p=0.00127 wins 34/95 ours WORSE
+ours_runC    vs swin_unetr Dice_TC   n=95 -0.0157 [-0.0542, +0.0189] p=0.691 wins 46/95 no sig. difference
+ours_runC    vs swin_unetr Dice_WT   n=95 -0.0943 [-0.1344, -0.0583] p=7.99e-08 wins 28/95 ours WORSE
+ours_runC_rot vs nnunet     Dice_Mean n=95 -0.0704 [-0.1048, -0.0407] p=5.51e-05 wins 33/95 ours WORSE
+ours_runC_rot vs nnunet     Dice_ET   n=95 -0.0356 [-0.0720, -0.0032] p=0.355 wins 44/95 ours WORSE
+ours_runC_rot vs nnunet     Dice_TC   n=95 -0.0645 [-0.1035, -0.0307] p=0.00084 wins 37/95 ours WORSE
+ours_runC_rot vs nnunet     Dice_WT   n=95 -0.1112 [-0.1551, -0.0730] p=3.88e-11 wins 16/95 ours WORSE
+ours_runC_rot vs swin_unetr Dice_Mean n=95 -0.0581 [-0.0905, -0.0305] p=0.00397 wins 39/95 ours WORSE
+ours_runC_rot vs swin_unetr Dice_ET   n=95 -0.0629 [-0.0992, -0.0314] p=0.00222 wins 34/95 ours WORSE
+ours_runC_rot vs swin_unetr Dice_TC   n=95 -0.0124 [-0.0494, +0.0223] p=0.485 wins 48/95 no sig. difference
+ours_runC_rot vs swin_unetr Dice_WT   n=95 -0.0990 [-0.1407, -0.0628] p=2.69e-08 wins 26/95 ours WORSE
+ours_runD_rot vs nnunet     Dice_Mean n=95 -0.0387 [-0.0590, -0.0198] p=0.000143 wins 33/95 ours WORSE
+ours_runD_rot vs nnunet     Dice_ET   n=95 -0.0332 [-0.0642, -0.0042] p=0.0532 wins 41/95 ours WORSE
+ours_runD_rot vs nnunet     Dice_TC   n=95 -0.0604 [-0.0919, -0.0323] p=6.6e-08 wins 22/95 ours WORSE
+ours_runD_rot vs nnunet     Dice_WT   n=95 -0.0226 [-0.0391, -0.0101] p=1.48e-06 wins 27/95 ours WORSE
+ours_runD_rot vs swin_unetr Dice_Mean n=95 -0.0264 [-0.0460, -0.0073] p=0.0262 wins 38/95 ours WORSE
+ours_runD_rot vs swin_unetr Dice_ET   n=95 -0.0605 [-0.0889, -0.0352] p=3.07e-05 wins 31/95 ours WORSE
+ours_runD_rot vs swin_unetr Dice_TC   n=95 -0.0082 [-0.0407, +0.0261] p=0.168 wins 38/95 no sig. difference
+ours_runD_rot vs swin_unetr Dice_WT   n=95 -0.0103 [-0.0261, +0.0028] p=0.153 wins 45/95 no sig. difference
+
+===== other_neoplasm (secondary, out-of-distribution) =====
+        model  n     ET     TC     WT   Mean    HD95
+   ours_ep253 51 0.6760 0.6448 0.6969 0.6726 17.7320
+    ours_runA 51 0.6966 0.6352 0.6620 0.6646 22.7147
+    ours_runC 51 0.7021 0.6912 0.7075 0.7003 21.2725
+ours_runC_rot 51 0.7357 0.7224 0.7027 0.7203 21.2903
+ours_runD_rot 51 0.6949 0.7129 0.8108 0.7395 15.9558
+       nnunet 51 0.7647 0.7920 0.8596 0.8054  9.8110
+   swin_unetr 51 0.7728 0.7392 0.8117 0.7746 15.7089
+ours_ep253   vs nnunet     Dice_Mean n=51 -0.1329 [-0.1999, -0.0726] p=3.87e-05 wins 12/51 ours WORSE
+ours_ep253   vs nnunet     Dice_ET   n=51 -0.0887 [-0.1659, -0.0093] p=0.031 wins 20/51 ours WORSE
+ours_ep253   vs nnunet     Dice_TC   n=51 -0.1473 [-0.2290, -0.0702] p=0.00204 wins 15/51 ours WORSE
+ours_ep253   vs nnunet     Dice_WT   n=51 -0.1626 [-0.2334, -0.0976] p=5.57e-07 wins 8/51 ours WORSE
+ours_ep253   vs swin_unetr Dice_Mean n=51 -0.1020 [-0.1694, -0.0389] p=0.00537 wins 20/51 ours WORSE
+ours_ep253   vs swin_unetr Dice_ET   n=51 -0.0968 [-0.1773, -0.0176] p=0.00853 wins 15/51 ours WORSE
+ours_ep253   vs swin_unetr Dice_TC   n=51 -0.0945 [-0.1744, -0.0185] p=0.119 wins 23/51 ours WORSE
+ours_ep253   vs swin_unetr Dice_WT   n=51 -0.1148 [-0.1914, -0.0424] p=0.00198 wins 17/51 ours WORSE
+ours_runA    vs nnunet     Dice_Mean n=51 -0.1409 [-0.2184, -0.0715] p=0.000506 wins 15/51 ours WORSE
+ours_runA    vs nnunet     Dice_ET   n=51 -0.0682 [-0.1613, +0.0223] p=0.746 wins 27/51 no sig. difference
+ours_runA    vs nnunet     Dice_TC   n=51 -0.1569 [-0.2468, -0.0749] p=0.00829 wins 20/51 ours WORSE
+ours_runA    vs nnunet     Dice_WT   n=51 -0.1975 [-0.2742, -0.1261] p=3.25e-07 wins 11/51 ours WORSE
+ours_runA    vs swin_unetr Dice_Mean n=51 -0.1100 [-0.1874, -0.0417] p=0.0186 wins 19/51 ours WORSE
+ours_runA    vs swin_unetr Dice_ET   n=51 -0.0762 [-0.1700, +0.0139] p=0.478 wins 24/51 no sig. difference
+ours_runA    vs swin_unetr Dice_TC   n=51 -0.1040 [-0.1937, -0.0224] p=0.112 wins 22/51 ours WORSE
+ours_runA    vs swin_unetr Dice_WT   n=51 -0.1497 [-0.2247, -0.0819] p=6.27e-05 wins 15/51 ours WORSE
+ours_runC    vs nnunet     Dice_Mean n=51 -0.1052 [-0.1567, -0.0584] p=2.27e-05 wins 13/51 ours WORSE
+ours_runC    vs nnunet     Dice_ET   n=51 -0.0627 [-0.1151, -0.0148] p=0.0329 wins 20/51 ours WORSE
+ours_runC    vs nnunet     Dice_TC   n=51 -0.1008 [-0.1738, -0.0250] p=0.00306 wins 18/51 ours WORSE
+ours_runC    vs nnunet     Dice_WT   n=51 -0.1520 [-0.2085, -0.1004] p=5.31e-07 wins 10/51 ours WORSE
+ours_runC    vs swin_unetr Dice_Mean n=51 -0.0743 [-0.1240, -0.0308] p=0.00111 wins 18/51 ours WORSE
+ours_runC    vs swin_unetr Dice_ET   n=51 -0.0707 [-0.1249, -0.0238] p=0.0182 wins 17/51 ours WORSE
+ours_runC    vs swin_unetr Dice_TC   n=51 -0.0480 [-0.1176, +0.0261] p=0.134 wins 24/51 no sig. difference
+ours_runC    vs swin_unetr Dice_WT   n=51 -0.1042 [-0.1526, -0.0614] p=2.17e-05 wins 14/51 ours WORSE
+ours_runC_rot vs nnunet     Dice_Mean n=51 -0.0852 [-0.1333, -0.0388] p=6.27e-05 wins 13/51 ours WORSE
+ours_runC_rot vs nnunet     Dice_ET   n=51 -0.0290 [-0.0736, +0.0121] p=0.223 wins 23/51 no sig. difference
+ours_runC_rot vs nnunet     Dice_TC   n=51 -0.0696 [-0.1394, +0.0024] p=0.0144 wins 20/51 no sig. difference
+ours_runC_rot vs nnunet     Dice_WT   n=51 -0.1569 [-0.2185, -0.0997] p=2.94e-07 wins 8/51 ours WORSE
+ours_runC_rot vs swin_unetr Dice_Mean n=51 -0.0543 [-0.0981, -0.0151] p=0.00169 wins 17/51 ours WORSE
+ours_runC_rot vs swin_unetr Dice_ET   n=51 -0.0371 [-0.0823, +0.0021] p=0.0809 wins 18/51 no sig. difference
+ours_runC_rot vs swin_unetr Dice_TC   n=51 -0.0168 [-0.0814, +0.0495] p=0.253 wins 23/51 no sig. difference
+ours_runC_rot vs swin_unetr Dice_WT   n=51 -0.1090 [-0.1630, -0.0611] p=4.37e-05 wins 15/51 ours WORSE
+ours_runD_rot vs nnunet     Dice_Mean n=51 -0.0659 [-0.1183, -0.0218] p=0.000489 wins 12/51 ours WORSE
+ours_runD_rot vs nnunet     Dice_ET   n=51 -0.0699 [-0.1280, -0.0162] p=2.64e-05 wins 9/51 ours WORSE
+ours_runD_rot vs nnunet     Dice_TC   n=51 -0.0792 [-0.1488, -0.0094] p=2.68e-05 wins 9/51 ours WORSE
+ours_runD_rot vs nnunet     Dice_WT   n=51 -0.0488 [-0.0909, -0.0143] p=0.000847 wins 12/51 ours WORSE
+ours_runD_rot vs swin_unetr Dice_Mean n=51 -0.0351 [-0.0795, +0.0046] p=0.109 wins 19/51 no sig. difference
+ours_runD_rot vs swin_unetr Dice_ET   n=51 -0.0779 [-0.1293, -0.0345] p=6.23e-05 wins 8/51 ours WORSE
+ours_runD_rot vs swin_unetr Dice_TC   n=51 -0.0264 [-0.0898, +0.0405] p=0.0239 wins 14/51 no sig. difference
+ours_runD_rot vs swin_unetr Dice_WT   n=51 -0.0010 [-0.0438, +0.0404] p=0.613 wins 21/51 no sig. difference

@@ -1,0 +1,1 @@
+runD 0.8937 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runD/runD_in_z_best_evaluated.pth 100 both

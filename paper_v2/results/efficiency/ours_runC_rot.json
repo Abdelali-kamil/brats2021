@@ -1,0 +1,94 @@
+{
+ "method": "ours_runC_rot",
+ "params": 33960891,
+ "params_M": 33.96,
+ "gflops_per_forward": 2485.8,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 576,
+ "sec_per_case_mean": 55.07,
+ "sec_per_case_sd": 0.05,
+ "peak_gpu_gib_max": 4.24,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 54.980721452011494,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 55.03508883799077,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 55.00293513000361,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 55.02422941001714,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 55.099393170996336,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 55.15344833099516,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 55.09863214800134,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 55.08765617501922,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 55.06759663799312,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 55.111858196993126,
+   "peak_gib": 4.236514091491699,
+   "n_forward": 576
+  }
+ ],
+ "protocol": "128^3 stride 64, gaussian, 8-flip TTA, orientation TTA (2 axis orders), 90-degree rotation TTA, F=24, WT largest"
+}

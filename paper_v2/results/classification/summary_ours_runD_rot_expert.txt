@@ -1,0 +1,5 @@
+ours_runD_rot / logreg             AUC 0.738 [0.657, 0.819]  bal.acc 0.666  sens 0.620  spec 0.712  (n=146, glioma=95)
+ours_runD_rot / random_forest      AUC 0.757 [0.678, 0.836]  bal.acc 0.688  sens 0.636  spec 0.739  (n=146, glioma=95)
+expert / logreg                    AUC 0.826 [0.749, 0.894]  bal.acc 0.744  sens 0.764  spec 0.724  (n=146, glioma=95)
+expert / random_forest             AUC 0.778 [0.693, 0.854]  bal.acc 0.705  sens 0.706  spec 0.704  (n=146, glioma=95)
+centre+scanner only / logreg       AUC 0.484 [0.384, 0.588]  bal.acc 0.612  sens 0.449  spec 0.775  (n=146, glioma=95)

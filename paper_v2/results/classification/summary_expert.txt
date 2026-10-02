@@ -1,0 +1,3 @@
+expert / logreg                    AUC 0.826 [0.749, 0.894]  bal.acc 0.744  sens 0.764  spec 0.724  (n=146, glioma=95)
+expert / random_forest             AUC 0.778 [0.693, 0.854]  bal.acc 0.705  sens 0.706  spec 0.704  (n=146, glioma=95)
+centre+scanner only / logreg       AUC 0.484 [0.384, 0.588]  bal.acc 0.612  sens 0.449  spec 0.775  (n=146, glioma=95)

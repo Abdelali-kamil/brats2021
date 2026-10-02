@@ -1,0 +1,15 @@
+{
+ "primary_M1": {
+  "wt": "largest",
+  "mult": 1,
+  "et": 0,
+  "val": 0.9196937935628001
+ },
+ "selected": {
+  "cand": "M1+M2",
+  "wt": "largest",
+  "mult": 20,
+  "et": 0,
+  "val": 0.9210346710163967
+ }
+}

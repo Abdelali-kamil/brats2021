@@ -1,0 +1,1 @@
+runA 0.8928 largest 20 /mnt/data1/kamil_research/experiments/eval_v2/work_runA/runA_ds400_best_evaluated.pth 100

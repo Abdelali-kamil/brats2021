@@ -1,0 +1,7 @@
+ours_runC_loc / logreg             AUC 0.758 [0.678, 0.832]  bal.acc 0.673  sens 0.663  spec 0.682  (n=146, glioma=95)
+ours_runC_loc / random_forest      AUC 0.747 [0.667, 0.824]  bal.acc 0.702  sens 0.603  spec 0.800  (n=146, glioma=95)
+expert_loc / logreg                AUC 0.814 [0.737, 0.884]  bal.acc 0.736  sens 0.758  spec 0.714  (n=146, glioma=95)
+expert_loc / random_forest         AUC 0.782 [0.702, 0.857]  bal.acc 0.703  sens 0.683  spec 0.724  (n=146, glioma=95)
+ours_runD_rot_loc / logreg         AUC 0.714 [0.630, 0.794]  bal.acc 0.619  sens 0.585  spec 0.653  (n=146, glioma=95)
+ours_runD_rot_loc / random_forest  AUC 0.751 [0.674, 0.831]  bal.acc 0.678  sens 0.622  spec 0.733  (n=146, glioma=95)
+centre+scanner only / logreg       AUC 0.484 [0.384, 0.588]  bal.acc 0.612  sens 0.449  spec 0.775  (n=146, glioma=95)

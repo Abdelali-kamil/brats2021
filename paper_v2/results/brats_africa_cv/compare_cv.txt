@@ -1,0 +1,99 @@
+BraTS-Africa glioma, 5-fold CV adaptation, pooled n=95 (ours adapted from: runA / ep253; ours zero-shot = Run A, ours_runC zero-shot = Run C; ours_sel zero-shot shown as Run A)
+        model      setting     ET     TC     WT   Mean    Mean 95% CI
+         ours    zero-shot 0.7459 0.7884 0.8107 0.7817 [0.743, 0.818]
+         ours adapted (CV) 0.8108 0.8343 0.8979 0.8477 [0.814, 0.876]
+     ours_sel adapted (CV) 0.8145 0.8191 0.9087 0.8474 [0.814, 0.876]
+    ours_runC    zero-shot 0.7467 0.7698 0.8160 0.7775 [0.729, 0.820]
+    ours_runC adapted (CV) 0.8374 0.8492 0.9195 0.8687 [0.837, 0.895]
+ours_runC_sel adapted (CV) 0.8346 0.8457 0.9196 0.8666 [0.835, 0.894]
+    ours_runD    zero-shot 0.7519 0.7773 0.8999 0.8097 [0.768, 0.846]
+    ours_runD adapted (CV) 0.8586 0.8663 0.9251 0.8833 [0.854, 0.907]
+ours_runD_sel adapted (CV) 0.8586 0.8663 0.9251 0.8833 [0.854, 0.907]
+       nnunet    zero-shot 0.7851 0.8376 0.9225 0.8484 [0.814, 0.876]
+       nnunet adapted (CV) 0.8617 0.8614 0.9305 0.8845 [0.854, 0.909]
+   swin_unetr    zero-shot 0.8123 0.7855 0.9103 0.8361 [0.804, 0.864]
+   swin_unetr adapted (CV) 0.8514 0.8522 0.9269 0.8769 [0.852, 0.898]
+
+adapted (CV) minus zero-shot (same start model)
+ours                               Dice_ET   +0.0649 [+0.0400, +0.0912] p=2.77e-09 wins 78/95 BETTER
+ours                               Dice_TC   +0.0458 [+0.0215, +0.0735] p=0.00024 wins 67/95 BETTER
+ours                               Dice_WT   +0.0873 [+0.0590, +0.1189] p=5.34e-10 wins 74/95 BETTER
+ours                               Dice_Mean +0.0660 [+0.0471, +0.0873] p=4.12e-12 wins 83/95 BETTER
+ours_sel                           Dice_ET   +0.0685 [+0.0463, +0.0933] p=6.33e-12 wins 75/95 BETTER
+ours_sel                           Dice_TC   +0.0307 [+0.0041, +0.0584] p=0.000233 wins 67/95 BETTER
+ours_sel                           Dice_WT   +0.0980 [+0.0658, +0.1346] p=1.7e-10 wins 73/95 BETTER
+ours_sel                           Dice_Mean +0.0657 [+0.0468, +0.0868] p=5.53e-12 wins 85/95 BETTER
+ours_runC                          Dice_ET   +0.0906 [+0.0608, +0.1241] p=4.71e-12 wins 79/95 BETTER
+ours_runC                          Dice_TC   +0.0794 [+0.0471, +0.1161] p=1.95e-09 wins 77/95 BETTER
+ours_runC                          Dice_WT   +0.1035 [+0.0684, +0.1422] p=5.68e-11 wins 74/95 BETTER
+ours_runC                          Dice_Mean +0.0912 [+0.0634, +0.1215] p=8.58e-15 wins 82/95 BETTER
+ours_runC_sel                      Dice_ET   +0.0879 [+0.0579, +0.1210] p=1.67e-12 wins 80/95 BETTER
+ours_runC_sel                      Dice_TC   +0.0759 [+0.0440, +0.1126] p=4.05e-08 wins 75/95 BETTER
+ours_runC_sel                      Dice_WT   +0.1036 [+0.0684, +0.1415] p=5e-11 wins 75/95 BETTER
+ours_runC_sel                      Dice_Mean +0.0891 [+0.0620, +0.1203] p=7.04e-14 wins 84/95 BETTER
+ours_runD                          Dice_ET   +0.1068 [+0.0807, +0.1378] p=1.79e-15 wins 90/95 BETTER
+ours_runD                          Dice_TC   +0.0890 [+0.0600, +0.1218] p=1.59e-15 wins 87/95 BETTER
+ours_runD                          Dice_WT   +0.0251 [+0.0103, +0.0473] p=7.67e-11 wins 82/95 BETTER
+ours_runD                          Dice_Mean +0.0736 [+0.0529, +0.0968] p=1.22e-15 wins 91/95 BETTER
+ours_runD_sel                      Dice_ET   +0.1068 [+0.0794, +0.1377] p=1.79e-15 wins 90/95 BETTER
+ours_runD_sel                      Dice_TC   +0.0890 [+0.0605, +0.1221] p=1.59e-15 wins 87/95 BETTER
+ours_runD_sel                      Dice_WT   +0.0251 [+0.0103, +0.0470] p=7.67e-11 wins 82/95 BETTER
+ours_runD_sel                      Dice_Mean +0.0736 [+0.0530, +0.0964] p=1.22e-15 wins 91/95 BETTER
+nnunet                             Dice_ET   +0.0767 [+0.0516, +0.1021] p=2.17e-12 wins 85/95 BETTER
+nnunet                             Dice_TC   +0.0237 [+0.0025, +0.0461] p=1.27e-05 wins 73/95 BETTER
+nnunet                             Dice_WT   +0.0080 [-0.0040, +0.0217] p=0.000167 wins 69/95 no sig. difference
+nnunet                             Dice_Mean +0.0361 [+0.0221, +0.0516] p=3.44e-09 wins 81/95 BETTER
+swin_unetr                         Dice_ET   +0.0391 [+0.0258, +0.0541] p=8.19e-09 wins 76/95 BETTER
+swin_unetr                         Dice_TC   +0.0667 [+0.0306, +0.1051] p=5.94e-06 wins 69/95 BETTER
+swin_unetr                         Dice_WT   +0.0167 [+0.0089, +0.0260] p=2.91e-06 wins 67/95 BETTER
+swin_unetr                         Dice_Mean +0.0408 [+0.0271, +0.0557] p=5.69e-10 wins 78/95 BETTER
+
+ours minus baseline (both adapted, CV)
+ours - nnunet                      Dice_ET   -0.0509 [-0.0745, -0.0306] p=1.09e-09 wins 17/95 WORSE
+ours - nnunet                      Dice_TC   -0.0271 [-0.0585, +0.0072] p=1.89e-07 wins 18/95 no sig. difference
+ours - nnunet                      Dice_WT   -0.0325 [-0.0588, -0.0105] p=4.76e-08 wins 17/95 WORSE
+ours - nnunet                      Dice_Mean -0.0369 [-0.0580, -0.0171] p=4.6e-09 wins 14/95 WORSE
+ours - swin_unetr                  Dice_ET   -0.0406 [-0.0645, -0.0201] p=8.42e-06 wins 32/95 WORSE
+ours - swin_unetr                  Dice_TC   -0.0179 [-0.0471, +0.0108] p=0.0492 wins 39/95 no sig. difference
+ours - swin_unetr                  Dice_WT   -0.0290 [-0.0571, -0.0070] p=0.0146 wins 41/95 WORSE
+ours - swin_unetr                  Dice_Mean -0.0292 [-0.0504, -0.0104] p=0.000711 wins 34/95 WORSE
+ours_sel - nnunet                  Dice_ET   -0.0473 [-0.0704, -0.0268] p=2.35e-09 wins 20/95 WORSE
+ours_sel - nnunet                  Dice_TC   -0.0423 [-0.0660, -0.0201] p=8.13e-08 wins 16/95 WORSE
+ours_sel - nnunet                  Dice_WT   -0.0218 [-0.0385, -0.0068] p=1.23e-07 wins 19/95 WORSE
+ours_sel - nnunet                  Dice_Mean -0.0371 [-0.0550, -0.0213] p=1.95e-08 wins 19/95 WORSE
+ours_sel - swin_unetr              Dice_ET   -0.0370 [-0.0569, -0.0191] p=0.000132 wins 34/95 WORSE
+ours_sel - swin_unetr              Dice_TC   -0.0331 [-0.0582, -0.0101] p=0.0233 wins 39/95 WORSE
+ours_sel - swin_unetr              Dice_WT   -0.0182 [-0.0344, -0.0046] p=0.00704 wins 37/95 WORSE
+ours_sel - swin_unetr              Dice_Mean -0.0294 [-0.0455, -0.0150] p=0.000751 wins 37/95 WORSE
+ours_runC - nnunet                 Dice_ET   -0.0244 [-0.0495, +0.0000] p=0.000377 wins 28/95 no sig. difference
+ours_runC - nnunet                 Dice_TC   -0.0122 [-0.0388, +0.0163] p=0.0267 wins 35/95 no sig. difference
+ours_runC - nnunet                 Dice_WT   -0.0109 [-0.0266, +0.0024] p=0.000149 wins 23/95 no sig. difference
+ours_runC - nnunet                 Dice_Mean -0.0158 [-0.0342, +0.0016] p=0.000398 wins 25/95 no sig. difference
+ours_runC - swin_unetr             Dice_ET   -0.0141 [-0.0332, +0.0026] p=0.53 wins 44/95 no sig. difference
+ours_runC - swin_unetr             Dice_TC   -0.0030 [-0.0235, +0.0155] p=0.0471 wins 62/95 no sig. difference
+ours_runC - swin_unetr             Dice_WT   -0.0074 [-0.0219, +0.0042] p=0.85 wins 52/95 no sig. difference
+ours_runC - swin_unetr             Dice_Mean -0.0082 [-0.0234, +0.0045] p=0.481 wins 52/95 no sig. difference
+ours_runC_sel - nnunet             Dice_ET   -0.0271 [-0.0535, -0.0019] p=0.00058 wins 27/95 WORSE
+ours_runC_sel - nnunet             Dice_TC   -0.0157 [-0.0441, +0.0135] p=0.0129 wins 33/95 no sig. difference
+ours_runC_sel - nnunet             Dice_WT   -0.0109 [-0.0266, +0.0026] p=0.000132 wins 23/95 no sig. difference
+ours_runC_sel - nnunet             Dice_Mean -0.0179 [-0.0378, +0.0004] p=0.000271 wins 24/95 no sig. difference
+ours_runC_sel - swin_unetr         Dice_ET   -0.0168 [-0.0377, +0.0014] p=0.555 wins 45/95 no sig. difference
+ours_runC_sel - swin_unetr         Dice_TC   -0.0065 [-0.0287, +0.0127] p=0.0684 wins 59/95 no sig. difference
+ours_runC_sel - swin_unetr         Dice_WT   -0.0074 [-0.0220, +0.0045] p=0.789 wins 51/95 no sig. difference
+ours_runC_sel - swin_unetr         Dice_Mean -0.0102 [-0.0263, +0.0035] p=0.476 wins 52/95 no sig. difference
+ours_runD - nnunet                 Dice_ET   -0.0031 [-0.0159, +0.0106] p=0.0334 wins 39/95 no sig. difference
+ours_runD - nnunet                 Dice_TC   +0.0049 [-0.0145, +0.0290] p=0.412 wins 39/95 no sig. difference
+ours_runD - nnunet                 Dice_WT   -0.0054 [-0.0170, +0.0044] p=0.00431 wins 28/95 no sig. difference
+ours_runD - nnunet                 Dice_Mean -0.0012 [-0.0134, +0.0111] p=0.0518 wins 32/95 no sig. difference
+ours_runD - swin_unetr             Dice_ET   +0.0072 [-0.0049, +0.0191] p=0.00704 wins 64/95 no sig. difference
+ours_runD - swin_unetr             Dice_TC   +0.0141 [+0.0012, +0.0282] p=0.00336 wins 62/95 BETTER
+ours_runD - swin_unetr             Dice_WT   -0.0019 [-0.0129, +0.0077] p=0.00217 wins 63/95 no sig. difference
+ours_runD - swin_unetr             Dice_Mean +0.0065 [-0.0031, +0.0155] p=0.00306 wins 66/95 no sig. difference
+ours_runD_sel - nnunet             Dice_ET   -0.0031 [-0.0159, +0.0107] p=0.0334 wins 39/95 no sig. difference
+ours_runD_sel - nnunet             Dice_TC   +0.0049 [-0.0138, +0.0282] p=0.412 wins 39/95 no sig. difference
+ours_runD_sel - nnunet             Dice_WT   -0.0054 [-0.0167, +0.0045] p=0.00431 wins 28/95 no sig. difference
+ours_runD_sel - nnunet             Dice_Mean -0.0012 [-0.0134, +0.0114] p=0.0518 wins 32/95 no sig. difference
+ours_runD_sel - swin_unetr         Dice_ET   +0.0072 [-0.0050, +0.0190] p=0.00704 wins 64/95 no sig. difference
+ours_runD_sel - swin_unetr         Dice_TC   +0.0141 [+0.0011, +0.0279] p=0.00336 wins 62/95 BETTER
+ours_runD_sel - swin_unetr         Dice_WT   -0.0019 [-0.0129, +0.0077] p=0.00217 wins 63/95 no sig. difference
+ours_runD_sel - swin_unetr         Dice_Mean +0.0065 [-0.0031, +0.0155] p=0.00306 wins 66/95 no sig. difference

@@ -1,0 +1,1 @@
+--downsample dwt3d --base-filters 24 --deep-supervision

@@ -1,0 +1,94 @@
+{
+ "method": "ours_dwt3d_arch",
+ "params": 15096147,
+ "params_M": 15.1,
+ "gflops_per_forward": 1107.3,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 144,
+ "sec_per_case_mean": 7.81,
+ "sec_per_case_sd": 0.01,
+ "peak_gpu_gib_max": 2.84,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 7.798997809062712,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 7.808397533022799,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 7.797496879007667,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 7.80307369097136,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 7.817510187975131,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 7.820636042044498,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 7.812808832037263,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 7.807291822973639,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 7.7906922600232065,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 7.812283030943945,
+   "peak_gib": 2.835890293121338,
+   "n_forward": 144
+  }
+ ],
+ "protocol": "128^3 stride 64, gaussian, 8-flip TTA, WT largest"
+}

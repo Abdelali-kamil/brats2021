@@ -1,0 +1,60 @@
+SWIN UNETR BASELINE — run metadata
+launched: 2026-09-23T13:56:54+08:00
+purpose: fair segmentation baseline on the frozen BraTS2021 split (comparison table)
+code: baselines/repos/swin_unetr/SwinUNETR/BRATS21 (pinned 21ed8e57)
+env: overlay venv (torchfix torch 2.12/cu128 + monai 1.6 + einops + tensorboardX)
+     DEVIATION from SETUP.md: uses cu128 not pinned cu121 (cu121 unsupported on RTX 5090 sm_120) — must be stated in paper.
+split: baselines/common/brats_split_frozen.json  (train 1000 / val 126 / test 125)
+datalist: baselines/swin_unetr/datalist_frozen_train1000_val126.json
+          fold0=val(126, selection), fold1=train(1000); TEST 125 EXCLUDED (no leakage)
+config: feature_size 48, roi 96^3, batch 1, max_epochs 300 (recipe default), val_every 25, warmup_cosine, AMP on
+image channel order: [flair, t1ce, t1, t2]
+params: 62,191,941 (matches parameter_counts.json)
+checkpoints: runs/swin_unetr_frozen/model.pt (best-by-val), model_final.pt
+log: /home/kamilabdelali/brats2021/logs/swin_unetr_20260923_135449.log
+NEXT after training: inference on 251/125 -> label maps -> baselines/common/score_segmentation.py --key swin_unetr
+
+--- 2026-09-23 16:30 correction ---
+BUG in first launch (log swin_unetr_20260923_135449.log): upstream main.py used
+AsDiscrete(argmax=False, logit_thresh=0.5). MONAI 1.6 silently ignores
+`logit_thresh`, so validation scored soft sigmoid probabilities -> val Dice ~0.01
+(TC/WT/ET 0.007/0.022/0.004 at ep49) and best-by-val model.pt was selected on noise.
+Training was unaffected. Verified on ep49 model_final.pt, 6 val cases:
+  logit_thresh (broken): 0.006 / 0.030 / 0.003
+  threshold=0.5 (fixed): 0.808 / 0.950 / 0.863
+FIX (one-line deviation from pinned 21ed8e57, API rename only, restores upstream
+intent): main.py:148 logit_thresh=0.5 -> threshold=0.5. test.py unaffected
+(thresholds explicitly with > 0.5).
+Relaunch from scratch via baselines/swin_unetr/relaunch_fixed.sh (upstream
+--checkpoint does not restore optimizer/scheduler, so resuming would be a second
+deviation). Broken run archived as runs/swin_unetr_frozen_BROKENVAL_20260923_165207
+(model_final.pt = ep49, model.pt = ep24 chosen on the broken metric; do not use
+for reporting).
+
+--- 2026-09-23 16:55 relaunch crash ---
+Two relaunches (logs swin_unetr_20260923_165207.log, _165213.log) died in epoch 0
+with "received 0 items of ancdata" / "Pin memory thread exited unexpectedly":
+launched from an SSH shell with soft nofile=1024, too few for 8 workers passing
+MONAI MetaTensors by file descriptor. The first launch came from a shell with
+nofile=1048576. relaunch_fixed.sh now raises the soft limit to the hard limit.
+No training setting changed. Stub run dirs from the two crashes removed.
+
+--- 2026-09-24 10:19 test-set evaluation ---
+Training finished 2026-09-24 06:46 (300 epochs). model.pt = ep199 (best MONAI
+val mean Dice 0.8996); model_final.pt = ep299.
+Test scoring: bash baselines/swin_unetr/run_swin_test_eval.sh
+  infer_test125.py  - upstream test.py recipe (sigmoid>0.5, overlap 0.6, no TTA,
+                      fp32) at the TRAINED roi 96 (upstream default 128 would
+                      mismatch); affine from GT seg (MONAI 1.6 has no
+                      image_meta_dict); predictions on native 240x240x155 grid.
+  score_swin_test.py - copy of nnU-Net's score_nnunet_test.py (our score_case +
+                      summarise_segmentation, bootstrap CIs); labels NCR1/ED2/ET4.
+PRIMARY, declared before scoring: model.pt (best-by-val, the upstream rule and
+the rule used for Wavelet U-Net++). model_final.pt is reference only.
+Note nnU-Net was scored from checkpoint_final (its standard), not best-by-val.
+Outputs: results/brats/swin_unetr_test_{summary,per_case}.csv,
+         results/brats/swin_unetr_final_ep299_test_{summary,per_case}.csv
+Predictions + log: /mnt/data1/kamil_research/baselines/swin_unetr/eval/
+RESULT (2026-09-24 10:41), 125 test cases, our metric:
+  PRIMARY model.pt ep199:  mean Dice 0.9028 [0.8846, 0.9183]  ET 0.8756 / TC 0.9077 / WT 0.9252, HD95 mean 4.10 mm
+  reference model_final ep299: 0.8621 [0.8405, 0.8812], HD95 5.14 mm
