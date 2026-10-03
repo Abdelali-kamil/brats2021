@@ -5,7 +5,7 @@ against this project's Wavelet U-Net++, and collect the numbers into one table
 for the paper.
 
 > **This must run where the GPU and the real data are.** The methods below train
-> deep networks on BraTS2021 / UPenn-GBM. They cannot run in a checkout without
+> deep networks on BraTS2021. They cannot run in a checkout without
 > the imaging data and a CUDA GPU. Do all of this on your server. The only piece
 > that runs anywhere is XGBoost (CPU, from the committed feature tables), which is
 > already done — see `results/baselines/xgboost_classification.json`.

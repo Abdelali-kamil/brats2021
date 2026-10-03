@@ -56,7 +56,7 @@ sys.path.insert(0, str(ROOT))
 from brats_gbm.eval.stats import bootstrap_ci  # noqa: E402
 from brats_gbm.gnn import ClinicalImagingKANGNN  # noqa: E402
 
-COHORT = ROOT / "results" / "classification" / "upenn_mgmt_cohort.csv"
+COHORT = None   # pass --cohort: the feature table of the cohort to analyse (BraTS 2021 MGMT in the paper)
 OUT_DIR = ROOT / "results" / "classification"
 CLINICAL_COLS = ["age", "gender_m", "gtr_over90"]
 NON_FEATURE = {"patient_id", "mask_source", "idh1_label", "idh1_raw", "mgmt_label"}
@@ -258,7 +258,7 @@ def run_config(name, cfg, X_img, X_clin, y, repeats):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cohort", default=str(COHORT))
+    ap.add_argument("--cohort", required=True)
     ap.add_argument("--out-dir", default=str(OUT_DIR))
     ap.add_argument("--repeats", type=int, default=N_REPEATS)
     ap.add_argument("--configs", nargs="*", default=list(CONFIGS))

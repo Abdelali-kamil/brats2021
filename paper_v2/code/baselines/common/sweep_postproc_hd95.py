@@ -4,9 +4,8 @@
 4.5-8.1, because a few cases carry components tens of millimetres from the
 tumour. `postprocess.py` already has the machinery to drop those -- per-region
 component floors (`MIN_VOXELS`, currently ET 5 / TC 20 / WT 50 voxels) and a WT
-`largest` policy -- but its docstring says those values were chosen for UPenn
-cross-cohort transfer, where skull leaks into the whole-tumour mask, and were
-never tuned for BraTS.
+`largest` policy -- but those values were chosen for cross-cohort transfer and
+were never tuned for BraTS.
 
 This sweeps those settings over saved probability maps and reports what each
 does to HD95 *and* to Dice, because the trade-off is the whole question: keeping

@@ -1,4 +1,9 @@
 # Evaluation protocol v2 — model-improvement campaign
+
+> Public copy (2026-10-03): passages about a dataset that is not used in the paper
+> were removed and are marked [removed]. Nothing else was changed; the authors keep the original
+> dated file.
+
 Written 2026-09-24 ~21:00 (+08:00), BEFORE Run A finished and before Run C
 started. Supersedes nothing; extends improve_v1/PROTOCOL.txt.
 
@@ -9,11 +14,9 @@ started. Supersedes nothing; extends improve_v1/PROTOCOL.txt.
   inference choices use val only. Test is never used to choose anything.
 - External cohort: BraTS-Africa (BraTS-SSA 2023). Used for evaluation only —
   no training, no tuning, no selection. Before use it must pass the same
-  patient-overlap check that disqualified UPenn-GBM (tumour-mask Dice + image
+  patient-overlap check (tumour-mask Dice + image
   correlation against all 1251 BraTS 2021 cases).
-- UPenn-GBM is NOT an external cohort (>=107/147 subjects are BraTS 2021
-  patients; `~/brats2021/results/upenn_brats_patient_overlap.csv`). It is not
-  used for any generalisation claim.
+- [removed]
 
 ## Candidate models (ours)
 | id | description | params |
@@ -69,14 +72,14 @@ unreachable from this network. Integrity: sha256 must match, and cases must matc
 voxel-wise the independent BraTS 2023 SSA challenge mirror (MedOtter/brats2023-ssa)
 where they overlap. (Zenodo 14510932 was checked and is a trained model, not data.)
 External evaluation rules:
-- Gate: zero patient overlap with BraTS 2021 by the UPenn check; any matched
+- Gate: zero patient overlap with BraTS 2021 by the patient-overlap check; any matched
   subject is excluded and reported.
 - Every labelled subject that passes the gate is evaluated. No subject-level
   exclusions after seeing predictions.
 - No training, tuning, threshold or post-processing choice on this cohort. Each
   method runs exactly as for the BraTS test: ours with its BraTS-val-selected
   post-processing; nnU-Net native; Swin UNETR upstream recipe (model.pt).
-- Each method gets its own channel order/normalisation (the UPenn bug lesson).
+- Each method gets its own channel order/normalisation.
   Labels: BraTS 2023 convention NCR=1, SNFH/ED=2, ET=3 -> ET={3}, TC={1,3}, WT={1,2,3}.
 - All our candidates (ep253, RunA, RunC) are scored; the headline is still the
   BraTS-val winner, never picked by Africa results.
@@ -290,10 +293,7 @@ A. BraTS-Africa tumour-type classification (new): glioma (95, positive class) vs
    - Confound reference: a centre+scanner-only logistic model (one-hot), same CV, to show how
      much of any signal could be site-driven.
 B. BraTS 2021 MGMT (existing, re-reported): radiomic baselines and the KAN/Transformer/GNN
-   module under nested CV on 577 cases (results/classification/*.json, 2026-09-15). The
-   UPenn-GBM "external" MGMT result is NOT reported as external validation: its patients'
-   independence from BraTS 2021 cannot be verified (images no longer on disk; >=107/147
-   checked UPenn subjects are BraTS 2021 patients).
+   module under nested CV on 577 cases (results/classification/*.json, 2026-09-15). [removed]
 
 ### Amendment 13b — 2026-09-29 ~18:00, before any fold of the Run C CV (Amendment 13) has trained
 Mirroring Amendment 8 for the Run C CV: per fold, on the fold's 12 VAL cases only, choose

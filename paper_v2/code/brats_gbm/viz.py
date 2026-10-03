@@ -1,6 +1,6 @@
 """Shared figure rendering for segmentation results.
 
-Both cohorts render through this module so the BraTS2021 and UPenn-GBM figures
+All cohorts render through this module so their figures
 are guaranteed identical in palette, layout and typography rather than merely
 similar.
 

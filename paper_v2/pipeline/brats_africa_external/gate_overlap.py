@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PROTOCOL_v2 gate: patient overlap with BraTS 2021, by the UPenn method
+"""PROTOCOL_v2 gate: patient overlap with BraTS 2021, by tumour-mask overlap and image correlation
 (best WT-mask Dice over all 1251 BraTS 2021 cases at 2x downsampling, then FLAIR
 intensity correlation on that match). Flag = corr > 0.8 or WT Dice > 0.9."""
 import glob, os, numpy as np, nibabel as nib, pandas as pd

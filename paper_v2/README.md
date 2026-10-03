@@ -56,7 +56,6 @@ Run D2 (Run D + a second 200-epoch cosine cycle).
 | `brats_africa_cv/` | pooled per-case CV results (95 gliomas), per-fold selections, `compare_cv.txt` |
 | `classification/` | AUC summaries and full results |
 | `efficiency/` | benchmark outputs |
-| `upenn_overlap/` | UPenn-GBM ↔ BraTS 2021 subject matching (≥107/147 duplicates) |
 
 File-name key: `final_ep253` = base model; `runA`, `runC`, `runD`, `runD2` = variants above;
 `_rot` = with 90° rotation test-time augmentation; `ensemble`, `ensemble2`, `ensemble3` =

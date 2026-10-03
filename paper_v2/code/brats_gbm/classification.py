@@ -1,7 +1,7 @@
 """Shared cross-validation machinery for the molecular-marker classifiers.
 
-Both the UPenn IDH1 and BraTS MGMT analyses run through this, so their
-protocols are identical by construction and their numbers are comparable.
+All classification analyses (BraTS 2021 MGMT, BraTS-Africa glioma vs other
+neoplasm) run through this, so their protocols are identical by construction and their numbers are comparable.
 
 Protocol
 --------

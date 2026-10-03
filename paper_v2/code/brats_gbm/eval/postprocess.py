@@ -19,8 +19,7 @@ inside the TC mask whenever ET came out empty, forcing a non-empty prediction.
 That is backwards: it can only ever convert correct empty predictions into
 zeros. `min_volume` is the standard BraTS rule and does the opposite. Both are
 implemented here so the choice can be made on validation data rather than
-asserted — see scripts/evaluate_upenn.py, which sweeps them and reports which
-one validation selected.
+asserted (the post-processing sweep on validation selects between them).
 """
 from __future__ import annotations
 
@@ -40,9 +39,8 @@ ET_POLICIES = ("min_volume", "none", "rescue")
 # "components" keeps every component above the voxel floor. "largest" keeps only
 # the single largest, on the prior that a case carries one tumour.
 #
-# This matters most for cross-cohort transfer. BraTS images are skull-stripped
-# and UPenn-GBM images are not, so a BraTS-trained model applied to UPenn tends
-# to light up skull and scalp as whole tumour: distant false-positive components
+# This matters most under domain shift, where a model can light up distant
+# structures as whole tumour: false-positive components
 # that cost little Dice individually but wreck HD95, which is a distance metric
 # and is dominated by the furthest error. Restricting to the largest component
 # removes them.

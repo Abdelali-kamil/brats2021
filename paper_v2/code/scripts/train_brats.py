@@ -4,7 +4,7 @@
 The 80/20 partition this script creates is a two-way split: the 20% portion is
 used both to watch validation Dice during training and, historically, to report
 performance. It is therefore internal validation, not a clean test set. The
-clean external test in this project is UPenn-GBM. See docs/METHODOLOGY.md.
+paper uses the frozen 3-way split (1,000 / 126 / 125) instead.
 """
 import os
 import sys

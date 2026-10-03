@@ -1,1 +1,1 @@
-"""BraTS2021 + UPenn-GBM segmentation and molecular-marker classification."""
+"""Wavelet U-Net++: BraTS 2021 / BraTS-Africa segmentation and segmentation-based classification."""

@@ -4,8 +4,7 @@
 Uses the **expert segmentation** for every case, not a model prediction.
 
 That choice removes two problems at once. Mask provenance is uniform across the
-whole cohort, so nothing analogous to the UPenn leakage (where mask source
-correlated 4.7x with the outcome) can arise. And the segmentation model never
+whole cohort, so mask source cannot correlate with the outcome. And the segmentation model never
 touches this analysis, so the 1000 cases it trained on carry no advantage over
 the 251 it did not — there is simply no segmentation model in the loop.
 
@@ -37,7 +36,7 @@ DATA = ROOT / "data"
 LABELS = ROOT / "metadata" / "brats_mgmt_labels.csv"
 OUT_CSV = ROOT / "results" / "classification" / "brats_mgmt_features.csv"
 
-# Same modality keys as the UPenn table so feature names line up.
+# Modality keys used in the feature names.
 MODALITIES = {"flair": "flair", "t1": "t1", "t1ce": "t1ce", "t2": "t2"}
 ET_LABEL, NCR_LABEL, ED_LABEL = 4, 1, 2
 

@@ -48,14 +48,6 @@ cross-validated fine-tuning (64 train / 12 validation / 19 test per fold, every 
 
 Secondary and post-hoc analyses are marked as such in the paper and in the protocol.
 
-## UPenn-GBM is not an external test set for BraTS 2021 models
-
-At least **107 of the 147** UPenn-GBM subjects are the same patients and scans as BraTS 2021 cases
-(identical tumour masks; FLAIR correlation 0.89–0.98); 84 of them fall in our BraTS training split.
-The matching table is in `paper_v2/results/upenn_overlap/`. UPenn-GBM results reported in the first
-phase of this project (see `docs/README_v1.md`) are therefore **not** external results and should
-not be cited as such.
-
 ## Layout
 
 ```
@@ -66,7 +58,6 @@ paper_v2/
   protocol/        PROTOCOL_v2.md — the dated, pre-registered protocol with every amendment
   splits/          BraTS 2021 validation/test case lists; BraTS-Africa CV folds
   results/         per-case and summary results for every model, the selection files, statistics
-brats_gbm/, scripts/, baselines/, docs/, results/   first project phase (kept for the record)
 ```
 
 ## Data

@@ -15,7 +15,7 @@ If prediction volumes were saved, pass --pred-dir and --gt-dir as well and it
 also counts connected components on the worst cases and estimates how much
 HD95 would improve if components below a size floor were dropped -- the
 question `brats_gbm/eval/postprocess.py` already has the machinery for, but
-whose thresholds were tuned for UPenn cross-cohort transfer rather than BraTS.
+whose thresholds were not tuned for BraTS.
 """
 from __future__ import annotations
 

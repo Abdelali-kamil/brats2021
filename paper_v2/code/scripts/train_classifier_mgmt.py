@@ -3,7 +3,7 @@
 
 Cohort: 577 cases with both imaging and an MGMT label, features derived from
 expert segmentations. Classes are near balanced (301 methylated / 276 not),
-which makes this a far better-powered analysis than the UPenn IDH1 one — no
+which makes this a well-powered analysis — no
 rare-event problem, no mask-provenance confound, and no segmentation model in
 the loop.
 

@@ -12,14 +12,14 @@ produced those numbers used a different operating point, a different crop, or
 different preprocessing.
 
 Numbers that cannot be regenerated should not be published, so this script
-recomputes them under exactly the protocol used for UPenn-GBM: full-volume
+recomputes them under one fixed protocol: full-volume
 sliding-window inference at 128^3 with 64^3 stride, Gaussian blending, 8-flip
 test-time augmentation, and the shared post-processing.
 
 Operating point
 ---------------
-Fixed at 0.5, the value `train_brats.py` validates against. Unlike UPenn there
-is no separate partition to tune on — the 251-case partition doubled as the
+Fixed at 0.5, the value `train_brats.py` validates against. In the historical
+two-way split there is no separate partition to tune on — the 251-case partition doubled as the
 model-selection set during training — so tuning a threshold here would be
 fitting on the data being reported. It is used as specified, not selected.
 
@@ -94,8 +94,8 @@ def main() -> None:
                     help="whole-tumour component policy (see brats_gbm/eval/postprocess.py)")
     ap.add_argument("--floor-mult", type=float, default=1.0,
                     help="scale the per-region component floors. The shipped "
-                         "values (ET 5 / TC 20 / WT 50 voxels) were tuned for "
-                         "UPenn transfer, not BraTS.")
+                         "values (ET 5 / TC 20 / WT 50 voxels) were not tuned "
+                         "for BraTS.")
     ap.add_argument("--cases", default=None, metavar="FILE_OR_LIST",
                     help="restrict to these case ids: a comma-separated list or "
                          "a file with one id per line. --limit takes the first N, "

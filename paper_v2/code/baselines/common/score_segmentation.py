@@ -47,9 +47,9 @@ def to_regions(seg: np.ndarray, et_label: int) -> np.ndarray:
 
 
 def case_id(path: Path) -> str:
-    """Best-effort case id, matching BraTS or UPenn naming, else the file stem."""
+    """Best-effort case id from BraTS-style naming, else the file stem."""
     for pat in (r"BraTS\d{4}_\d{3,6}",   # BraTS2021_00001 (case number, not the year)
-                r"sub-?\d+"):             # UPenn sub-251 / sub251
+                r"sub-?\d+"):             # sub-251 / sub251 style
         m = re.search(pat, path.name)
         if m:
             return m.group(0)

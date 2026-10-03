@@ -1,13 +1,11 @@
 # Imaging data — hundreds of GB, obtained separately (see README)
 /data/
-/upenn_data/
-/upenn_nifti/
 
 # Model weights
 /checkpoints/
 *.pth
 
-# Cached probability maps produced by scripts/evaluate_upenn.py
+# Cached probability maps
 /cache/
 
 # Run logs
