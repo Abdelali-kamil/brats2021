@@ -1,4 +1,4 @@
-candidates (val Dice): {'ep253': 0.8911, 'runA': 0.8928, 'runC': 0.8994, 'runC_rot': 0.9027, 'runD': 0.8937, 'runD_rot': 0.894, 'ensemble': 0.9024628717413145, 'ensemble2': 0.9072638052544012} -> headline by VAL: ensemble2
+candidates (val Dice): {'ep253': 0.8911, 'runA': 0.8928, 'runC': 0.8994, 'runC_rot': 0.9027, 'runD': 0.8937, 'runD_rot': 0.894, 'runD2': 0.8978, 'runD2_rot': 0.8991, 'ensemble': 0.9024628717413145, 'ensemble2': 0.9072638052544012, 'ensemble3': 0.9078717954500087} -> headline by VAL: ensemble3
      model   n     ET     TC     WT   Mean
      ep253 125 0.8644 0.8865 0.9075 0.8861
       runA 125 0.8491 0.8777 0.8842 0.8704
@@ -6,8 +6,11 @@ candidates (val Dice): {'ep253': 0.8911, 'runA': 0.8928, 'runC': 0.8994, 'runC_r
   runC_rot 125 0.8726 0.9058 0.9143 0.8976
       runD 125 0.8576 0.8917 0.9210 0.8901
   runD_rot 125 0.8673 0.8923 0.9220 0.8939
+     runD2 125 0.8683 0.8950 0.9180 0.8937
+ runD2_rot 125 0.8694 0.8954 0.9180 0.8942
   ensemble 125 0.8721 0.9064 0.9140 0.8975
  ensemble2 125 0.8728 0.8989 0.9209 0.8975
+ ensemble3 125 0.8748 0.9016 0.9206 0.8990
    nnU-Net 125 0.8808 0.9178 0.9316 0.9101
 Swin UNETR 125 0.8756 0.9077 0.9252 0.9028
 
@@ -60,19 +63,43 @@ runD_rot vs Swin UNETR Dice_Mean -0.0090 [-0.0193, +0.0010] p=0.01058  wins 48/1
 runD_rot vs Swin UNETR Dice_ET   -0.0083 [-0.0259, +0.0136] p=0.0002515  wins 40/125  no sig. difference
 runD_rot vs Swin UNETR Dice_TC   -0.0154 [-0.0349, +0.0023] p=0.2649  wins 59/125  no sig. difference
 runD_rot vs Swin UNETR Dice_WT   -0.0032 [-0.0093, +0.0026] p=0.4833  wins 62/125  no sig. difference
-ensemble vs nnU-Net    Dice_Mean -0.0126 [-0.0196, -0.0038] p=5.855e-14  wins 19/125  ours WORSE
-ensemble vs nnU-Net    Dice_ET   -0.0087 [-0.0225, +0.0116] p=2.169e-10  wins 30/125  no sig. difference
-ensemble vs nnU-Net    Dice_TC   -0.0113 [-0.0205, -0.0033] p=9.69e-06  wins 43/125  ours WORSE
-ensemble vs nnU-Net    Dice_WT   -0.0176 [-0.0248, -0.0115] p=3.024e-12  wins 21/125  ours WORSE
-ensemble vs Swin UNETR Dice_Mean -0.0053 [-0.0210, +0.0067] p=0.8486  wins 64/125  no sig. difference
-ensemble vs Swin UNETR Dice_ET   -0.0035 [-0.0238, +0.0191] p=0.9047  wins 57/125  no sig. difference
-ensemble vs Swin UNETR Dice_TC   -0.0012 [-0.0190, +0.0122] p=0.004278  wins 78/125  no sig. difference
-ensemble vs Swin UNETR Dice_WT   -0.0112 [-0.0266, +0.0002] p=0.2148  wins 61/125  no sig. difference
-ensemble2 vs nnU-Net    Dice_Mean -0.0125 [-0.0216, -0.0055] p=6.281e-12  wins 21/125  ours WORSE
-ensemble2 vs nnU-Net    Dice_ET   -0.0080 [-0.0269, +0.0138] p=2.842e-08  wins 35/125  no sig. difference
-ensemble2 vs nnU-Net    Dice_TC   -0.0189 [-0.0324, -0.0083] p=3.733e-05  wins 48/125  ours WORSE
-ensemble2 vs nnU-Net    Dice_WT   -0.0107 [-0.0160, -0.0060] p=2.185e-07  wins 33/125  ours WORSE
-ensemble2 vs Swin UNETR Dice_Mean -0.0053 [-0.0222, +0.0072] p=0.1197  wins 75/125  no sig. difference
-ensemble2 vs Swin UNETR Dice_ET   -0.0029 [-0.0263, +0.0215] p=0.5953  wins 64/125  no sig. difference
-ensemble2 vs Swin UNETR Dice_TC   -0.0088 [-0.0316, +0.0101] p=0.005552  wins 80/125  no sig. difference
-ensemble2 vs Swin UNETR Dice_WT   -0.0043 [-0.0183, +0.0057] p=0.03656  wins 75/125  no sig. difference
+runD2  vs nnU-Net    Dice_Mean -0.0163 [-0.0255, -0.0075] p=2.744e-14  wins 20/125  ours WORSE
+runD2  vs nnU-Net    Dice_ET   -0.0125 [-0.0282, +0.0086] p=2.833e-14  wins 15/125  no sig. difference
+runD2  vs nnU-Net    Dice_TC   -0.0228 [-0.0355, -0.0117] p=3.93e-12  wins 21/125  ours WORSE
+runD2  vs nnU-Net    Dice_WT   -0.0137 [-0.0247, -0.0040] p=2.994e-09  wins 31/125  ours WORSE
+runD2  vs Swin UNETR Dice_Mean -0.0091 [-0.0208, +0.0014] p=0.2148  wins 56/125  no sig. difference
+runD2  vs Swin UNETR Dice_ET   -0.0073 [-0.0253, +0.0147] p=0.007739  wins 52/125  no sig. difference
+runD2  vs Swin UNETR Dice_TC   -0.0127 [-0.0322, +0.0053] p=0.5258  wins 61/125  no sig. difference
+runD2  vs Swin UNETR Dice_WT   -0.0072 [-0.0170, +0.0006] p=0.9597  wins 57/125  no sig. difference
+runD2_rot vs nnU-Net    Dice_Mean -0.0158 [-0.0263, -0.0048] p=3.054e-13  wins 24/125  ours WORSE
+runD2_rot vs nnU-Net    Dice_ET   -0.0114 [-0.0281, +0.0105] p=5.439e-14  wins 15/125  no sig. difference
+runD2_rot vs nnU-Net    Dice_TC   -0.0224 [-0.0363, -0.0096] p=9.172e-12  wins 23/125  ours WORSE
+runD2_rot vs nnU-Net    Dice_WT   -0.0137 [-0.0272, -0.0017] p=6.677e-09  wins 30/125  ours WORSE
+runD2_rot vs Swin UNETR Dice_Mean -0.0086 [-0.0204, +0.0016] p=0.3523  wins 57/125  no sig. difference
+runD2_rot vs Swin UNETR Dice_ET   -0.0062 [-0.0238, +0.0154] p=0.01504  wins 51/125  no sig. difference
+runD2_rot vs Swin UNETR Dice_TC   -0.0123 [-0.0314, +0.0060] p=0.6092  wins 61/125  no sig. difference
+runD2_rot vs Swin UNETR Dice_WT   -0.0072 [-0.0177, +0.0009] p=0.8447  wins 61/125  no sig. difference
+ensemble vs nnU-Net    Dice_Mean -0.0126 [-0.0196, -0.0040] p=5.855e-14  wins 19/125  ours WORSE
+ensemble vs nnU-Net    Dice_ET   -0.0087 [-0.0227, +0.0119] p=2.169e-10  wins 30/125  no sig. difference
+ensemble vs nnU-Net    Dice_TC   -0.0113 [-0.0205, -0.0034] p=9.69e-06  wins 43/125  ours WORSE
+ensemble vs nnU-Net    Dice_WT   -0.0176 [-0.0247, -0.0116] p=3.024e-12  wins 21/125  ours WORSE
+ensemble vs Swin UNETR Dice_Mean -0.0053 [-0.0214, +0.0067] p=0.8486  wins 64/125  no sig. difference
+ensemble vs Swin UNETR Dice_ET   -0.0035 [-0.0234, +0.0185] p=0.9047  wins 57/125  no sig. difference
+ensemble vs Swin UNETR Dice_TC   -0.0012 [-0.0187, +0.0122] p=0.004278  wins 78/125  no sig. difference
+ensemble vs Swin UNETR Dice_WT   -0.0112 [-0.0266, +0.0003] p=0.2148  wins 61/125  no sig. difference
+ensemble2 vs nnU-Net    Dice_Mean -0.0125 [-0.0214, -0.0056] p=6.281e-12  wins 21/125  ours WORSE
+ensemble2 vs nnU-Net    Dice_ET   -0.0080 [-0.0266, +0.0143] p=2.842e-08  wins 35/125  no sig. difference
+ensemble2 vs nnU-Net    Dice_TC   -0.0189 [-0.0326, -0.0084] p=3.733e-05  wins 48/125  ours WORSE
+ensemble2 vs nnU-Net    Dice_WT   -0.0107 [-0.0159, -0.0060] p=2.185e-07  wins 33/125  ours WORSE
+ensemble2 vs Swin UNETR Dice_Mean -0.0053 [-0.0221, +0.0073] p=0.1197  wins 75/125  no sig. difference
+ensemble2 vs Swin UNETR Dice_ET   -0.0029 [-0.0260, +0.0222] p=0.5953  wins 64/125  no sig. difference
+ensemble2 vs Swin UNETR Dice_TC   -0.0088 [-0.0313, +0.0099] p=0.005552  wins 80/125  no sig. difference
+ensemble2 vs Swin UNETR Dice_WT   -0.0043 [-0.0187, +0.0056] p=0.03656  wins 75/125  no sig. difference
+ensemble3 vs nnU-Net    Dice_Mean -0.0110 [-0.0184, -0.0049] p=2.67e-11  wins 23/125  ours WORSE
+ensemble3 vs nnU-Net    Dice_ET   -0.0060 [-0.0221, +0.0150] p=2.801e-08  wins 35/125  no sig. difference
+ensemble3 vs nnU-Net    Dice_TC   -0.0161 [-0.0283, -0.0065] p=2.53e-05  wins 44/125  ours WORSE
+ensemble3 vs nnU-Net    Dice_WT   -0.0110 [-0.0167, -0.0061] p=1.864e-07  wins 33/125  ours WORSE
+ensemble3 vs Swin UNETR Dice_Mean -0.0038 [-0.0201, +0.0085] p=0.04913  wins 75/125  no sig. difference
+ensemble3 vs Swin UNETR Dice_ET   -0.0008 [-0.0228, +0.0228] p=0.3246  wins 68/125  no sig. difference
+ensemble3 vs Swin UNETR Dice_TC   -0.0060 [-0.0283, +0.0135] p=0.004481  wins 78/125  no sig. difference
+ensemble3 vs Swin UNETR Dice_WT   -0.0045 [-0.0189, +0.0056] p=0.0213  wins 80/125  no sig. difference

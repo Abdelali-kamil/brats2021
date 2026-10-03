@@ -25,9 +25,10 @@ Mean Dice with 95% bootstrap CI.
 | nnU-Net | 31.2 M | 0.881 | 0.918 | 0.932 | 0.910 [0.888, 0.929] |
 | Swin UNETR | 62.2 M | 0.876 | 0.908 | 0.925 | 0.903 [0.885, 0.918] |
 | Wavelet U-Net++, best single model (3D DWT, rotation TTA) | 34.0 M | 0.873 | 0.906 | 0.914 | 0.898 [0.873, 0.917] |
-| Wavelet U-Net++, validation-selected ensemble | 78.4 M | 0.873 | 0.899 | 0.921 | 0.898 [0.872, 0.918] |
+| Wavelet U-Net++, validation-selected ensemble (headline) | 78.3 M | 0.875 | 0.902 | 0.921 | 0.899 [0.874, 0.919] |
 
-Statistically on par with Swin UNETR, below nnU-Net. All candidates (including those that did
+Statistically on par with Swin UNETR, below nnU-Net. After adaptation on BraTS-Africa our model is statistically
+level with nnU-Net (+0.002 [−0.011, +0.016]; ours higher on 35/95 cases). All candidates (including those that did
 worse) are in `paper_v2/results/brats2021/`.
 
 **BraTS-Africa** (95 gliomas, verified to share no patient with BraTS 2021), 5-fold
@@ -38,7 +39,8 @@ cross-validated fine-tuning (64 train / 12 validation / 19 test per fold, every 
 | nnU-Net | 0.848 | 0.885 [0.854, 0.909] |
 | Swin UNETR | 0.836 | 0.877 [0.852, 0.898] |
 | Wavelet U-Net++, start model fixed in advance | 0.782 | 0.848 [0.814, 0.876] |
-| Wavelet U-Net++, z-score + instance norm + strong aug. (secondary) | 0.810 | 0.883 [0.854, 0.907] |
+| Wavelet U-Net++, z-score + instance norm + strong aug., 200 epochs (secondary) | 0.810 | 0.883 [0.854, 0.907] |
+| Wavelet U-Net++, same, 400 epochs (secondary) | 0.803 | 0.887 [0.858, 0.911] |
 
 **Classification** (BraTS-Africa, glioma vs other neoplasm, 146 subjects, repeated stratified
 5-fold CV): AUC 0.762 [0.679, 0.836] from our own zero-shot masks, 0.826 with expert masks,

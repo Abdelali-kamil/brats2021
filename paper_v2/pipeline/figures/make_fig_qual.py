@@ -10,15 +10,16 @@ from brats_gbm.eval import postprocess as pp
 R = "/home/kamilabdelali/brats2021/results/brats"; DATA = "/mnt/data1/kamil_research/data/brats2021"; OUT = os.path.dirname(os.path.abspath(__file__))
 # headline = best VAL candidate among those evaluated
 cand = {}
-for t in ("runC", "runC_rot"):
+for t in ("runA", "runC", "runC_rot", "runD", "runD_rot", "runD2", "runD2_rot"):
     f = f"{E}/eval_v2/work_{t}/selection.txt"
     if os.path.exists(f) and os.path.exists(f"{R}/per_case_{t}_test_tuned_recomputed.csv"):
         x = open(f).read().split(); cand[t] = dict(val=float(x[1]), members=[t], wt=x[2], mult=int(x[3]), et=int(x[5]))
-f = f"{E}/eval_v2/ensemble/selection.json"
-if os.path.exists(f) and os.path.exists(f"{R}/per_case_ensemble_test_tuned_recomputed.csv"):
-    s = json.load(open(f)); cand["ensemble"] = dict(val=s["val_dice"], members=s["combo"].split("+"), wt=s["wt_policy"], mult=s["floor_mult"], et=s["et_min_volume"])
+for e in ("ensemble", "ensemble2", "ensemble3"):
+    f = f"{E}/eval_v2/{e}/selection.json"
+    if os.path.exists(f) and os.path.exists(f"{R}/per_case_{e}_test_tuned_recomputed.csv"):
+        s = json.load(open(f)); cand[e] = dict(val=s["val_dice"], members=s["combo"].split("+"), wt=s["wt_policy"], mult=s["floor_mult"], et=s["et_min_volume"])
 H = max(cand, key=lambda k: cand[k]["val"]); h = cand[H]; print("headline:", H, h)
-PROB = {"ep253": f"{E}/eval_ep253/probs_test"} | {t: f"{E}/eval_v2/work_{t}/probs_test" for t in ("runA", "runC", "runC_rot")}
+PROB = {"ep253": f"{E}/eval_ep253/probs_test"} | {t: f"{E}/eval_v2/work_{t}/probs_test" for t in ("runA", "runC", "runC_rot", "runD", "runD_rot", "runD2", "runD2_rot")}
 per = pd.read_csv(f"{R}/per_case_{H}_test_tuned_recomputed.csv").set_index("Patient_ID")
 nn = pd.read_csv(f"{R}/nnunet_test_per_case.csv"); nn = nn.set_index(nn.columns[-1] if "Patient_ID" not in nn else "Patient_ID")
 sw = pd.read_csv(f"{R}/swin_unetr_test_per_case.csv"); sw = sw.set_index(sw.columns[-1] if "Patient_ID" not in sw else "Patient_ID")

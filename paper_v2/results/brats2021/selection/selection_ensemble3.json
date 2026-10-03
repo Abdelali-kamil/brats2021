@@ -1,0 +1,7 @@
+{
+ "combo": "ep253+runC_rot+runD2_rot",
+ "wt_policy": "components",
+ "floor_mult": 1,
+ "et_min_volume": 100,
+ "val_dice": 0.9078717954500087
+}

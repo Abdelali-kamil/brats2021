@@ -1,0 +1,1 @@
+runD2_rot 0.8991 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runD2/runD2_best_evaluated.pth 100 both+rot
