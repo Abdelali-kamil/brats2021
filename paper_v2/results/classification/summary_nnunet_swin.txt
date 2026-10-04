@@ -1,0 +1,5 @@
+nnunet / logreg                    AUC 0.770 [0.688, 0.845]  bal.acc 0.689  sens 0.686  spec 0.692  (n=146, glioma=95)
+nnunet / random_forest             AUC 0.749 [0.665, 0.829]  bal.acc 0.675  sens 0.638  spec 0.712  (n=146, glioma=95)
+swin / logreg                      AUC 0.767 [0.686, 0.843]  bal.acc 0.688  sens 0.633  spec 0.743  (n=146, glioma=95)
+swin / random_forest               AUC 0.760 [0.680, 0.835]  bal.acc 0.669  sens 0.593  spec 0.745  (n=146, glioma=95)
+centre+scanner only / logreg       AUC 0.484 [0.384, 0.588]  bal.acc 0.612  sens 0.449  spec 0.775  (n=146, glioma=95)
