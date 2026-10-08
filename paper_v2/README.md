@@ -53,6 +53,7 @@ Run D2 (Run D + a second 200-epoch cosine cycle).
 | `brats2021/per_case/` | per-case Dice/HD95 on the 125 test cases for every candidate and all five baselines |
 | `brats2021/selection/` | each candidate's validation-selected settings and validation Dice |
 | `brats2021/compare_test.txt` | paired bootstrap + Wilcoxon against nnU-Net, Swin UNETR, SegResNet, UNETR and 3D U-Net |
+| `brats2021/extra_paired_stats.txt` | the remaining paired statistics quoted in the text (HD95 comparisons, Run C vs base, Run D vs Run C zero-shot, adaptation-gain differences); script `pipeline/brats2021/extra_paired_stats.py` |
 | `brats_africa_zeroshot/` | per-case zero-shot results on the 146 BraTS-Africa subjects |
 | `brats_africa_cv/` | pooled per-case CV results (95 gliomas), per-fold selections, `compare_cv.txt` |
 | `classification/` | AUC summaries and full results |
@@ -66,7 +67,7 @@ validation-selected ensembles; `_sel` = per-fold validation-selected option in t
 
 | Method | Params | Mean Dice [95% CI] | HD95 (mm) | BraTS-Africa zero-shot (95 gliomas) |
 |---|---|---|---|---|
-| nnU-Net | 31.2 M | 0.910 [0.888, 0.929] | 2.89 | 0.848 |
+| nnU-Net | 31.2 M | 0.910 [0.887, 0.929] | 2.89 | 0.848 |
 | SegResNet | 4.7 M | 0.905 [0.884, 0.923] | 3.59 | 0.846 |
 | Swin UNETR | 62.2 M | 0.903 [0.885, 0.918] | 4.10 | 0.836 |
 | **Wavelet U-Net++ (Ensemble 3, headline)** | 78.3 M | 0.899 [0.874, 0.919] | 3.96 | 0.803 (Run D2) |

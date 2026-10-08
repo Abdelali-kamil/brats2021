@@ -22,12 +22,12 @@ Mean Dice with 95% bootstrap CI.
 
 | Method | Params | ET | TC | WT | Mean Dice [95% CI] |
 |---|---|---|---|---|---|
-| nnU-Net | 31.2 M | 0.881 | 0.918 | 0.932 | 0.910 [0.888, 0.929] |
+| nnU-Net | 31.2 M | 0.881 | 0.918 | 0.932 | 0.910 [0.887, 0.929] |
 | SegResNet | 4.7 M | 0.871 | 0.917 | 0.927 | 0.905 [0.884, 0.923] |
 | Swin UNETR | 62.2 M | 0.876 | 0.908 | 0.925 | 0.903 [0.885, 0.918] |
 | UNETR | 102.2 M | 0.851 | 0.877 | 0.914 | 0.881 [0.860, 0.899] |
 | 3D U-Net | 16.3 M | 0.832 | 0.858 | 0.896 | 0.862 [0.835, 0.887] |
-| Wavelet U-Net++, best single model (3D DWT, rotation TTA) | 34.0 M | 0.873 | 0.906 | 0.914 | 0.898 [0.873, 0.917] |
+| Wavelet U-Net++, best single model (3D DWT, rotation TTA) | 34.0 M | 0.873 | 0.906 | 0.914 | 0.898 [0.873, 0.916] |
 | Wavelet U-Net++, validation-selected ensemble (headline) | 78.3 M | 0.875 | 0.902 | 0.921 | 0.899 [0.874, 0.919] |
 
 Statistically on par with Swin UNETR and SegResNet, better than UNETR and 3D U-Net, below nnU-Net. After adaptation on BraTS-Africa our model is statistically

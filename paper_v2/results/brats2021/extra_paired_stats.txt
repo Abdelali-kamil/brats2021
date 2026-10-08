@@ -1,0 +1,16 @@
+== BraTS 2021 test (125)
+Run A - base, Dice_Mean                              n=125 mean -0.015787 [-0.036877, -0.000341]  median +0.000368  first higher on 65/125  Wilcoxon p=0.483
+Run C - base, Dice_Mean                              n=125 mean +0.011113 [+0.004142, +0.018894]  median +0.002486  first higher on 79/125  Wilcoxon p=0.00131
+Run C - base, HD95 (mm)                              n=124 mean -1.214607 [-2.526662, +0.031295]  median +0.000000  first higher on 41/124  Wilcoxon p=0.00535
+Run C rot - Swin UNETR, Dice_Mean (median)           n=125 mean -0.005275 [-0.020683, +0.006604]  median +0.000260  first higher on 64/125  Wilcoxon p=0.887
+runC - Swin UNETR, HD95 (mm)                         n=124 mean -0.406803 [-1.368677, +0.357754]  median +0.000000  first higher on 57/124  Wilcoxon p=0.255
+runC - nnU-Net, HD95 (mm)                            n=124 mean +0.870004 [+0.146848, +1.821786]  median +0.138071  first higher on 68/124  Wilcoxon p=1.79e-07
+runC_rot - Swin UNETR, HD95 (mm)                     n=124 mean -0.367136 [-1.368808, +0.448247]  median +0.000000  first higher on 54/124  Wilcoxon p=0.686
+runC_rot - nnU-Net, HD95 (mm)                        n=124 mean +0.909671 [+0.172936, +1.862086]  median +0.080228  first higher on 64/124  Wilcoxon p=2.98e-06
+ens3 - Swin UNETR, HD95 (mm)                         n=124 mean -0.151793 [-1.321445, +1.017088]  median +0.000000  first higher on 52/124  Wilcoxon p=0.574
+ens3 - nnU-Net, HD95 (mm)                            n=124 mean +1.125014 [+0.218901, +2.268341]  median +0.007849  first higher on 62/124  Wilcoxon p=4.56e-05
+== BraTS-Africa zero-shot, 95 gliomas
+Run D rot - Run C rot, Dice_Mean                     n= 95 mean +0.031722 [+0.002590, +0.063334]  median +0.003976  first higher on 51/95  Wilcoxon p=0.175
+== BraTS-Africa CV, adaptation gain (adapted - own zero-shot), difference between methods
+gain ours (Run A) - gain nnU-Net                     n= 95 mean +0.029870 [+0.009299, +0.051222]  median +0.016150  first higher on 55/95  Wilcoxon p=0.00569
+gain ours (Run A) - gain Swin UNETR                  n= 95 mean +0.025191 [+0.004101, +0.047070]  median +0.008339  first higher on 53/95  Wilcoxon p=0.0199
