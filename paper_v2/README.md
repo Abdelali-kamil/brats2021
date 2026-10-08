@@ -56,7 +56,7 @@ Run D2 (Run D + a second 200-epoch cosine cycle).
 | `brats2021/extra_paired_stats.txt` | the remaining paired statistics quoted in the text (HD95 comparisons, Run C vs base, Run D vs Run C zero-shot, adaptation-gain differences); script `pipeline/brats2021/extra_paired_stats.py` |
 | `brats_africa_zeroshot/` | per-case zero-shot results on the 146 BraTS-Africa subjects |
 | `brats_africa_cv/` | pooled per-case CV results (95 gliomas), per-fold selections, `compare_cv.txt` |
-| `classification/` | AUC summaries and full results |
+| `classification/` | AUC summaries and full results (BraTS-Africa); `classification/brats2021_mgmt/` BraTS 2021 MGMT results quoted in the paper |
 | `efficiency/` | benchmark outputs |
 
 File-name key: `final_ep253` = base model; `runA`, `runC`, `runD`, `runD2` = variants above;
