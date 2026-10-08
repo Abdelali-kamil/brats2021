@@ -352,3 +352,74 @@ User: "do best and make for me good results". Run D was cut to 200 epochs (Amend
 ### Amendment 18 — 2026-10-04, classification with the baselines' masks (post-hoc, disclosed; written before any of these results exist)
 For a comparison table the user asked for, the Amendment-14A classification is repeated, unchanged (same 54 features, same LR C=0.1 / RF 500, same repeated stratified 5-fold ×10, same bootstrap, same seeds), with the zero-shot BraTS-Africa masks of nnU-Net and Swin UNETR (their saved predictions, label conventions as in their scoring). Reported whatever the result, marked post-hoc; the primary classification result stays ours (Run C masks).
 - **Amendment 18 result (2026-10-04)**: AUC (LR / RF) with nnU-Net masks AUC 0.770 [0.688, 0.845] / AUC 0.749; with Swin UNETR masks AUC 0.767 [0.686, 0.843] / AUC 0.760. Mask alignment verified (WT Dice identical to their scoring).
+
+### Amendment 19 — 2026-10-04, three more baselines on our split (written before any of them is trained)
+User: "compare with 5 papers, not just 2" -> train 3D U-Net, SegResNet and UNETR on the frozen split, so that five
+published methods (with nnU-Net and Swin UNETR) are compared head-to-head. Added after our results were known; disclosed.
+- Code: authors' official implementations (repos and versions in ~/code_for_papers/README.txt): 3D U-Net = pytorch-3dunet
+  UNet3D default config (original is Caffe); SegResNet = MONAI SegResNet with the official MONAI BraTS tutorial config
+  (blocks_down 1-2-2-4, init_filters 16, dropout 0.2); UNETR = MONAI UNETR with the official UNETR config (feature 16,
+  hidden 768, mlp 3072, 12 heads, perceptron patch embedding, instance norm, residual blocks).
+- Training: the SAME official BRATS21 pipeline as the Swin UNETR baseline (copy in ~/brats2021/baselines/extra3/BRATS21, only
+  the network switch added): datalist_frozen_train1000_val126.json, channel order flair/t1ce/t1/t2, AdamW 1e-4, warmup-cosine,
+  300 epochs, batch 1, validation every 25 epochs, AMP; crops 96^3 (3D U-Net, UNETR, as Swin) and 224x224x144 with squared
+  Dice loss (smooth_nr 0, smooth_dr 1e-5) for SegResNet (its tutorial's crop and loss). Checkpoint = best-by-validation (model.pt).
+- Inference/scoring exactly as Swin UNETR: sliding window at the training crop, overlap 0.6, sigmoid > 0.5, no TTA, no
+  post-processing; BraTS 2021 test (125) scored ONCE with score_swin_test.py; BraTS-Africa zero-shot with score_labelmaps.py;
+  classification with the Amendment-14A pipeline on their zero-shot masks. No BraTS-Africa fine-tuning CV for these three.
+- All three reported whatever the result, including if they beat Wavelet U-Net++.
+- Compatibility fix (2026-10-04, before training): trainer.py casts the bool label masks to float before the loss (MONAI 1.6 squared Dice cannot take bool); identical values for the plain Dice loss.
+
+### Amendment 20 — 2026-10-04 ~15:00, same-conditions comparison of all six methods (user: "the comparison must be conducted under the same conditions, so that the results are fair and directly comparable"); written before any result below exists. Post-hoc with respect to earlier results; disclosed (†).
+Why: so far the methods were compared at their own default inference — nnU-Net with mirroring TTA; Swin UNETR / 3D U-Net /
+SegResNet / UNETR with no TTA (overlap 0.6, constant blending); ours as Ensemble 3 (3 models, 8 flips x 2 axis orders x 2
+rotations, validation-chosen post-processing). Those results are kept and reported unchanged (headline rule unchanged:
+Ensemble 3). This amendment adds ONE identical evaluation setting for all six methods.
+- Methods: nnU-Net, Swin UNETR, 3D U-Net, SegResNet, UNETR, Wavelet U-Net++.
+- Training: as already done/under way (same 1,000 cases, each method's official recipe). Identical training is not possible
+  without changing the methods (nnU-Net configures its own training); stated as a limitation.
+- Inference "M" (identical for all): ONE model (no ensembles); NO test-time augmentation of any kind (no flips, rotations or
+  axis-order averaging; ours uses the single "nib" axis order, its historical single-pass mode); sliding window at the
+  network's own training patch size with 50% overlap and Gaussian blending (ours 128^3 stride 64; nnU-Net tile_step_size 0.5,
+  use_gaussian; MONAI models overlap 0.5, mode "gaussian"); per-region sigmoid > 0.5; label map with the same nesting for all
+  (WT->2, TC->1, ET->4, i.e. ET within TC within WT); NO post-processing of any kind. Each model keeps its own input
+  preprocessing (part of the trained model).
+- Checkpoint, chosen on the same 126 validation cases for all: MONAI models = their best-by-validation model.pt (unchanged);
+  nnU-Net = checkpoint_final or checkpoint_best, whichever has the higher mean validation Dice under M; ours = the single
+  model with the highest mean validation Dice under M among base (ep253), Run A, Run C, Run D, Run D2 (each at its
+  best-by-validation checkpoint). Validation Dice under M is computed for all six and reported.
+- BraTS 2021 test (125): each method under M scored ONCE, same scorer (brats_gbm.eval.score_case via score_swin_test.py);
+  ours vs each baseline: paired bootstrap (10,000, seed 0) + Wilcoxon, mean and per region, Dice and HD95.
+- BraTS-Africa zero-shot: all 146 subjects under M, score_labelmaps.py; glioma (95) primary.
+- Classification: Amendment-14A pipeline (54 features; LR C=0.1, RF 500 trees; stratified 5-fold x10) on each method's
+  zero-shot masks under M.
+- BraTS-Africa fine-tuning CV: 3D U-Net, SegResNet and UNETR are fine-tuned on the same folds (cv/cv_split.json) with the
+  Swin UNETR fine-tuning recipe (150 epochs, validation every 5, start = their BraTS model). Then the adapted fold models of
+  all six (nnU-Net, Swin UNETR, ours from the start model chosen above, the three new) are inferred under M on their
+  fold-test gliomas and pooled over the 95. If our chosen model has no existing CV, its CV is run with our existing recipe.
+- Reported whatever the result, including where baselines beat Wavelet U-Net++. The six-method table under M becomes the
+  main comparison table; the default-setting results stay in their tables.
+- Correction found while preparing this: the nnU-Net predictions (test and BraTS-Africa) were made with nnUNetv2_predict,
+  which does NOT apply post-processing (nnUNetv2_apply_postprocessing was never run; nnU-Net derives it only from 5-fold CV,
+  which a "fold all" model lacks). The paper's phrase "its native post-processing" is wrong and will be corrected.
+- Addendum (2026-10-04 ~15:00, user decision before any setting-M result existed): the paper stays as it was — headline
+  Ensemble 3 (0.899) and the comparison at each method's default settings (the three Amendment-19 baselines are added there
+  with their default settings). The setting-M runs are completed and published in the code repository only, as a
+  supplementary same-conditions analysis; they do not enter the paper. The nnU-Net post-processing correction stays.
+- Addendum 2 (2026-10-04 ~15:00): user "just complete the other 3 papers" -> setting-M runs STOPPED before any TEST or
+  BraTS-Africa result under M existed (only VAL for the base model, 0.8897, and inference of some adapted CV folds had run;
+  kept on disk, unused). Only Amendment 19 continues: 3D U-Net, SegResNet, UNETR at their default settings.
+
+### Amendment 19b — 2026-10-04 ~15:05, training-collapse rule for the three Amendment-19 baselines (written before any of them is evaluated)
+Observed: 3D U-Net (AMP, the pipeline default) trained normally to epoch 23 (loss 0.31-0.35), then collapsed at ~iteration 330
+of epoch 24 to all-background output (loss ~0.8-1.0; first validation, epoch 24: Dice 0.0/0.0/0.0) and did not recover.
+Sudden death under fp16 mixed precision; pytorch-3dunet's own trainer is fp32. Rule, identical for all three networks:
+- A training run is "collapsed" if any validation reports Dice < 0.05 for all three regions, or if it ends with best
+  validation Dice < 0.5. A collapsed run is stopped and retrained ONCE from scratch in fp32 (--noamp), all else unchanged.
+- 3D U-Net is therefore retrained in fp32 now. SegResNet and UNETR start with AMP (pipeline default) under the same rule.
+- Collapsed runs are kept (moved to ~/delete/unused_checkpoints), not used, and reported in the repository.
+Unchanged: data, split, optimiser, schedule, epochs, crops, losses, checkpoint rule, inference and scoring (Amendment 19).
+- **Amendment 19/19b result (2026-10-06)**: all three trained (3D U-Net and UNETR in fp32 after AMP collapses; SegResNet with AMP).
+  BraTS 2021 test (125, scored once): SegResNet 0.905 [0.884, 0.923], UNETR 0.881 [0.860, 0.899], 3D U-Net 0.862 [0.835, 0.887].
+  Ensemble 3 vs each: SegResNet -0.006 [-0.015, +0.002] (n.s.), UNETR +0.018 [+0.002, +0.033], 3D U-Net +0.037 [+0.022, +0.053].
+  BraTS-Africa zero-shot gliomas: SegResNet 0.846, UNETR 0.799, 3D U-Net 0.805. Classification AUC (LR): 0.772 / 0.748 / 0.771.

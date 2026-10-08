@@ -24,7 +24,7 @@ log "gate: $(python3 -c "import pandas as p;d=p.read_csv('$X/cases_gated.csv');p
 [ -s results/per_case_swin_unetr.csv ] || { log "Swin UNETR"; $S infer_swin_external.py >> $X/swin.log 2>&1 || die swin
   $T score_labelmaps.py swin_unetr $X/pred_swin brats21 >> $X/swin.log 2>&1 || die "swin score"; }
 
-# nnU-Net (fold all, checkpoint_final, native mirroring TTA, native post-processing)
+# nnU-Net (fold all, checkpoint_final, native mirroring TTA; nnUNetv2_predict applies no post-processing)
 if [ ! -s results/per_case_nnunet.csv ]; then
   log "nnU-Net"
   export nnUNet_raw=/mnt/data1/kamil_research/baselines/nnunet/nnUNet_raw

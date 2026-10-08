@@ -29,6 +29,7 @@ the reported Swin UNETR checkpoint is its best-by-validation epoch, as for every
 | `scripts/evaluate_brats.py` | evaluation (`--axis-order`, `--rot-tta`, `--save-probs`) |
 | `scripts/infer_probs.py` | probability maps for the BraTS-Africa CV folds |
 | `baselines/` | nnU-Net and Swin UNETR set-up, conversion and scoring on the identical split |
+| `baselines/extra3/` | SegResNet, UNETR and 3D U-Net: the official MONAI BraTS 2021 pipeline (as for Swin UNETR) with only the network switched (`BRATS21/models_extra3.py`, `main.py --model_name`), test inference and the run queues (Amendments 19/19b) |
 
 Model variants: base (2D DWT, F=16, 10.4 M); Run A (+ deep supervision); Run C (3D DWT, F=24,
 34.0 M); Run D (Run C + InstanceNorm + z-score inputs + strong augmentation, 200 epochs);
@@ -49,9 +50,9 @@ Run D2 (Run D + a second 200-epoch cosine cycle).
 
 | Folder | Content |
 |---|---|
-| `brats2021/per_case/` | per-case Dice/HD95 on the 125 test cases for every candidate and both baselines |
+| `brats2021/per_case/` | per-case Dice/HD95 on the 125 test cases for every candidate and all five baselines |
 | `brats2021/selection/` | each candidate's validation-selected settings and validation Dice |
-| `brats2021/compare_test.txt` | paired bootstrap + Wilcoxon against nnU-Net and Swin UNETR |
+| `brats2021/compare_test.txt` | paired bootstrap + Wilcoxon against nnU-Net, Swin UNETR, SegResNet, UNETR and 3D U-Net |
 | `brats_africa_zeroshot/` | per-case zero-shot results on the 146 BraTS-Africa subjects |
 | `brats_africa_cv/` | pooled per-case CV results (95 gliomas), per-fold selections, `compare_cv.txt` |
 | `classification/` | AUC summaries and full results |
@@ -60,3 +61,17 @@ Run D2 (Run D + a second 200-epoch cosine cycle).
 File-name key: `final_ep253` = base model; `runA`, `runC`, `runD`, `runD2` = variants above;
 `_rot` = with 90° rotation test-time augmentation; `ensemble`, `ensemble2`, `ensemble3` =
 validation-selected ensembles; `_sel` = per-fold validation-selected option in the CV.
+
+## Baselines on the identical split (BraTS 2021 test, 125 cases, scored once)
+
+| Method | Params | Mean Dice [95% CI] | HD95 (mm) | BraTS-Africa zero-shot (95 gliomas) |
+|---|---|---|---|---|
+| nnU-Net | 31.2 M | 0.910 [0.888, 0.929] | 2.89 | 0.848 |
+| SegResNet | 4.7 M | 0.905 [0.884, 0.923] | 3.59 | 0.846 |
+| Swin UNETR | 62.2 M | 0.903 [0.885, 0.918] | 4.10 | 0.836 |
+| **Wavelet U-Net++ (Ensemble 3, headline)** | 78.3 M | 0.899 [0.874, 0.919] | 3.96 | 0.803 (Run D2) |
+| UNETR | 102.2 M | 0.881 [0.860, 0.899] | 5.39 | 0.799 |
+| 3D U-Net | 16.3 M | 0.862 [0.835, 0.887] | 7.45 | 0.805 |
+
+3D U-Net and UNETR collapsed under mixed precision in their first runs and were retrained once in full precision
+under the rule of Amendment 19b, fixed before any of the three was evaluated.

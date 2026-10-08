@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 sys.path.insert(0, "/home/kamilabdelali/brats2021")
 from brats_gbm.features import all_region_features, znorm
 X = "/mnt/data1/kamil_research/experiments/external_africa"; D = "/mnt/data1/kamil_research/experiments/classification_africa"
-SRC = sys.argv[1]; PRED = {"nnunet": "pred_nnunet", "swin": "pred_swin"}[SRC]
+SRC = sys.argv[1]; PRED = {"nnunet": "pred_nnunet", "swin": "pred_swin", "unet3d": "pred_unet3d", "segresnet": "pred_segresnet", "unetr": "pred_unetr"}[SRC]   # Amendment 19 adds the last three
 cases = pd.read_csv(f"{X}/cases.csv")
 def regions(lab):
     if SRC == "nnunet":            # nnU-Net region labels: WT={1,2,3}, TC={2,3}, ET={3}
@@ -26,7 +26,7 @@ def one(i):
 if __name__ == "__main__":
     with ProcessPoolExecutor(8) as ex: rows = list(ex.map(one, range(len(cases))))
     df = pd.DataFrame(rows)
-    ref = pd.read_csv(f"{X}/results/per_case_{'nnunet' if SRC == 'nnunet' else 'swin_unetr'}.csv").set_index("Patient_ID").Dice_WT
+    ref = pd.read_csv(f"{X}/results/per_case_{ {'nnunet': 'nnunet', 'swin': 'swin_unetr'}.get(SRC, SRC) }.csv").set_index("Patient_ID").Dice_WT
     chk = df.set_index("case")._wt_dice_check
     print(SRC, "alignment: mean |WT Dice here - WT Dice in scoring| =", round(float((chk - ref.loc[chk.index]).abs().mean()), 4))
     df.drop(columns=["_wt_dice_check"]).to_csv(f"{D}/features_{SRC}.csv", index=False)

@@ -6,8 +6,8 @@ Code, pre-registered evaluation protocol, data splits and per-case results for t
 > A Pre-Registered Evaluation on BraTS 2021 and BraTS-Africa**
 
 Wavelet U-Net++ is a 3D U-Net++ whose encoder replaces pooling with a fixed Haar discrete
-wavelet transform (DWT). It is compared with **nnU-Net** and **Swin UNETR** trained on the
-identical split, scored by identical code, with paired bootstrap confidence intervals and
+wavelet transform (DWT). It is compared with five published methods — **nnU-Net**, **Swin UNETR**, **SegResNet**, **UNETR** and
+**3D U-Net** — trained on the identical split, scored by identical code, with paired bootstrap confidence intervals and
 Wilcoxon tests. Every model-selection and post-processing choice was fixed on validation data
 before the corresponding test result existed; the dated protocol and all of its amendments are in
 [`paper_v2/protocol/PROTOCOL_v2.md`](paper_v2/protocol/PROTOCOL_v2.md).
@@ -23,11 +23,14 @@ Mean Dice with 95% bootstrap CI.
 | Method | Params | ET | TC | WT | Mean Dice [95% CI] |
 |---|---|---|---|---|---|
 | nnU-Net | 31.2 M | 0.881 | 0.918 | 0.932 | 0.910 [0.888, 0.929] |
+| SegResNet | 4.7 M | 0.871 | 0.917 | 0.927 | 0.905 [0.884, 0.923] |
 | Swin UNETR | 62.2 M | 0.876 | 0.908 | 0.925 | 0.903 [0.885, 0.918] |
+| UNETR | 102.2 M | 0.851 | 0.877 | 0.914 | 0.881 [0.860, 0.899] |
+| 3D U-Net | 16.3 M | 0.832 | 0.858 | 0.896 | 0.862 [0.835, 0.887] |
 | Wavelet U-Net++, best single model (3D DWT, rotation TTA) | 34.0 M | 0.873 | 0.906 | 0.914 | 0.898 [0.873, 0.917] |
 | Wavelet U-Net++, validation-selected ensemble (headline) | 78.3 M | 0.875 | 0.902 | 0.921 | 0.899 [0.874, 0.919] |
 
-Statistically on par with Swin UNETR, below nnU-Net. After adaptation on BraTS-Africa our model is statistically
+Statistically on par with Swin UNETR and SegResNet, better than UNETR and 3D U-Net, below nnU-Net. After adaptation on BraTS-Africa our model is statistically
 level with nnU-Net (+0.002 [−0.011, +0.016]; ours higher on 35/95 cases). All candidates (including those that did
 worse) are in `paper_v2/results/brats2021/`.
 

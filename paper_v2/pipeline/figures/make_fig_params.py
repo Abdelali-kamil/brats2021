@@ -7,10 +7,14 @@ matplotlib.use("Agg"); import matplotlib.pyplot as plt
 sys.path.insert(0, "/mnt/data1/kamil_research/experiments/eval_v2/code")
 from brats_gbm.eval.stats import summarise_segmentation
 R = "/home/kamilabdelali/brats2021/results/brats"; OUT = os.path.dirname(os.path.abspath(__file__))
-FAM = {"nnU-Net": ("#2a78d6", "s"), "Swin UNETR": ("#eb6834", "^"), "Wavelet U-Net++ (ours)": ("#1baf7a", "o")}
+FAM = {"nnU-Net": ("#2a78d6", "s"), "Swin UNETR": ("#eb6834", "^"), "Wavelet U-Net++ (ours)": ("#1baf7a", "o"),
+       "other baselines": ("#7a7873", "D")}   # Amendment 19: SegResNet, UNETR, 3D U-Net (neutral grey, diamond)
 P = {"ep253": 10.40, "runA": 10.40, "runC": 33.96, "runC_rot": 33.96, "runD2": 33.96, "runD2_rot": 33.96}   # parameters (M) per candidate
 ROWS = [("nnU-Net", "nnU-Net", "nnunet_test_per_case.csv", 31.2),
         ("Swin UNETR", "Swin UNETR", "swin_unetr_test_per_case.csv", 62.2),
+        ("other baselines", "SegResNet", "segresnet_test_per_case.csv", 4.70),
+        ("other baselines", "UNETR", "unetr_test_per_case.csv", 102.24),
+        ("other baselines", "3D U-Net", "unet3d_test_per_case.csv", 16.32),
         ("Wavelet U-Net++ (ours)", "base (2D DWT)", "per_case_final_ep253_test_tuned_recomputed.csv", P["ep253"]),
         ("Wavelet U-Net++ (ours)", "+ deep supervision", "per_case_runA_test_tuned_recomputed.csv", P["runA"]),
         ("Wavelet U-Net++ (ours)", "+ 3D DWT, F=24", "per_case_runC_test_tuned_recomputed.csv", P["runC"]),
@@ -31,14 +35,17 @@ for fam, lab, f, prm in ROWS:
     m = s[s.region == "MEAN"].iloc[0]; pts.append((fam, lab, prm, m.dice, m.dice_lo, m.dice_hi))
     print(f"{lab:32s} {prm:6.1f} M  {m.dice:.4f} [{m.dice_lo:.4f}, {m.dice_hi:.4f}]")
 plt.rcParams.update({"font.size": 8, "font.family": "DejaVu Sans", "axes.spines.top": False, "axes.spines.right": False})
-fig, ax = plt.subplots(figsize=(4.0, 3.0), dpi=300)
+fig, ax = plt.subplots(figsize=(5.2, 3.2), dpi=300)
 ax.grid(axis="y", color="#e4e3df", lw=0.5); ax.set_axisbelow(True)
 seen = {}; BARS = []; TEXTS = []
 # label position (data coords), alignment, and whether a leader line joins label and point
 LAB = {"nnU-Net": (31.2, 0.9315, "center", "bottom", False),
        "Swin UNETR": (60.6, 0.9028, "right", "center", False),
-       "base (2D DWT)": (2.0, 0.9255, "left", "center", True),
-       "+ deep supervision": (15.0, 0.8455, "left", "center", True),
+       "SegResNet": (1.0, 0.9262, "left", "center", False),
+       "UNETR": (102.24, 0.9010, "center", "bottom", False),
+       "3D U-Net": (17.6, 0.8620, "left", "center", False),
+       "base (2D DWT)": (13.0, 0.9180, "left", "center", True),
+       "+ deep supervision": (11.2, 0.8325, "center", "top", False),
        "+ 3D DWT, F=24": (39.5, 0.8545, "left", "center", True),
        "+ rotation TTA": (39.5, 0.8665, "left", "center", True),
        "Run D2 (z-score, strong aug.)": (39.5, 0.8785, "left", "center", True),
@@ -53,9 +60,9 @@ for fam, lab, prm, dc, lo, hi in pts:
         ax.plot([tx - (0.6 if ha == "left" else -0.6), x], [ty, dc], color="#b5b3ad", lw=0.5, zorder=1)
     TEXTS.append(ax.text(tx, ty, lab, ha=ha, va=va, fontsize=6.5, color="#52514e", zorder=4))
 ax.set_xlabel("Parameters (M)"); ax.set_ylabel("BraTS 2021 test mean Dice")
-ax.set_xlim(0, 92); ax.set_ylim(0.834, 0.936)
+ax.set_xlim(0, 112); ax.set_ylim(0.822, 0.936)
 from matplotlib.lines import Line2D
-ax.legend(handles=[Line2D([], [], marker=FAM[k][1], color=FAM[k][0], ls="", ms=5, label=k) for k in FAM], loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3, frameon=False, fontsize=6.5, handletextpad=0.3, columnspacing=1.0)
+ax.legend(handles=[Line2D([], [], marker=FAM[k][1], color=FAM[k][0], ls="", ms=5, label=k) for k in FAM], loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=4, frameon=False, fontsize=6.5, handletextpad=0.3, columnspacing=1.0)
 fig.tight_layout(); fig.canvas.draw(); rr = fig.canvas.get_renderer()
 bb = [t.get_window_extent(rr).expanded(1.02, 1.1) for t in TEXTS]; ab = ax.get_window_extent(rr); bad = 0
 for i in range(len(bb)):

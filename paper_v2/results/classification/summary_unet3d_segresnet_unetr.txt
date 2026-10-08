@@ -1,0 +1,7 @@
+unet3d / logreg                    AUC 0.771 [0.682, 0.850]  bal.acc 0.704  sens 0.748  spec 0.659  (n=146, glioma=95)
+unet3d / random_forest             AUC 0.766 [0.681, 0.843]  bal.acc 0.684  sens 0.679  spec 0.688  (n=146, glioma=95)
+segresnet / logreg                 AUC 0.772 [0.688, 0.845]  bal.acc 0.672  sens 0.633  spec 0.712  (n=146, glioma=95)
+segresnet / random_forest          AUC 0.745 [0.662, 0.825]  bal.acc 0.656  sens 0.597  spec 0.716  (n=146, glioma=95)
+unetr / logreg                     AUC 0.748 [0.662, 0.824]  bal.acc 0.661  sens 0.651  spec 0.671  (n=146, glioma=95)
+unetr / random_forest              AUC 0.762 [0.682, 0.834]  bal.acc 0.686  sens 0.620  spec 0.753  (n=146, glioma=95)
+centre+scanner only / logreg       AUC 0.484 [0.384, 0.588]  bal.acc 0.612  sens 0.449  spec 0.775  (n=146, glioma=95)
