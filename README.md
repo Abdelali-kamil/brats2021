@@ -1,9 +1,9 @@
 # Wavelet U-Net++ for brain tumour segmentation and segmentation-based classification
 
-Code, pre-registered evaluation protocol, data splits and per-case results for the paper
+Code, pre-specified evaluation protocol, data splits and per-case results for the paper
 
 > **Wavelet U-Net++ for Brain Tumour Segmentation and Segmentation-Based Classification:
-> A Pre-Registered Evaluation on BraTS 2021 and BraTS-Africa**
+> A Pre-Specified Evaluation on BraTS 2021 and BraTS-Africa**
 
 Wavelet U-Net++ is a 3D U-Net++ whose encoder replaces pooling with a fixed Haar discrete
 wavelet transform (DWT). It is compared with five published methods — **nnU-Net**, **Swin UNETR**, **SegResNet**, **UNETR** and
@@ -58,7 +58,7 @@ paper_v2/
   code/            brats_gbm package + training/evaluation scripts used for the paper
   pipeline/        orchestration and analysis scripts as they were run (BraTS 2021, BraTS-Africa,
                    classification, efficiency, figures)
-  protocol/        PROTOCOL_v2.md — the dated, pre-registered protocol with every amendment
+  protocol/        PROTOCOL_v2.md — the dated, pre-specified protocol with every amendment
   splits/          BraTS 2021 validation/test case lists; BraTS-Africa CV folds
   results/         per-case and summary results for every model, the selection files, statistics
 ```
