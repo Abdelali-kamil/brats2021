@@ -1,0 +1,17 @@
+ours_runC      logreg        AUC 0.762
+expert         logreg        AUC 0.826
+ours_runD_rot  logreg        AUC 0.738
+nnunet         logreg        AUC 0.770
+swin           logreg        AUC 0.767
+segresnet      logreg        AUC 0.772
+unetr          logreg        AUC 0.748
+unet3d         logreg        AUC 0.771
+
+paired patient-level bootstrap (2,000) of AUC differences
+  expert        - ours_runC     [logreg] +0.064 [-0.009, +0.137]
+  ours_runD_rot - ours_runC     [logreg] -0.024 [-0.087, +0.040]
+  nnunet        - ours_runC     [logreg] +0.008 [-0.053, +0.073]
+  swin          - ours_runC     [logreg] +0.005 [-0.054, +0.067]
+  segresnet     - ours_runC     [logreg] +0.009 [-0.045, +0.068]
+  unetr         - ours_runC     [logreg] -0.014 [-0.076, +0.048]
+  unet3d        - ours_runC     [logreg] +0.009 [-0.048, +0.067]

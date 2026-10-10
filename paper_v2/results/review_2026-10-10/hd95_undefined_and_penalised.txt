@@ -1,0 +1,35 @@
+penalty = image diagonal 373.13 mm
+     model  undef ET  undef TC  undef WT  cases all undef  cases in mean  HD95 reported  HD95 penalised
+   nnU-Net         1         0         0                0            125           2.89            3.83
+Swin UNETR         1         0         0                0            125           4.10            5.05
+ SegResNet         1         0         0                0            125           3.59            4.52
+     UNETR         1         0         0                0            125           5.39            6.33
+  3D U-Net         2         1         0                0            125           7.45           10.27
+      base         1         2         1                1            124           4.92            8.85
+     Run A         3         3         0                0            125           6.78           11.94
+     Run C         1         1         1                1            124           3.71            6.66
+ Run C rot         1         1         1                1            124           3.75            6.70
+     Ens 1         1         1         1                1            124           3.82            6.77
+     Run D         1         0         0                0            125           4.77            5.75
+ Run D rot         0         0         0                0            125           4.71            4.71
+    Run D2         0         0         0                0            125           4.71            4.71
+Run D2 rot         0         0         0                0            125           4.80            4.80
+     Ens 2         1         1         1                1            124           4.35            7.30
+     Ens 3         1         1         1                1            124           3.96            6.92
+
+paired, Ensemble 3 / Run C rot minus baseline, PENALISED HD95 (all 125 cases)
+  Ens 3     - nnU-Net      +3.09 [  -1.73,  +10.19] mm  Wilcoxon p=2.88e-05
+  Ens 3     - Swin UNETR   +1.87 [  -3.00,   +9.12] mm  Wilcoxon p=0.699
+  Ens 3     - SegResNet    +2.40 [  -2.37,   +9.50] mm  Wilcoxon p=0.0062
+  Ens 3     - UNETR        +0.59 [  -4.30,   +7.82] mm  Wilcoxon p=1.59e-05
+  Ens 3     - 3D U-Net     -3.35 [  -6.85,   +0.03] mm  Wilcoxon p=5.68e-09
+  Run C rot - nnU-Net      +2.88 [  -1.88,   +9.96] mm  Wilcoxon p=1.82e-06
+  Run C rot - Swin UNETR   +1.65 [  -3.16,   +8.85] mm  Wilcoxon p=0.569
+  Run C rot - SegResNet    +2.19 [  -2.80,   +9.46] mm  Wilcoxon p=0.0014
+  Run C rot - UNETR        +0.38 [  -4.66,   +7.71] mm  Wilcoxon p=0.000165
+  Run C rot - 3D U-Net     -3.57 [  -7.05,   -0.25] mm  Wilcoxon p=1.17e-08
+  Run C     - nnU-Net      +2.84 [  -1.92,   +9.95] mm  Wilcoxon p=1.09e-07
+  Run C     - Swin UNETR   +1.62 [  -3.21,   +8.84] mm  Wilcoxon p=0.196
+  Run C     - SegResNet    +2.15 [  -2.82,   +9.45] mm  Wilcoxon p=0.000259
+  Run C     - UNETR        +0.34 [  -4.70,   +7.66] mm  Wilcoxon p=0.000341
+  Run C     - 3D U-Net     -3.61 [  -7.08,   -0.31] mm  Wilcoxon p=7.25e-09

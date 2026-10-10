@@ -423,3 +423,29 @@ Unchanged: data, split, optimiser, schedule, epochs, crops, losses, checkpoint r
   BraTS 2021 test (125, scored once): SegResNet 0.905 [0.884, 0.923], UNETR 0.881 [0.860, 0.899], 3D U-Net 0.862 [0.835, 0.887].
   Ensemble 3 vs each: SegResNet -0.006 [-0.015, +0.002] (n.s.), UNETR +0.018 [+0.002, +0.033], 3D U-Net +0.037 [+0.022, +0.053].
   BraTS-Africa zero-shot gliomas: SegResNet 0.846, UNETR 0.799, 3D U-Net 0.805. Classification AUC (LR): 0.772 / 0.748 / 0.771.
+
+### Amendment 21 — 2026-10-10 ~11:04 (+08:00), non-wavelet control for Run C (peer review; written before the control is trained)
+Reason: an external review noted that no U-Net++ with conventional downsampling was trained, so the contribution of the
+wavelet transform itself is not isolated. One control is added (user decision 2026-10-10: run the control; no extra seeds,
+no no-TTA test scoring).
+- Candidate `ctrl_maxpool3d`: Run C's frozen code snapshot (experiments/runC_dwt3d/code, copied) with ONE change, the
+  encoder downsampling: `downsample="maxpool3d_matched"` = 2x2x2 max-pooling followed by a 1x1x1 convolution C -> 8C, so every
+  encoder block receives the same tensor shape as with the 3D Haar DWT (8C channels at half resolution); decoder upsampling
+  (2,2,2). Everything else as Run C: width F=24, deep supervision, BatchNorm, min-max inputs, standard augmentation,
+  focal-BCE + Dice loss, AdamW 2e-4, 400-epoch cosine, batch 2 x accumulation 4, AMP, seed 42, same split, centre-crop
+  validation, checkpoint = best validation epoch. Parameters 34,355,451 vs 33,960,891 for Run C (+394,560, +1.2%: the
+  projections); GFLOPs and runtime are measured and reported, not assumed equal.
+- Evaluation identical to Run C: eval_run.sh (VAL in both axis orders, Amendment-5 30-setting post-processing grid, highest
+  VAL Dice selects order and setting; TEST scored ONCE); no rotation TTA, so the comparator is Run C without rotation TTA.
+  BraTS-Africa zero-shot (95 gliomas primary, 51 other neoplasms separately) with the BraTS-VAL-selected settings.
+- Primary comparison (fixed now): Run C minus control, mean Dice on the 125 BraTS 2021 test cases, paired bootstrap (10,000,
+  fresh seed-0 generator) 95% CI + two-sided Wilcoxon. Interpretation: the wavelet transform is said to improve BraTS 2021
+  Dice only if the CI excludes zero in Run C's favour; if the CI includes zero, "no difference detected" (equivalence is not
+  tested); if it favours the control, that is reported as such. Secondary: per-region Dice, HD95 (defined-only and with
+  undefined values = 373.13 mm), BraTS-Africa zero-shot glioma mean Dice (same tests). One seed only.
+- Reported in the paper and the repository whatever it shows. It does not change the headline (Ensemble 3) or any existing
+  result, and the control is not added to any ensemble search.
+- Collapse rule as Amendment 19b (validation Dice < 0.05 for all regions, or best < 0.5 -> retrain once from scratch in
+  fp32). Crashes: resume from _last.pth, as for Run C.
+- Code check before launch: all five evaluated checkpoints (base, Runs A, C, D, D2) load strictly and give bit-identical
+  outputs with the extended model code; 48/48 tests pass; control peak memory 12.6 GiB at batch 2, 128^3, AMP.

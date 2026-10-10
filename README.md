@@ -3,13 +3,14 @@
 Code, pre-specified evaluation protocol, data splits and per-case results for the paper
 
 > **Wavelet U-Net++ for Brain Tumour Segmentation and Segmentation-Based Classification:
-> A Pre-Specified Evaluation on BraTS 2021 and BraTS-Africa**
+> Benchmarking and Domain-Shift Evaluation on BraTS 2021 and BraTS-Africa**
 
 Wavelet U-Net++ is a 3D U-Net++ whose encoder replaces pooling with a fixed Haar discrete
 wavelet transform (DWT). It is compared with five published methods — **nnU-Net**, **Swin UNETR**, **SegResNet**, **UNETR** and
-**3D U-Net** — trained on the identical split, scored by identical code, with paired bootstrap confidence intervals and
-Wilcoxon tests. Every model-selection and post-processing choice was fixed on validation data
-before the corresponding test result existed; the dated protocol and all of its amendments are in
+**3D U-Net** — each trained with its own recipe on the identical split and scored by identical code, with paired bootstrap
+confidence intervals and Wilcoxon tests. Checkpoint, post-processing and ensemble selection used validation data, and each
+candidate was scored on the test set once; the test split had been scored during earlier development of the base model, and
+analyses added later are marked as exploratory. The dated protocol and all of its amendments are in
 [`paper_v2/protocol/PROTOCOL_v2.md`](paper_v2/protocol/PROTOCOL_v2.md).
 
 Everything for the paper is in [`paper_v2/`](paper_v2/) — see [`paper_v2/README.md`](paper_v2/README.md)
@@ -30,11 +31,13 @@ Mean Dice with 95% bootstrap CI.
 | Wavelet U-Net++, best single model (3D DWT, rotation TTA) | 34.0 M | 0.873 | 0.906 | 0.914 | 0.898 [0.873, 0.916] |
 | Wavelet U-Net++, validation-selected ensemble (headline) | 78.3 M | 0.875 | 0.902 | 0.921 | 0.899 [0.874, 0.919] |
 
-Statistically on par with Swin UNETR and SegResNet, better than UNETR and 3D U-Net, below nnU-Net. After adaptation on BraTS-Africa our model is statistically
-level with nnU-Net (+0.002 [−0.011, +0.016]; ours higher on 35/95 cases). All candidates (including those that did
+Not significantly different from Swin UNETR and SegResNet (equivalence was not tested), better than UNETR and 3D U-Net,
+below nnU-Net. After adaptation on BraTS-Africa our model does not differ significantly from nnU-Net (+0.002 [−0.011, +0.016];
+ours higher on 35/95 cases). Mean HD95 leaves out undefined values (one empty mask); with them set to 373.13 mm the headline
+ensemble's HD95 is 6.92 mm (nnU-Net 3.83) — see `paper_v2/results/review_2026-10-10/`. All candidates (including those that did
 worse) are in `paper_v2/results/brats2021/`.
 
-**BraTS-Africa** (95 gliomas, verified to share no patient with BraTS 2021), 5-fold
+**BraTS-Africa** (95 gliomas; no overlap with BraTS 2021 detected by our screening), 5-fold
 cross-validated fine-tuning (64 train / 12 validation / 19 test per fold, every subject tested once):
 
 | Method | Zero-shot | Fine-tuned (CV) |
@@ -47,9 +50,20 @@ cross-validated fine-tuning (64 train / 12 validation / 19 test per fold, every 
 
 **Classification** (BraTS-Africa, glioma vs other neoplasm, 146 subjects, repeated stratified
 5-fold CV): AUC 0.762 [0.679, 0.836] from our own zero-shot masks, 0.826 with expert masks,
-0.484 from centre and scanner alone.
+0.484 from centre and scanner alone. Paired differences in AUC between mask sources (expert vs ours +0.064
+[−0.009, +0.137]; each baseline vs ours −0.014 to +0.009) are not significant.
 
 Secondary and post-hoc analyses are marked as such in the paper and in the protocol.
+
+## Peer-review revision (2026-10-10)
+
+- `paper_v2/pipeline/review_2026-10-10/` and `paper_v2/results/review_2026-10-10/`: analyses added after an external
+  review, on existing results only — undefined and penalised HD95, paired AUC differences between mask sources, and three
+  small checks (Run A without its two collapsed cases, Run D2 vs Run D zero-shot, Run C vs base with penalised HD95).
+- **Non-wavelet control (Amendment 21, running):** Run C retrained with 2×2×2 max-pooling and a 1×1×1 projection in place
+  of the 3D Haar DWT, everything else identical. The design, the comparison and its interpretation rule were written in the
+  protocol before training started; scripts in `paper_v2/pipeline/brats2021/ctrl_maxpool3d/`. Its result will be added here
+  whatever it shows.
 
 ## Layout
 

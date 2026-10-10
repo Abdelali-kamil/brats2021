@@ -229,8 +229,10 @@ def main():
     parser.add_argument("--tversky-et", type=float, default=0.0,
                         help="weight of a focal-Tversky term on the ET channel (0 = off)")
     parser.add_argument("--save-dir", type=str, default="checkpoints")
+    parser.add_argument("--no-amp", action="store_true",
+                        help="train in full precision (only for a retrain under the collapse rule, Amendment 21)")
     parser.add_argument("--downsample", type=str, default="dwt",
-                        choices=["dwt", "dwt3d", "maxpool_matched"],
+                        choices=["dwt", "dwt3d", "maxpool_matched", "maxpool3d_matched"],
                         help="encoder downsampling operator; 'maxpool_matched' is "
                              "the Table IX ablation baseline (variant A)")
     parser.add_argument("--data-root", default=None,
@@ -357,7 +359,7 @@ def main():
         )
         scheduler_desc = "ReduceLROnPlateau(mode=max, factor=0.5, patience=3, min_lr=1e-7)"
 
-    use_amp = (device.type == "cuda")
+    use_amp = (device.type == "cuda") and not args.no_amp   # --no-amp: fp32 retrain under the collapse rule (Amendment 21)
     scaler = torch.amp.GradScaler("cuda") if use_amp else None
 
     start_epoch = args.start_epoch

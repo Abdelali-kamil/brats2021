@@ -104,15 +104,15 @@ class WaveletUNetPlusPlus(nn.Module):
         # base_filters=16 is the published width; larger values scale every stage.
         nb_filter = [base_filters * m for m in (1, 2, 4, 8, 16)]
         self.deep_supervision = deep_supervision
-        if downsample not in ("dwt", "maxpool_matched", "dwt3d"):
+        if downsample not in ("dwt", "maxpool_matched", "dwt3d", "maxpool3d_matched"):
             raise ValueError(
-                "downsample must be 'dwt', 'dwt3d' or 'maxpool_matched', got %r" % (downsample,))
+                "downsample must be 'dwt', 'dwt3d', 'maxpool_matched' or 'maxpool3d_matched', got %r" % (downsample,))
         self.downsample = downsample
         # Sub-band count: the 2D DWT emits 4C channels, the 3D DWT 8C.
-        k = 8 if downsample == "dwt3d" else 4
+        k = 8 if downsample in ("dwt3d", "maxpool3d_matched") else 4
         self.dwt = DWT() if downsample == "dwt" else (DWT3D() if downsample == "dwt3d" else None)
         self.expand = None if downsample in ("dwt", "dwt3d") else nn.ModuleList(
-            [nn.Conv3d(c, c * 4, kernel_size=1) for c in nb_filter[:4]])
+            [nn.Conv3d(c, c * k, kernel_size=1) for c in nb_filter[:4]])
         # --- Encoders ---
         self.conv0_0 = ConvBlock(in_channels, nb_filter[0], norm=norm)
         self.conv1_0 = ConvBlock(nb_filter[0]*k, nb_filter[1], norm=norm)
@@ -130,7 +130,7 @@ class WaveletUNetPlusPlus(nn.Module):
         self.conv0_3 = ConvBlock(nb_filter[0]*3 + nb_filter[1], nb_filter[0], norm=norm)
         self.conv1_3 = ConvBlock(nb_filter[1]*3 + nb_filter[2], nb_filter[1], norm=norm)
         self.conv0_4 = ConvBlock(nb_filter[0]*4 + nb_filter[1], nb_filter[0], norm=norm)
-        self.up = nn.Upsample(scale_factor=(2, 2, 2) if downsample == "dwt3d" else (1, 2, 2),
+        self.up = nn.Upsample(scale_factor=(2, 2, 2) if downsample in ("dwt3d", "maxpool3d_matched") else (1, 2, 2),
                               mode='trilinear', align_corners=True)
         self.final = nn.Conv3d(nb_filter[0], n_classes, kernel_size=1)
         # Created only when deep supervision is on, so the default state_dict
@@ -143,8 +143,13 @@ class WaveletUNetPlusPlus(nn.Module):
         """Halve the two in-plane axes (4C channels), or all three for dwt3d (8C)."""
         if self.downsample in ("dwt", "dwt3d"):
             return self.dwt(x)
-        # Depth is kept at full resolution to match the DWT, hence (1, 2, 2).
-        pooled = F.max_pool3d(x, kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        if self.downsample == "maxpool3d_matched":
+            # Non-wavelet control for the 3D DWT (PROTOCOL_v2 Amendment 21): 2x2x2 max-pooling,
+            # then a 1x1x1 projection C -> 8C so every encoder block sees the same shape as with dwt3d.
+            pooled = F.max_pool3d(x, kernel_size=2, stride=2)
+        else:
+            # Depth is kept at full resolution to match the DWT, hence (1, 2, 2).
+            pooled = F.max_pool3d(x, kernel_size=(1, 2, 2), stride=(1, 2, 2))
         return self.expand[level](pooled)
 
     def forward(self, input):

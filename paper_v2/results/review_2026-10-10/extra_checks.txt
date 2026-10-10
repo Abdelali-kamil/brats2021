@@ -1,0 +1,4 @@
+Run A - base, all 125                                   n=125 -0.0158 [-0.0369, -0.0003] Wilcoxon p=0.483
+Run A - base, without the two collapsed cases           n=123 -0.0028 [-0.0084, +0.0021] Wilcoxon p=0.302
+Africa zero-shot: Run D2 rot - Run D rot (95 gliomas)   n=95 -0.0063 [-0.0261, +0.0111] Wilcoxon p=0.601
+Run C - base, HD95 penalised (mm)                       n=125 -2.1888 [-4.8156, -0.2767] Wilcoxon p=0.00472
