@@ -98,6 +98,11 @@ The imaging data are not redistributed. BraTS 2021 is available from the RSNA-AS
 challenge; BraTS-Africa from The Cancer Imaging Archive (CC BY 4.0). Model weights (~400 MB each)
 are not in this repository.
 
+## Licence
+
+Our code is released under the MIT License ([`LICENSE`](LICENSE)). Third-party code keeps its own licence
+(MONAI BRATS21 pipeline copy: Apache-2.0; patches against TransBTS: Apache-2.0, against nnFormer: MIT); see `LICENSE`.
+
 ## Note on paths
 
 The scripts under `paper_v2/pipeline/` are the exact files that produced the results and contain
