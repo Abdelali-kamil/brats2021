@@ -1,0 +1,10 @@
+== Ensemble 3 - nnFormer
+  Dice_Mean Ens3 0.8990  nnFormer 0.9082  diff -0.0091 [-0.0241, +0.0020]  Wilcoxon p=0.6636  Ens3 higher 72/125  no sig. difference
+  Dice_ET   Ens3 0.8748  nnFormer 0.8716  diff +0.0032 [-0.0176, +0.0256]  Wilcoxon p=0.001032  Ens3 higher 87/125  no sig. difference
+  Dice_TC   Ens3 0.9016  nnFormer 0.9197  diff -0.0180 [-0.0380, -0.0024]  Wilcoxon p=0.4098  Ens3 higher 77/125  Ens3 WORSE
+  Dice_WT   Ens3 0.9206  nnFormer 0.9332  diff -0.0126 [-0.0257, -0.0034]  Wilcoxon p=0.5751  Ens3 higher 68/125  Ens3 WORSE
+== Ensemble 3 - SegResNet (check vs compare.py)
+  Dice_Mean Ens3 0.8990  SegResNet 0.9050  diff -0.0059 [-0.0151, +0.0016]  Wilcoxon p=0.9049  Ens3 higher 69/125  no sig. difference
+  Dice_ET   Ens3 0.8748  SegResNet 0.8709  diff +0.0039 [-0.0116, +0.0246]  Wilcoxon p=0.3951  Ens3 higher 68/125  no sig. difference
+  Dice_TC   Ens3 0.9016  SegResNet 0.9171  diff -0.0154 [-0.0347, -0.0009]  Wilcoxon p=0.5387  Ens3 higher 71/125  Ens3 WORSE
+  Dice_WT   Ens3 0.9206  SegResNet 0.9270  diff -0.0063 [-0.0131, -0.0005]  Wilcoxon p=0.5937  Ens3 higher 66/125  Ens3 WORSE

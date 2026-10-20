@@ -1,0 +1,25 @@
+Amendment 28 — final clarifications (2026-10-17, VAL only; TEST not read). Selected configuration: E0 = original Ensemble 3, unchanged.
+
+1. BraTS2021_01624 (verified from the label file, not inferred)
+   GT label counts: background 8,894,440; label 2 (edema) 33,560; labels 1 and 4: 0 voxels.
+   -> GT ET = 0, GT TC = 0, GT WT = 33,560 voxels. ET and TC are genuinely empty.
+   Members (raw > 0.5, before post-processing), ET/TC/WT voxels: ep253 0/0/31,615 (max prob ET 0.023, TC 0.057);
+   runC_rot 0/0/31,815 (max ET 0.448, TC 0.449); runD2_rot 5,626/5,835/37,254 (max ET/TC 1.0).
+   After post-processing (ET/TC/WT predicted voxels; Dice ET/TC/WT; HD95 ET/TC/WT mm):
+     E0          0/0/31,645       1.000/1.000/0.937   0/0/2.00
+     LOO-ep253   2,145/2,497/35,062  0/0/0.886     undef/undef/48.96
+     LOO-runC_rot  554/1,722/33,515  0/0/0.910     undef/undef/7.62
+     W112        1,801/2,589/34,674  0/0/0.894     undef/undef/12.21
+     W122          457/464/32,221    0/0/0.928     undef/undef/2.83
+     (LOO-runD2_rot, W211, W121, W212, W221: ET/TC 0 voxels -> 1.000/1.000, HD95 0/0.)
+   Empty-region conventions (brats_gbm/eval/metrics.py, BraTS challenge convention): GT and prediction both empty -> Dice 1.0,
+   HD95 0.0; exactly one empty -> Dice 0.0, HD95 undefined (NaN). HD95 means in the tables are over defined values only
+   (undefined counts shown), so a false-positive ET/TC on an empty-GT case lowers Dice but drops out of the HD95 mean.
+   The case is kept in all primary results.
+
+2. Outer-fold selection: it chose the candidate with the HIGHEST MEAN DICE on the 4 selection folds (ties -> E0). Rules (a)-(c)
+   were not applied inside the selection folds. It is labelled "mean-Dice-only nested selection (exploratory)" and is not an
+   evaluation of the full prespecified Amendment 28 selection rule. Result unchanged: pooled held-out -0.0055 [-0.0168, +0.0006].
+
+3. Wording: none of the tested post-processing or re-weighting candidates demonstrated a reliable improvement in this
+   exploratory analysis. (Replaces the earlier phrasing that post-processing and re-weighting "can't fix" these errors.)

@@ -1,0 +1,273 @@
+== A. BraTS 2021 TEST (125 cases; each model's TEST scored once earlier; nothing re-scored)
+  Run C (single)                 n=125  mean 0.8973 [0.8728, 0.9162]  ET 0.8714 TC 0.9068 WT 0.9136  HD95 3.71 (n=124)  HD95* 6.66
+  Ensemble 3 (headline)          n=125  mean 0.8990 [0.8736, 0.9192]  ET 0.8748 TC 0.9016 WT 0.9206  HD95 3.96 (n=124)  HD95* 6.92
+  Run C + rot (best single by VAL) n=125  mean 0.8976 [0.8731, 0.9165]  ET 0.8726 TC 0.9058 WT 0.9143  HD95 3.75 (n=124)  HD95* 6.70
+  Henry et al.                   n=125  mean 0.9087 [0.8906, 0.9237]  ET 0.8809 TC 0.9141 WT 0.9310  HD95 3.32 (n=125)  HD95* 3.32
+  nnFormer                       n=125  mean 0.9082 [0.8901, 0.9231]  ET 0.8716 TC 0.9197 WT 0.9332  HD95 3.05 (n=125)  HD95* 3.99
+  SegResNet                      n=125  mean 0.9050 [0.8837, 0.9231]  ET 0.8709 TC 0.9171 WT 0.9270  HD95 3.59 (n=125)  HD95* 4.52
+  TransBTS                       n=125  mean 0.8958 [0.8715, 0.9164]  ET 0.8699 TC 0.8971 WT 0.9204  HD95 3.80 (n=125)  HD95* 6.68
+  UNETR                          n=125  mean 0.8807 [0.8604, 0.8992]  ET 0.8511 TC 0.8766 WT 0.9142  HD95 5.39 (n=125)  HD95* 6.33
+  3D U-Net                       n=125  mean 0.8620 [0.8346, 0.8866]  ET 0.8321 TC 0.8583 WT 0.8956  HD95 7.45 (n=125)  HD95* 10.27
+
+  paired (ours - baseline); Dice: positive = ours better; HD95*: negative = ours better
+  Run C (single)         - Henry et al.   Dice_Mean n=125 -0.0114 [-0.0259, -0.0005]  p=0.0257  higher 55/lower 70  a worse
+  Run C (single)         - Henry et al.   Dice_ET   n=125 -0.0095 [-0.0265, +0.0052]  p=0.97  higher 60/lower 63  n.s.
+  Run C (single)         - Henry et al.   Dice_TC   n=125 -0.0073 [-0.0247, +0.0070]  p=0.948  higher 69/lower 56  n.s.
+  Run C (single)         - Henry et al.   Dice_WT   n=125 -0.0174 [-0.0300, -0.0079]  p=2.42e-05  higher 41/lower 84  a worse
+  Run C (single)         - Henry et al.   HD95*     n=125 +3.3463 [-0.2119, +9.8609]  p=0.000174  higher 65/lower 28  n.s.
+  Run C (single)         - nnFormer       Dice_Mean n=125 -0.0109 [-0.0262, +0.0016]  p=0.0903  higher 62/lower 63  n.s.
+  Run C (single)         - nnFormer       Dice_ET   n=125 -0.0002 [-0.0197, +0.0219]  p=0.0953  higher 76/lower 48  n.s.
+  Run C (single)         - nnFormer       Dice_TC   n=125 -0.0129 [-0.0307, +0.0008]  p=0.388  higher 72/lower 53  n.s.
+  Run C (single)         - nnFormer       Dice_WT   n=125 -0.0196 [-0.0332, -0.0094]  p=1.1e-05  higher 47/lower 78  a worse
+  Run C (single)         - nnFormer       HD95*     n=125 +2.6770 [-2.1062, +9.7688]  p=5.87e-08  higher 72/lower 22  n.s.
+  Run C (single)         - SegResNet      Dice_Mean n=125 -0.0077 [-0.0164, +0.0020]  p=0.00782  higher 55/lower 70  n.s.  | recorded -0.0080 [-0.0160, +0.0020]  -> MATCH (reused)
+  Run C (single)         - SegResNet      Dice_ET   n=125 +0.0005 [-0.0130, +0.0205]  p=0.257  higher 60/lower 64  n.s.
+  Run C (single)         - SegResNet      Dice_TC   n=125 -0.0103 [-0.0245, +0.0026]  p=0.907  higher 65/lower 60  n.s.
+  Run C (single)         - SegResNet      Dice_WT   n=125 -0.0134 [-0.0218, -0.0062]  p=1.18e-05  higher 42/lower 83  a worse
+  Run C (single)         - SegResNet      HD95*     n=125 +2.1478 [-2.8187, +9.4494]  p=0.000259  higher 64/lower 29  n.s.
+  Run C (single)         - TransBTS       Dice_Mean n=125 +0.0015 [-0.0079, +0.0128]  p=0.691  higher 63/lower 62  n.s.
+  Run C (single)         - TransBTS       Dice_ET   n=125 +0.0015 [-0.0134, +0.0222]  p=0.962  higher 62/lower 61  n.s.
+  Run C (single)         - TransBTS       Dice_TC   n=125 +0.0097 [-0.0021, +0.0246]  p=0.0123  higher 78/lower 46  n.s.
+  Run C (single)         - TransBTS       Dice_WT   n=125 -0.0068 [-0.0167, +0.0038]  p=0.0432  higher 54/lower 71  n.s.
+  Run C (single)         - TransBTS       HD95*     n=125 -0.0109 [-3.1430, +2.9496]  p=0.111  higher 53/lower 44  n.s.
+  Run C (single)         - UNETR          Dice_Mean n=125 +0.0166 [+0.0018, +0.0315]  p=2.59e-07  higher 95/lower 30  a better  | recorded +0.0170 [+0.0020, +0.0310]  -> DIFFERS (see note)
+  Run C (single)         - UNETR          Dice_ET   n=125 +0.0203 [+0.0015, +0.0430]  p=3.45e-07  higher 95/lower 29  a better
+  Run C (single)         - UNETR          Dice_TC   n=125 +0.0302 [+0.0099, +0.0521]  p=1.97e-11  higher 106/lower 19  a better
+  Run C (single)         - UNETR          Dice_WT   n=125 -0.0007 [-0.0142, +0.0109]  p=0.0141  higher 78/lower 47  n.s.
+  Run C (single)         - UNETR          HD95*     n=125 +0.3360 [-4.7025, +7.6611]  p=0.000341  higher 34/lower 77  n.s.
+  Run C (single)         - 3D U-Net       Dice_Mean n=125 +0.0352 [+0.0211, +0.0515]  p=1.45e-11  higher 105/lower 20  a better  | recorded +0.0350 [+0.0210, +0.0510]  -> MATCH (reused)
+  Run C (single)         - 3D U-Net       Dice_ET   n=125 +0.0393 [+0.0208, +0.0619]  p=9.7e-11  higher 99/lower 24  a better
+  Run C (single)         - 3D U-Net       Dice_TC   n=125 +0.0485 [+0.0270, +0.0729]  p=8.42e-14  higher 111/lower 13  a better
+  Run C (single)         - 3D U-Net       Dice_WT   n=125 +0.0180 [+0.0059, +0.0317]  p=6.63e-06  higher 90/lower 35  a better
+  Run C (single)         - 3D U-Net       HD95*     n=125 -3.6078 [-7.0754, -0.3145]  p=7.25e-09  higher 24/lower 90  a better
+
+  Ensemble 3 (headline)  - Henry et al.   Dice_Mean n=125 -0.0096 [-0.0236, +0.0004]  p=0.968  higher 67/lower 58  n.s.  | recorded -0.0100 [-0.0240, +0.0000] p=0.97  -> MATCH (reused)
+  Ensemble 3 (headline)  - Henry et al.   Dice_ET   n=125 -0.0061 [-0.0215, +0.0054]  p=0.0942  higher 75/lower 48  n.s.
+  Ensemble 3 (headline)  - Henry et al.   Dice_TC   n=125 -0.0124 [-0.0303, +0.0014]  p=0.298  higher 76/lower 49  n.s.
+  Ensemble 3 (headline)  - Henry et al.   Dice_WT   n=125 -0.0104 [-0.0224, -0.0021]  p=0.901  higher 71/lower 54  a worse
+  Ensemble 3 (headline)  - Henry et al.   HD95*     n=125 +3.5993 [-0.0854, +10.1626]  p=0.0136  higher 62/lower 35  n.s.
+  Ensemble 3 (headline)  - nnFormer       Dice_Mean n=125 -0.0091 [-0.0241, +0.0020]  p=0.664  higher 72/lower 53  n.s.  | recorded -0.0091 [-0.0241, +0.0020] p=0.664  -> MATCH (reused)
+  Ensemble 3 (headline)  - nnFormer       Dice_ET   n=125 +0.0032 [-0.0176, +0.0256]  p=0.00103  higher 87/lower 37  n.s.
+  Ensemble 3 (headline)  - nnFormer       Dice_TC   n=125 -0.0180 [-0.0380, -0.0024]  p=0.41  higher 77/lower 48  a worse
+  Ensemble 3 (headline)  - nnFormer       Dice_WT   n=125 -0.0126 [-0.0257, -0.0034]  p=0.575  higher 68/lower 57  a worse
+  Ensemble 3 (headline)  - nnFormer       HD95*     n=125 +2.9300 [-1.8726, +10.0488]  p=4.75e-05  higher 63/lower 31  n.s.
+  Ensemble 3 (headline)  - SegResNet      Dice_Mean n=125 -0.0059 [-0.0151, +0.0016]  p=0.905  higher 69/lower 56  n.s.  | recorded -0.0059 [-0.0151, +0.0016] p=0.905  -> MATCH (reused)
+  Ensemble 3 (headline)  - SegResNet      Dice_ET   n=125 +0.0039 [-0.0116, +0.0246]  p=0.395  higher 68/lower 56  n.s.
+  Ensemble 3 (headline)  - SegResNet      Dice_TC   n=125 -0.0154 [-0.0347, -0.0009]  p=0.539  higher 71/lower 54  a worse
+  Ensemble 3 (headline)  - SegResNet      Dice_WT   n=125 -0.0063 [-0.0131, -0.0005]  p=0.594  higher 66/lower 59  a worse
+  Ensemble 3 (headline)  - SegResNet      HD95*     n=125 +2.4008 [-2.3703, +9.4978]  p=0.0062  higher 57/lower 34  n.s.
+  Ensemble 3 (headline)  - TransBTS       Dice_Mean n=125 +0.0033 [-0.0070, +0.0138]  p=0.0907  higher 70/lower 55  n.s.
+  Ensemble 3 (headline)  - TransBTS       Dice_ET   n=125 +0.0050 [-0.0120, +0.0260]  p=0.0937  higher 72/lower 51  n.s.
+  Ensemble 3 (headline)  - TransBTS       Dice_TC   n=125 +0.0046 [-0.0127, +0.0231]  p=0.00106  higher 83/lower 41  n.s.
+  Ensemble 3 (headline)  - TransBTS       Dice_WT   n=125 +0.0002 [-0.0084, +0.0101]  p=0.185  higher 74/lower 51  n.s.
+  Ensemble 3 (headline)  - TransBTS       HD95*     n=125 +0.2421 [-2.8297, +3.1504]  p=0.658  higher 50/lower 46  n.s.
+  Ensemble 3 (headline)  - UNETR          Dice_Mean n=125 +0.0184 [+0.0029, +0.0334]  p=3.54e-12  higher 106/lower 19  a better  | recorded +0.0180 [+0.0030, +0.0330]  -> MATCH (reused)
+  Ensemble 3 (headline)  - UNETR          Dice_ET   n=125 +0.0237 [+0.0037, +0.0473]  p=2.35e-10  higher 104/lower 20  a better
+  Ensemble 3 (headline)  - UNETR          Dice_TC   n=125 +0.0250 [-0.0013, +0.0509]  p=5.28e-12  higher 106/lower 19  n.s.
+  Ensemble 3 (headline)  - UNETR          Dice_WT   n=125 +0.0064 [-0.0066, +0.0172]  p=2.02e-07  higher 98/lower 27  n.s.
+  Ensemble 3 (headline)  - UNETR          HD95*     n=125 +0.5889 [-4.2974, +7.8247]  p=1.59e-05  higher 29/lower 82  n.s.
+  Ensemble 3 (headline)  - 3D U-Net       Dice_Mean n=125 +0.0370 [+0.0221, +0.0535]  p=9.53e-15  higher 110/lower 15  a better  | recorded +0.0370 [+0.0220, +0.0540]  -> MATCH (reused)
+  Ensemble 3 (headline)  - 3D U-Net       Dice_ET   n=125 +0.0427 [+0.0230, +0.0661]  p=8.75e-14  higher 106/lower 17  a better
+  Ensemble 3 (headline)  - 3D U-Net       Dice_TC   n=125 +0.0433 [+0.0155, +0.0720]  p=2.69e-13  higher 112/lower 12  a better
+  Ensemble 3 (headline)  - 3D U-Net       Dice_WT   n=125 +0.0250 [+0.0146, +0.0378]  p=1.19e-11  higher 104/lower 21  a better
+  Ensemble 3 (headline)  - 3D U-Net       HD95*     n=125 -3.3548 [-6.8520, +0.0341]  p=5.68e-09  higher 20/lower 93  n.s.
+
+  Run C + rot (best single by VAL) - Henry et al.   Dice_Mean n=125 -0.0111 [-0.0257, +0.0002]  p=0.0641  higher 61/lower 64  n.s.
+  Run C + rot (best single by VAL) - Henry et al.   Dice_ET   n=125 -0.0083 [-0.0256, +0.0070]  p=0.677  higher 70/lower 53  n.s.
+  Run C + rot (best single by VAL) - Henry et al.   Dice_TC   n=125 -0.0082 [-0.0257, +0.0064]  p=0.952  higher 71/lower 54  n.s.
+  Run C + rot (best single by VAL) - Henry et al.   Dice_WT   n=125 -0.0168 [-0.0295, -0.0072]  p=0.000335  higher 42/lower 83  a worse
+  Run C + rot (best single by VAL) - Henry et al.   HD95*     n=125 +3.3857 [-0.1934, +9.8974]  p=0.00234  higher 60/lower 32  n.s.
+  Run C + rot (best single by VAL) - nnFormer       Dice_Mean n=125 -0.0106 [-0.0259, +0.0016]  p=0.102  higher 61/lower 64  n.s.
+  Run C + rot (best single by VAL) - nnFormer       Dice_ET   n=125 +0.0010 [-0.0181, +0.0228]  p=0.0463  higher 77/lower 47  n.s.
+  Run C + rot (best single by VAL) - nnFormer       Dice_TC   n=125 -0.0138 [-0.0315, -0.0002]  p=0.407  higher 76/lower 49  a worse
+  Run C + rot (best single by VAL) - nnFormer       Dice_WT   n=125 -0.0190 [-0.0326, -0.0087]  p=8.99e-05  higher 46/lower 79  a worse
+  Run C + rot (best single by VAL) - nnFormer       HD95*     n=125 +2.7164 [-2.0547, +9.8125]  p=4.61e-07  higher 67/lower 27  n.s.
+  Run C + rot (best single by VAL) - SegResNet      Dice_Mean n=125 -0.0074 [-0.0159, +0.0020]  p=0.023  higher 55/lower 70  n.s.  | recorded -0.0070 [-0.0160, +0.0020]  -> MATCH (reused)
+  Run C + rot (best single by VAL) - SegResNet      Dice_ET   n=125 +0.0017 [-0.0114, +0.0217]  p=0.444  higher 61/lower 63  n.s.
+  Run C + rot (best single by VAL) - SegResNet      Dice_TC   n=125 -0.0113 [-0.0259, +0.0013]  p=0.822  higher 71/lower 54  n.s.
+  Run C + rot (best single by VAL) - SegResNet      Dice_WT   n=125 -0.0127 [-0.0212, -0.0055]  p=9.85e-05  higher 45/lower 80  a worse
+  Run C + rot (best single by VAL) - SegResNet      HD95*     n=125 +2.1872 [-2.8013, +9.4634]  p=0.0014  higher 59/lower 32  n.s.
+  Run C + rot (best single by VAL) - TransBTS       Dice_Mean n=125 +0.0018 [-0.0073, +0.0129]  p=0.785  higher 66/lower 59  n.s.
+  Run C + rot (best single by VAL) - TransBTS       Dice_ET   n=125 +0.0027 [-0.0116, +0.0232]  p=0.89  higher 64/lower 59  n.s.
+  Run C + rot (best single by VAL) - TransBTS       Dice_TC   n=125 +0.0087 [-0.0029, +0.0236]  p=0.0074  higher 79/lower 45  n.s.
+  Run C + rot (best single by VAL) - TransBTS       Dice_WT   n=125 -0.0062 [-0.0161, +0.0044]  p=0.0898  higher 57/lower 68  n.s.
+  Run C + rot (best single by VAL) - TransBTS       HD95*     n=125 +0.0284 [-3.1029, +2.9634]  p=0.513  higher 50/lower 49  n.s.
+  Run C + rot (best single by VAL) - UNETR          Dice_Mean n=125 +0.0169 [+0.0021, +0.0317]  p=2.46e-07  higher 93/lower 32  a better  | recorded +0.0170 [+0.0020, +0.0310]  -> DIFFERS (see note)
+  Run C + rot (best single by VAL) - UNETR          Dice_ET   n=125 +0.0215 [+0.0026, +0.0441]  p=2.91e-07  higher 95/lower 29  a better
+  Run C + rot (best single by VAL) - UNETR          Dice_TC   n=125 +0.0292 [+0.0089, +0.0511]  p=1.02e-10  higher 105/lower 20  a better
+  Run C + rot (best single by VAL) - UNETR          Dice_WT   n=125 +0.0000 [-0.0136, +0.0116]  p=0.00695  higher 80/lower 45  n.s.
+  Run C + rot (best single by VAL) - UNETR          HD95*     n=125 +0.3753 [-4.6633, +7.7068]  p=0.000165  higher 32/lower 78  n.s.
+  Run C + rot (best single by VAL) - 3D U-Net       Dice_Mean n=125 +0.0355 [+0.0216, +0.0517]  p=5.1e-12  higher 106/lower 19  a better  | recorded +0.0360 [+0.0210, +0.0520]  -> DIFFERS (see note)
+  Run C + rot (best single by VAL) - 3D U-Net       Dice_ET   n=125 +0.0405 [+0.0220, +0.0633]  p=4.24e-11  higher 100/lower 23  a better
+  Run C + rot (best single by VAL) - 3D U-Net       Dice_TC   n=125 +0.0475 [+0.0258, +0.0721]  p=6.46e-14  higher 112/lower 12  a better
+  Run C + rot (best single by VAL) - 3D U-Net       Dice_WT   n=125 +0.0187 [+0.0066, +0.0324]  p=2.14e-06  higher 92/lower 33  a better
+  Run C + rot (best single by VAL) - 3D U-Net       HD95*     n=125 -3.5684 [-7.0522, -0.2482]  p=1.17e-08  higher 23/lower 92  a better
+
+  ablation (already reported under Amendment 21; recomputed as a check)
+  max-pool control               n=125  mean 0.8883 [0.8622, 0.9094]  ET 0.8523 TC 0.9044 WT 0.9081  HD95 4.02 (n=124)  HD95* 8.92
+  Run C (single)         - max-pool ctrl  Dice_Mean n=125 +0.0090 [+0.0023, +0.0173]  p=6.15e-06  higher 84/lower 40  a better  | recorded +0.0090 [+0.0023, +0.0173] p=6.15e-06  -> MATCH (reused)
+  Run C (single)         - max-pool ctrl  HD95*     n=125 -2.2584 [-5.2494, -0.1295]  p=0.000568  higher 26/lower 59  a better  | recorded -2.2584 [-5.2494, -0.1295] p=0.000568  -> MATCH (reused)
+
+== B. BraTS-Africa zero-shot (95 gliomas primary; 51 other neoplasms reported separately)
+  gliomas (95)
+  Ensemble 3 (BraTS-VAL winner)  n= 95  mean 0.7968 [0.7498, 0.8381]  ET 0.7475 TC 0.7903 WT 0.8527  HD95 9.08 (n=93)  HD95* 26.27
+  Run C (single)                 n= 95  mean 0.7775 [0.7291, 0.8202]  ET 0.7467 TC 0.7698 WT 0.8160  HD95 10.72 (n=94)  HD95* 19.17
+  Run C + rot                    n= 95  mean 0.7780 [0.7305, 0.8205]  ET 0.7495 TC 0.7732 WT 0.8113  HD95 10.84 (n=94)  HD95* 19.28
+  Run D + rot                    n= 95  mean 0.8097 [0.7679, 0.8460]  ET 0.7519 TC 0.7773 WT 0.8999  HD95 9.98 (n=94)  HD95* 18.70
+  Run D2 + rot                   n= 95  mean 0.8034 [0.7589, 0.8416]  ET 0.7384 TC 0.7787 WT 0.8931  HD95 10.21 (n=93)  HD95* 22.65
+  Run A                          n= 95  mean 0.7817 [0.7426, 0.8178]  ET 0.7459 TC 0.7884 WT 0.8107  HD95 11.88 (n=95)  HD95* 20.45
+  base (ep253)                   n= 95  mean 0.7389 [0.6816, 0.7897]  ET 0.6983 TC 0.7387 WT 0.7798  HD95 12.32 (n=90)  HD95* 43.15
+  max-pool control               n= 95  mean 0.7602 [0.7135, 0.8047]  ET 0.7368 TC 0.7518 WT 0.7920  HD95 13.14 (n=93)  HD95* 21.85
+  Henry et al.                   n= 95  mean 0.8278 [0.7873, 0.8631]  ET 0.7562 TC 0.8236 WT 0.9038  HD95 7.32 (n=94)  HD95* 17.10
+  nnFormer                       n= 95  mean 0.8569 [0.8278, 0.8811]  ET 0.8185 TC 0.8282 WT 0.9242  HD95 5.40 (n=95)  HD95* 5.40
+  SegResNet                      n= 95  mean 0.8457 [0.8103, 0.8762]  ET 0.7979 TC 0.8266 WT 0.9126  HD95 6.37 (n=94)  HD95* 11.41
+  TransBTS                       n= 95  mean 0.8064 [0.7693, 0.8381]  ET 0.7703 TC 0.7613 WT 0.8877  HD95 8.96 (n=94)  HD95* 13.85
+  UNETR                          n= 95  mean 0.7993 [0.7618, 0.8316]  ET 0.7715 TC 0.7418 WT 0.8846  HD95 9.97 (n=95)  HD95* 9.97
+  3D U-Net                       n= 95  mean 0.8045 [0.7643, 0.8396]  ET 0.7863 TC 0.7446 WT 0.8827  HD95 9.78 (n=94)  HD95* 17.36
+  other neoplasms (51)
+  Ensemble 3 (BraTS-VAL winner)  n= 51  mean 0.7483 [0.6849, 0.8045]  ET 0.7376 TC 0.7323 WT 0.7752
+  Run C (single)                 n= 51  mean 0.7003 [0.6370, 0.7601]  ET 0.7021 TC 0.6912 WT 0.7075
+  Run C + rot                    n= 51  mean 0.7203 [0.6605, 0.7749]  ET 0.7357 TC 0.7224 WT 0.7027
+  Run D + rot                    n= 51  mean 0.7395 [0.6684, 0.8052]  ET 0.6949 TC 0.7129 WT 0.8108
+  Run D2 + rot                   n= 51  mean 0.7456 [0.6750, 0.8074]  ET 0.7178 TC 0.7105 WT 0.8086
+  Run A                          n= 51  mean 0.6646 [0.5886, 0.7338]  ET 0.6966 TC 0.6352 WT 0.6620
+  base (ep253)                   n= 51  mean 0.6726 [0.5888, 0.7488]  ET 0.6760 TC 0.6448 WT 0.6969
+  max-pool control               n= 51  mean 0.7228 [0.6653, 0.7748]  ET 0.7529 TC 0.7258 WT 0.6898
+  Henry et al.                   n= 51  mean 0.8338 [0.8007, 0.8643]  ET 0.8228 TC 0.8176 WT 0.8609
+  nnFormer                       n= 51  mean 0.8017 [0.7531, 0.8441]  ET 0.7695 TC 0.7776 WT 0.8581
+  SegResNet                      n= 51  mean 0.8049 [0.7496, 0.8540]  ET 0.7720 TC 0.7975 WT 0.8452
+  TransBTS                       n= 51  mean 0.7270 [0.6677, 0.7795]  ET 0.7105 TC 0.6938 WT 0.7767
+  UNETR                          n= 51  mean 0.7590 [0.7040, 0.8086]  ET 0.7646 TC 0.7028 WT 0.8095
+  3D U-Net                       n= 51  mean 0.7910 [0.7473, 0.8312]  ET 0.8021 TC 0.7506 WT 0.8204
+
+  paired on the 95 gliomas (ours - baseline)
+  Ensemble 3 (BraTS-VAL winner) - Henry et al.   Dice_Mean n= 95 -0.0310 [-0.0597, -0.0087]  p=0.0859  higher 43/lower 51  a worse
+  Ensemble 3 (BraTS-VAL winner) - Henry et al.   Dice_ET   n= 95 -0.0086 [-0.0383, +0.0143]  p=0.0249  higher 55/lower 35  n.s.
+  Ensemble 3 (BraTS-VAL winner) - Henry et al.   Dice_TC   n= 95 -0.0333 [-0.0662, -0.0052]  p=0.0109  higher 40/lower 52  a worse
+  Ensemble 3 (BraTS-VAL winner) - Henry et al.   Dice_WT   n= 95 -0.0510 [-0.0854, -0.0216]  p=1.39e-05  higher 27/lower 67  a worse
+  Ensemble 3 (BraTS-VAL winner) - nnFormer       Dice_Mean n= 95 -0.0601 [-0.0905, -0.0338]  p=6.37e-08  higher 26/lower 69  a worse
+  Ensemble 3 (BraTS-VAL winner) - nnFormer       Dice_ET   n= 95 -0.0709 [-0.1084, -0.0380]  p=0.000751  higher 38/lower 57  a worse
+  Ensemble 3 (BraTS-VAL winner) - nnFormer       Dice_TC   n= 95 -0.0379 [-0.0712, -0.0100]  p=0.0108  higher 36/lower 59  a worse
+  Ensemble 3 (BraTS-VAL winner) - nnFormer       Dice_WT   n= 95 -0.0714 [-0.1049, -0.0420]  p=2.27e-08  higher 26/lower 69  a worse
+  Ensemble 3 (BraTS-VAL winner) - SegResNet      Dice_Mean n= 95 -0.0489 [-0.0793, -0.0236]  p=1.51e-05  higher 27/lower 67  a worse
+  Ensemble 3 (BraTS-VAL winner) - SegResNet      Dice_ET   n= 95 -0.0503 [-0.0888, -0.0174]  p=0.00109  higher 32/lower 61  a worse
+  Ensemble 3 (BraTS-VAL winner) - SegResNet      Dice_TC   n= 95 -0.0363 [-0.0696, -0.0075]  p=0.0438  higher 37/lower 57  a worse
+  Ensemble 3 (BraTS-VAL winner) - SegResNet      Dice_WT   n= 95 -0.0599 [-0.0939, -0.0301]  p=0.000301  higher 36/lower 58  a worse
+  Ensemble 3 (BraTS-VAL winner) - TransBTS       Dice_Mean n= 95 -0.0096 [-0.0346, +0.0134]  p=0.184  higher 58/lower 36  n.s.
+  Ensemble 3 (BraTS-VAL winner) - TransBTS       Dice_ET   n= 95 -0.0228 [-0.0597, +0.0113]  p=0.315  higher 52/lower 41  n.s.
+  Ensemble 3 (BraTS-VAL winner) - TransBTS       Dice_TC   n= 95 +0.0290 [-0.0026, +0.0611]  p=0.000785  higher 65/lower 29  n.s.
+  Ensemble 3 (BraTS-VAL winner) - TransBTS       Dice_WT   n= 95 -0.0350 [-0.0597, -0.0127]  p=0.0309  higher 41/lower 53  a worse
+  Ensemble 3 (BraTS-VAL winner) - UNETR          Dice_Mean n= 95 -0.0025 [-0.0324, +0.0250]  p=0.0593  higher 61/lower 34  n.s.
+  Ensemble 3 (BraTS-VAL winner) - UNETR          Dice_ET   n= 95 -0.0240 [-0.0599, +0.0090]  p=0.198  higher 59/lower 36  n.s.
+  Ensemble 3 (BraTS-VAL winner) - UNETR          Dice_TC   n= 95 +0.0485 [+0.0087, +0.0864]  p=2.32e-05  higher 70/lower 25  a better
+  Ensemble 3 (BraTS-VAL winner) - UNETR          Dice_WT   n= 95 -0.0319 [-0.0613, -0.0043]  p=0.516  higher 48/lower 47  a worse
+  Ensemble 3 (BraTS-VAL winner) - 3D U-Net       Dice_Mean n= 95 -0.0077 [-0.0359, +0.0176]  p=0.126  higher 59/lower 35  n.s.
+  Ensemble 3 (BraTS-VAL winner) - 3D U-Net       Dice_ET   n= 95 -0.0388 [-0.0752, -0.0059]  p=0.54  higher 46/lower 45  a worse
+  Ensemble 3 (BraTS-VAL winner) - 3D U-Net       Dice_TC   n= 95 +0.0457 [+0.0087, +0.0819]  p=3.79e-05  higher 67/lower 24  a better
+  Ensemble 3 (BraTS-VAL winner) - 3D U-Net       Dice_WT   n= 95 -0.0300 [-0.0583, -0.0049]  p=0.974  higher 53/lower 41  a worse
+
+  Run C (single)         - Henry et al.   Dice_Mean n= 95 -0.0503 [-0.0806, -0.0255]  p=0.00197  higher 39/lower 55  a worse
+  Run C (single)         - Henry et al.   Dice_ET   n= 95 -0.0094 [-0.0395, +0.0163]  p=0.577  higher 49/lower 42  n.s.
+  Run C (single)         - Henry et al.   Dice_TC   n= 95 -0.0538 [-0.0855, -0.0272]  p=0.0011  higher 34/lower 59  a worse
+  Run C (single)         - Henry et al.   Dice_WT   n= 95 -0.0877 [-0.1276, -0.0534]  p=1.17e-10  higher 17/lower 77  a worse
+  Run C (single)         - nnFormer       Dice_Mean n= 95 -0.0794 [-0.1130, -0.0501]  p=2.13e-08  higher 26/lower 69  a worse
+  Run C (single)         - nnFormer       Dice_ET   n= 95 -0.0717 [-0.1088, -0.0381]  p=0.000421  higher 37/lower 58  a worse
+  Run C (single)         - nnFormer       Dice_TC   n= 95 -0.0584 [-0.0939, -0.0281]  p=0.000279  higher 35/lower 60  a worse
+  Run C (single)         - nnFormer       Dice_WT   n= 95 -0.1082 [-0.1497, -0.0704]  p=2.55e-11  higher 18/lower 77  a worse
+  Run C (single)         - SegResNet      Dice_Mean n= 95 -0.0682 [-0.1011, -0.0397]  p=8.36e-07  higher 27/lower 67  a worse  | recorded -0.0680 [-0.1010, -0.0400]  -> MATCH (reused)
+  Run C (single)         - SegResNet      Dice_ET   n= 95 -0.0511 [-0.0908, -0.0151]  p=0.000663  higher 30/lower 63  a worse
+  Run C (single)         - SegResNet      Dice_TC   n= 95 -0.0568 [-0.0907, -0.0282]  p=0.00455  higher 39/lower 55  a worse
+  Run C (single)         - SegResNet      Dice_WT   n= 95 -0.0966 [-0.1382, -0.0597]  p=1.48e-07  higher 29/lower 65  a worse
+  Run C (single)         - TransBTS       Dice_Mean n= 95 -0.0289 [-0.0565, -0.0034]  p=0.301  higher 46/lower 48  a worse
+  Run C (single)         - TransBTS       Dice_ET   n= 95 -0.0236 [-0.0596, +0.0107]  p=0.995  higher 44/lower 49  n.s.
+  Run C (single)         - TransBTS       Dice_TC   n= 95 +0.0085 [-0.0226, +0.0399]  p=0.0915  higher 56/lower 38  n.s.
+  Run C (single)         - TransBTS       Dice_WT   n= 95 -0.0717 [-0.1047, -0.0420]  p=1.88e-05  higher 32/lower 62  a worse
+  Run C (single)         - UNETR          Dice_Mean n= 95 -0.0218 [-0.0545, +0.0070]  p=0.596  higher 55/lower 40  n.s.  | recorded -0.0220 [-0.0550, +0.0070]  -> MATCH (reused)
+  Run C (single)         - UNETR          Dice_ET   n= 95 -0.0248 [-0.0603, +0.0084]  p=0.697  higher 49/lower 46  n.s.
+  Run C (single)         - UNETR          Dice_TC   n= 95 +0.0280 [-0.0092, +0.0623]  p=0.000452  higher 66/lower 29  n.s.
+  Run C (single)         - UNETR          Dice_WT   n= 95 -0.0686 [-0.1066, -0.0333]  p=0.00501  higher 43/lower 52  a worse
+  Run C (single)         - 3D U-Net       Dice_Mean n= 95 -0.0270 [-0.0579, -0.0002]  p=0.747  higher 49/lower 45  a worse  | recorded -0.0270 [-0.0580, -0.0002]  -> MATCH (reused)
+  Run C (single)         - 3D U-Net       Dice_ET   n= 95 -0.0396 [-0.0744, -0.0078]  p=0.3  higher 44/lower 48  a worse
+  Run C (single)         - 3D U-Net       Dice_TC   n= 95 +0.0252 [-0.0103, +0.0575]  p=0.000859  higher 61/lower 31  n.s.
+  Run C (single)         - 3D U-Net       Dice_WT   n= 95 -0.0667 [-0.1037, -0.0336]  p=0.0427  higher 47/lower 47  a worse
+
+  Ensemble 3 (BraTS-VAL winner) - Run C (single) Dice_Mean n= 95 +0.0193 [+0.0091, +0.0298]  p=0.00216  higher 55/lower 38  a better
+
+== C. BraTS-Africa 5-fold CV fine-tuning (95 gliomas, pooled out-of-fold)
+  from Run A (PRIMARY, fixed in advance) n= 95  mean 0.8477 [0.8126, 0.8791]  ET 0.8108 TC 0.8343 WT 0.8979  HD95 7.98 (n=95)  HD95* 12.85
+  from Run C (secondary)         n= 95  mean 0.8687 [0.8356, 0.8959]  ET 0.8374 TC 0.8492 WT 0.9195  HD95 4.70 (n=94)  HD95* 8.58
+  from Run D (secondary)         n= 95  mean 0.8833 [0.8538, 0.9082]  ET 0.8586 TC 0.8663 WT 0.9251  HD95 5.01 (n=95)  HD95* 7.58
+  from Run D2 (secondary)        n= 95  mean 0.8868 [0.8561, 0.9113]  ET 0.8574 TC 0.8721 WT 0.9308  HD95 5.85 (n=95)  HD95* 9.63
+  Henry et al.                   n= 95  mean 0.8666 [0.8337, 0.8965]  ET 0.8390 TC 0.8426 WT 0.9183  HD95 5.81 (n=95)  HD95* 7.05
+  nnFormer                       n= 95  mean 0.8665 [0.8318, 0.8960]  ET 0.8425 TC 0.8410 WT 0.9158  HD95 4.97 (n=94)  HD95* 8.85
+  SegResNet                      n= 95  mean 0.8792 [0.8452, 0.9064]  ET 0.8486 TC 0.8615 WT 0.9274  HD95 5.52 (n=94)  HD95* 9.39
+  TransBTS                       n= 95  mean 0.8565 [0.8169, 0.8897]  ET 0.8254 TC 0.8378 WT 0.9065  HD95 6.07 (n=95)  HD95* 9.70
+  UNETR                          n= 95  mean 0.8372 [0.8016, 0.8687]  ET 0.8159 TC 0.8012 WT 0.8944  HD95 8.53 (n=95)  HD95* 8.53
+  3D U-Net                       n= 95  mean 0.8162 [0.7754, 0.8551]  ET 0.7909 TC 0.7787 WT 0.8791  HD95 10.65 (n=94)  HD95* 19.12
+
+  gain = adapted - own zero-shot on the same 95 gliomas
+  from Run A (PRIMARY, fixed in advance) - own zero-shot  Dice_Mean n= 95 +0.0660 [+0.0471, +0.0874]  p=4.12e-12  higher 83/lower 11  a better  | recorded +0.0660 [+0.0470, +0.0870]  -> MATCH (reused)
+  from Run C (secondary) - own zero-shot  Dice_Mean n= 95 +0.0912 [+0.0649, +0.1223]  p=8.58e-15  higher 82/lower 12  a better  | recorded +0.0910 [+0.0630, +0.1210]  -> DIFFERS (see note)
+  from Run D (secondary) - own zero-shot  Dice_Mean n= 95 +0.0736 [+0.0535, +0.0966]  p=1.22e-15  higher 91/lower 4  a better  | recorded +0.0740 [+0.0530, +0.0970]  -> DIFFERS (see note)
+  from Run D2 (secondary) - own zero-shot  Dice_Mean n= 95 +0.0834 [+0.0581, +0.1129]  p=1.91e-15  higher 88/lower 7  a better  | recorded +0.0830 [+0.0570, +0.1120]  -> DIFFERS (see note)
+  Henry et al.           - own zero-shot  Dice_Mean n= 95 +0.0388 [+0.0233, +0.0575]  p=1.19e-08  higher 77/lower 18  a better
+  nnFormer               - own zero-shot  Dice_Mean n= 95 +0.0095 [-0.0047, +0.0229]  p=0.000134  higher 71/lower 24  n.s.  | recorded +0.0095 [-0.0047, +0.0229]  -> MATCH (reused)
+  SegResNet              - own zero-shot  Dice_Mean n= 95 +0.0335 [+0.0203, +0.0476]  p=5.34e-10  higher 78/lower 16  a better
+  TransBTS               - own zero-shot  Dice_Mean n= 95 +0.0501 [+0.0338, +0.0673]  p=1.7e-09  higher 77/lower 17  a better  | recorded +0.0501 [+0.0338, +0.0673]  -> MATCH (reused)
+  UNETR                  - own zero-shot  Dice_Mean n= 95 +0.0379 [+0.0247, +0.0515]  p=1.98e-11  higher 85/lower 10  a better
+  3D U-Net               - own zero-shot  Dice_Mean n= 95 +0.0117 [+0.0016, +0.0218]  p=0.000949  higher 61/lower 33  a better
+
+  difference in gain (ours primary gain - baseline gain), same 95 gliomas
+  gain Run A start       - gain Henry et al. Dice_Mean n= 95 +0.0272 [+0.0042, +0.0498]  p=0.0108  higher 53/lower 42  a better
+  gain Run A start       - gain nnFormer  Dice_Mean n= 95 +0.0565 [+0.0361, +0.0788]  p=6.69e-07  higher 67/lower 28  a better
+  gain Run A start       - gain SegResNet Dice_Mean n= 95 +0.0325 [+0.0109, +0.0543]  p=0.0019  higher 57/lower 37  a better
+  gain Run A start       - gain TransBTS  Dice_Mean n= 95 +0.0159 [-0.0081, +0.0418]  p=0.482  higher 48/lower 46  n.s.
+  gain Run A start       - gain UNETR     Dice_Mean n= 95 +0.0281 [+0.0042, +0.0540]  p=0.0155  higher 59/lower 36  a better
+  gain Run A start       - gain 3D U-Net  Dice_Mean n= 95 +0.0543 [+0.0326, +0.0775]  p=2.12e-06  higher 69/lower 25  a better
+
+  paired (ours - baseline), adapted
+  from Run A (PRIMARY, fixed in advance) - Henry et al.   Dice_Mean n= 95 -0.0189 [-0.0377, -0.0024]  p=0.00101  higher 31/lower 64  a worse
+  from Run A (PRIMARY, fixed in advance) - nnFormer       Dice_Mean n= 95 -0.0188 [-0.0387, +0.0006]  p=5.25e-05  higher 30/lower 64  n.s.
+  from Run A (PRIMARY, fixed in advance) - SegResNet      Dice_Mean n= 95 -0.0315 [-0.0509, -0.0128]  p=1.21e-07  higher 20/lower 74  a worse
+  from Run A (PRIMARY, fixed in advance) - TransBTS       Dice_Mean n= 95 -0.0089 [-0.0324, +0.0158]  p=0.0492  higher 34/lower 60  n.s.
+  from Run A (PRIMARY, fixed in advance) - UNETR          Dice_Mean n= 95 +0.0105 [-0.0114, +0.0333]  p=0.0305  higher 57/lower 38  n.s.
+  from Run A (PRIMARY, fixed in advance) - 3D U-Net       Dice_Mean n= 95 +0.0314 [+0.0085, +0.0567]  p=6.36e-05  higher 64/lower 30  a better
+
+  from Run C (secondary) - Henry et al.   Dice_Mean n= 95 +0.0021 [-0.0119, +0.0160]  p=0.879  higher 45/lower 50  n.s.
+  from Run C (secondary) - nnFormer       Dice_Mean n= 95 +0.0022 [-0.0122, +0.0174]  p=0.73  higher 46/lower 48  n.s.
+  from Run C (secondary) - SegResNet      Dice_Mean n= 95 -0.0105 [-0.0229, +0.0024]  p=0.00295  higher 35/lower 59  n.s.
+  from Run C (secondary) - TransBTS       Dice_Mean n= 95 +0.0121 [-0.0069, +0.0339]  p=0.0515  higher 55/lower 39  n.s.
+  from Run C (secondary) - UNETR          Dice_Mean n= 95 +0.0315 [+0.0149, +0.0515]  p=5.54e-06  higher 74/lower 21  a better
+  from Run C (secondary) - 3D U-Net       Dice_Mean n= 95 +0.0525 [+0.0336, +0.0752]  p=1.88e-10  higher 79/lower 15  a better
+
+  from Run D (secondary) - Henry et al.   Dice_Mean n= 95 +0.0167 [+0.0046, +0.0308]  p=0.0125  higher 61/lower 34  a better
+  from Run D (secondary) - nnFormer       Dice_Mean n= 95 +0.0168 [+0.0067, +0.0287]  p=0.000377  higher 61/lower 34  a better
+  from Run D (secondary) - SegResNet      Dice_Mean n= 95 +0.0041 [-0.0046, +0.0145]  p=0.87  higher 48/lower 47  n.s.
+  from Run D (secondary) - TransBTS       Dice_Mean n= 95 +0.0268 [+0.0138, +0.0439]  p=1e-07  higher 71/lower 24  a better
+  from Run D (secondary) - UNETR          Dice_Mean n= 95 +0.0461 [+0.0315, +0.0642]  p=4.8e-12  higher 84/lower 11  a better
+  from Run D (secondary) - 3D U-Net       Dice_Mean n= 95 +0.0671 [+0.0491, +0.0885]  p=4.02e-15  higher 91/lower 4  a better
+
+  from Run D2 (secondary) - Henry et al.   Dice_Mean n= 95 +0.0202 [+0.0060, +0.0363]  p=0.000271  higher 64/lower 31  a better  | recorded +0.0200 [+0.0060, +0.0360]  -> MATCH (reused)
+  from Run D2 (secondary) - nnFormer       Dice_Mean n= 95 +0.0203 [+0.0096, +0.0327]  p=1.64e-05  higher 65/lower 30  a better
+  from Run D2 (secondary) - SegResNet      Dice_Mean n= 95 +0.0076 [-0.0000, +0.0167]  p=0.0513  higher 57/lower 38  n.s.  | recorded +0.0080 [-0.0000, +0.0170] p=0.051  -> MATCH (reused)
+  from Run D2 (secondary) - TransBTS       Dice_Mean n= 95 +0.0302 [+0.0151, +0.0503]  p=1.38e-08  higher 74/lower 21  a better
+  from Run D2 (secondary) - UNETR          Dice_Mean n= 95 +0.0496 [+0.0335, +0.0696]  p=1.2e-13  higher 85/lower 10  a better  | recorded +0.0500 [+0.0340, +0.0700]  -> MATCH (reused)
+  from Run D2 (secondary) - 3D U-Net       Dice_Mean n= 95 +0.0705 [+0.0510, +0.0943]  p=7.05e-16  higher 92/lower 3  a better  | recorded +0.0710 [+0.0510, +0.0940]  -> MATCH (reused)
+
+== D. Classification, BraTS-Africa glioma (95) vs other neoplasm (51), logistic regression
+  Run C masks (PRIMARY)    AUC 0.762  (recorded 0.762, MATCH)
+  expert masks             AUC 0.826  (recorded 0.826, MATCH)
+  Henry et al.             AUC 0.781  (recorded 0.781, MATCH)
+  nnFormer                 AUC 0.799  (recorded 0.799, MATCH)
+  SegResNet                AUC 0.772  (recorded 0.772, MATCH)
+  TransBTS                 AUC 0.776  (recorded 0.776, MATCH)
+  UNETR                    AUC 0.748  (recorded 0.748, MATCH)
+  3D U-Net                 AUC 0.771  (recorded 0.771, MATCH)
+  paired AUC difference (source - Run C masks), patient-level bootstrap 2,000
+  expert masks             - Run C masks  +0.064 [-0.009, +0.137]  reused-verified
+  Henry et al.             - Run C masks  +0.019 [-0.036, +0.076]  new
+  nnFormer                 - Run C masks  +0.037 [-0.019, +0.098]  new
+  SegResNet                - Run C masks  +0.009 [-0.045, +0.068]  reused-verified
+  TransBTS                 - Run C masks  +0.014 [-0.046, +0.076]  new
+  UNETR                    - Run C masks  -0.014 [-0.076, +0.048]  reused-verified
+  3D U-Net                 - Run C masks  +0.009 [-0.048, +0.067]  reused-verified

@@ -1,0 +1,134 @@
+Amendment 28 — EXPLORATORY validation analysis of Ensemble 3 (126 VAL cases). These VAL cases already chose every member
+checkpoint, the members and the post-processing of Ensemble 3 (870 configurations, Amendment 17); fold splits inside them
+cannot undo that selection, so nothing here is an unbiased estimate. TEST was not read. Choices INHERITED from the earlier
+full-VAL selection (not re-chosen per fold): member checkpoints (best-by-VAL epochs), each member's inference mode (rotation
+TTA for runC_rot/runD2_rot, chosen on VAL), the member set, thresholds 0.5, wt_policy components, floors x1, ET min-volume 100.
+New choices (the 17 fixed candidates in config.json) are selected in the nested check with the outer fold held out.
+Motivation note: the component rules were suggested partly by earlier observations of FP-blob collapses (Run A, TEST);
+no rule parameter was derived from TEST data.
+
+E0 reproduction (full VAL, 126): Dice_Mean 0.907872 vs original 0.907872  Dice_ET 0.884133 vs original 0.884133  Dice_TC 0.907550 vs original 0.907550  Dice_WT 0.931933 vs original 0.931933
+-> E0 reproduces Ensemble 3 exactly (members' saved VAL probabilities unchanged since the 2026-10-03 selection).
+
+== Step 1: E0 (Ensemble 3) VAL error decomposition (126 cases), voxels summed over cases
+          gt_vox      fp  fp_blob  fp_boundary      fn  fn_missed  fn_boundary  fp_blob_%err  fp_bound_%err  fn_missed_%err  fn_bound_%err
+region                                                                                                                                    
+ET       2410058  169709     4186       165523  182272       4099       178173           1.2           47.0             1.2           50.6
+TC       3735419  139990    17304       122686  346310      20391       325919           3.6           25.2             4.2           67.0
+WT      11064479  492428    32629       459799  670557      11616       658941           2.8           39.5             1.0           56.7
+TC errors that are core<->edema confusion: FN predicted as edema 299221.0 vox (86.4 % of TC FN), FP that is GT edema 114101.0 vox (81.5 % of TC FP)
+cases with empty GT: ET 3, TC 2, WT 0
+
+Worst 10 VAL cases by Dice_TC (E0):
+  BraTS2021_00597 Dice_TC 0.000 (ET 0.000 TC 0.000 WT 0.958) GT 3240 pred 13483 FP 13483 (blob 13483 in 2) FN 3240 (missed 3240 in 4) -> FP blob (81 % of errors)
+  BraTS2021_01503 Dice_TC 0.000 (ET 0.000 TC 0.000 WT 0.881) GT 14507 pred 0 FP 0 (blob 0 in 0) FN 14507 (missed 14507 in 1) -> missed region (100 % of errors)
+  BraTS2021_01483 Dice_TC 0.001 (ET 1.000 TC 0.001 WT 0.873) GT 59424 pred 37 FP 0 (blob 0 in 0) FN 59387 (missed 0 in 0) -> core->edema (FN) (86 % of errors)
+  BraTS2021_01594 Dice_TC 0.128 (ET 0.000 TC 0.128 WT 0.915) GT 678 pred 70 FP 22 (blob 0 in 0) FN 630 (missed 14 in 2) -> other boundary FN (63 % of errors)
+  BraTS2021_00321 Dice_TC 0.344 (ET 0.764 TC 0.344 WT 0.815) GT 561 pred 119 FP 2 (blob 0 in 0) FN 444 (missed 0 in 0) -> core->edema (FN) (98 % of errors)
+  BraTS2021_01523 Dice_TC 0.608 (ET 0.500 TC 0.608 WT 0.964) GT 159875 pred 71282 FP 1001 (blob 0 in 0) FN 89594 (missed 0 in 0) -> core->edema (FN) (92 % of errors)
+  BraTS2021_01414 Dice_TC 0.609 (ET 0.882 TC 0.609 WT 0.944) GT 75471 pred 33505 FP 329 (blob 0 in 0) FN 42295 (missed 96 in 62) -> core->edema (FN) (98 % of errors)
+  BraTS2021_01469 Dice_TC 0.762 (ET 0.794 TC 0.762 WT 0.676) GT 6118 pred 3860 FP 60 (blob 0 in 0) FN 2318 (missed 11 in 4) -> core->edema (FN) (74 % of errors)
+  BraTS2021_01522 Dice_TC 0.786 (ET 0.858 TC 0.786 WT 0.950) GT 6499 pred 4760 FP 333 (blob 0 in 0) FN 2072 (missed 3 in 3) -> core->edema (FN) (85 % of errors)
+  BraTS2021_01110 Dice_TC 0.801 (ET 0.533 TC 0.801 WT 0.836) GT 5493 pred 4881 FP 727 (blob 0 in 0) FN 1339 (missed 9 in 1) -> core->edema (FN) (65 % of errors)
+
+Worst 10 VAL cases by Dice_WT (E0):
+  BraTS2021_01091 Dice_WT 0.492 (ET 0.886 TC 0.900 WT 0.492) GT 6790 pred 2623 FP 307 (blob 0 in 0) FN 4474 (missed 0 in 0) -> boundary FN (94 % of errors)
+  BraTS2021_01469 Dice_WT 0.676 (ET 0.794 TC 0.762 WT 0.676) GT 52716 pred 27156 FP 142 (blob 0 in 0) FN 25702 (missed 356 in 32) -> boundary FN (98 % of errors)
+  BraTS2021_01179 Dice_WT 0.724 (ET 1.000 TC 1.000 WT 0.724) GT 105314 pred 63810 FP 2576 (blob 0 in 0) FN 44080 (missed 3828 in 3) -> boundary FN (86 % of errors)
+  BraTS2021_01255 Dice_WT 0.741 (ET 0.928 TC 0.927 WT 0.741) GT 7513 pred 12351 FP 4990 (blob 0 in 0) FN 152 (missed 4 in 3) -> boundary FP (97 % of errors)
+  BraTS2021_01279 Dice_WT 0.755 (ET 0.916 TC 0.908 WT 0.755) GT 15718 pred 10990 FP 910 (blob 0 in 0) FN 5638 (missed 864 in 7) -> boundary FN (73 % of errors)
+  BraTS2021_00314 Dice_WT 0.797 (ET 0.973 TC 0.975 WT 0.797) GT 22211 pred 32824 FP 10901 (blob 0 in 0) FN 288 (missed 0 in 0) -> boundary FP (97 % of errors)
+  BraTS2021_00501 Dice_WT 0.803 (ET 0.874 TC 0.928 WT 0.803) GT 194150 pred 130694 FP 252 (blob 0 in 0) FN 63708 (missed 0 in 0) -> boundary FN (100 % of errors)
+  BraTS2021_01519 Dice_WT 0.815 (ET 0.896 TC 0.893 WT 0.815) GT 27311 pred 27434 FP 5135 (blob 0 in 0) FN 5012 (missed 137 in 21) -> boundary FP (51 % of errors)
+  BraTS2021_00321 Dice_WT 0.815 (ET 0.764 TC 0.344 WT 0.815) GT 20752 pred 15906 FP 973 (blob 0 in 0) FN 5819 (missed 22 in 12) -> boundary FN (85 % of errors)
+  BraTS2021_01525 Dice_WT 0.828 (ET 0.905 TC 0.914 WT 0.828) GT 37466 pred 27465 FP 587 (blob 0 in 0) FN 10588 (missed 931 in 23) -> boundary FN (86 % of errors)
+share of the total VAL Dice_TC shortfall (1 - mean = 0.0925) from the worst 10 cases: 51.2 %; worst 2: 17.2 %
+share of the total VAL Dice_WT shortfall (1 - mean = 0.0681) from the worst 10 cases: 29.8 %; worst 2: 9.7 %
+
+== FULL-VAL results (all 126 cases; optimistic, VAL reused): candidates vs E0 (paired bootstrap 10,000 seed 0 + two-sided Wilcoxon; unadjusted for 17 comparisons)
+candidate      Mean     ET     TC     WT      HD95 ET/TC/WT (undef) | d Mean [CI]              p      d TC [CI]                d WT [CI]                d HD95 mm [CI]           folds>=0 better/worse worst10 TC/WT  pass
+E0           0.9079 0.8841 0.9075 0.9319  2.43/ 3.28/ 3.81 (2,1,0) | reference
+LOO-ep253    0.9037 0.8765 0.8998 0.9348  2.23/ 3.32/ 3.85 (3,2,0) | -0.0042 [-0.0158,+0.0023] 0.0133  -0.0078 [-0.0248,+0.0017] +0.0028 [+0.0005,+0.0053] +0.202 [-0.521,+1.156]  3.0/5  75.0/51.0  +0.0072/+0.0120  no
+LOO-runC_rot 0.9007 0.8745 0.8972 0.9304  2.37/ 3.65/ 5.43 (4,2,0) | -0.0072 [-0.0186,-0.0007] 0.00517  -0.0103 [-0.0272,-0.0011] -0.0015 [-0.0040,+0.0009] +0.695 [+0.235,+1.254]  0.0/5  49.0/77.0  +0.0007/+0.0054  no
+LOO-runD2_rot 0.8998 0.8809 0.8924 0.9262  2.56/ 3.86/ 5.62 (2,1,0) | -0.0081 [-0.0155,-0.0031] 2.67e-10  -0.0151 [-0.0374,-0.0010] -0.0058 [-0.0081,-0.0036] +0.886 [+0.403,+1.462]  1.0/5  31.0/95.0  +0.0036/-0.0024  no
+W211         0.9034 0.8819 0.9009 0.9275  2.51/ 3.61/ 5.51 (2,1,0) | -0.0044 [-0.0085,-0.0019] 1.07e-11  -0.0066 [-0.0179,-0.0004] -0.0044 [-0.0065,-0.0025] +0.704 [+0.252,+1.271]  0.0/5  27.0/99.0  +0.0010/-0.0013  no
+W121         0.9079 0.8840 0.9077 0.9319  2.43/ 3.48/ 3.66 (2,0,0) | +0.0000 [-0.0006,+0.0006] 0.297  +0.0002 [-0.0005,+0.0008] -0.0000 [-0.0007,+0.0008] +0.051 [-0.164,+0.306]  3.0/5  57.0/69.0  +0.0004/+0.0015  no
+W112         0.9030 0.8761 0.8990 0.9339  2.33/ 3.36/ 3.64 (4,2,0) | -0.0049 [-0.0164,+0.0016] 0.117  -0.0085 [-0.0254,+0.0009] +0.0020 [-0.0000,+0.0042] +0.011 [-0.350,+0.405]  3.0/5  73.0/53.0  +0.0055/+0.0066  no
+W122         0.9033 0.8766 0.8998 0.9334  2.44/ 3.31/ 3.62 (3,2,0) | -0.0046 [-0.0156,+0.0012] 2.26e-05  -0.0077 [-0.0242,+0.0010] +0.0015 [+0.0006,+0.0024] -0.052 [-0.210,+0.067]  3.0/5  83.0/43.0  +0.0017/+0.0041  no
+W212         0.9074 0.8837 0.9069 0.9316  2.45/ 3.26/ 4.26 (2,1,0) | -0.0005 [-0.0011,+0.0000] 0.333  -0.0007 [-0.0014,-0.0000] -0.0004 [-0.0012,+0.0004] +0.150 [-0.007,+0.420]  1.0/5  60.0/66.0  -0.0009/+0.0007  no
+W221         0.9067 0.8830 0.9068 0.9302  2.48/ 3.52/ 3.89 (2,0,0) | -0.0012 [-0.0018,-0.0006] 4.51e-08  -0.0007 [-0.0015,+0.0001] -0.0017 [-0.0026,-0.0009] +0.157 [+0.029,+0.388]  1.0/5  36.0/90.0  -0.0020/-0.0011  no
+WTrel0.05    0.9081 0.8844 0.9077 0.9322  2.43/ 3.26/ 3.70 (2,1,0) | +0.0002 [-0.0007,+0.0014] 0.362  +0.0001 [-0.0010,+0.0015] +0.0002 [-0.0004,+0.0009] -0.044 [-0.637,+0.464]  2.0/5  14.0/9.0  +0.0000/-0.0026  no
+WTrel0.1     0.9077 0.8841 0.9074 0.9315  2.52/ 3.35/ 3.77 (2,1,0) | -0.0002 [-0.0015,+0.0011] 0.638  -0.0001 [-0.0014,+0.0012] -0.0004 [-0.0026,+0.0013] +0.038 [-0.558,+0.594]  2.0/5  15.0/11.0  +0.0000/-0.0026  no
+WTrel0.2     0.9071 0.8835 0.9069 0.9309  2.78/ 3.63/ 3.92 (2,1,0) | -0.0008 [-0.0027,+0.0009] 0.909  -0.0006 [-0.0024,+0.0009] -0.0010 [-0.0039,+0.0015] +0.265 [-0.448,+1.079]  2.0/5  16.0/12.0  +0.0000/-0.0078  no
+TCrel0.05    0.9077 0.8839 0.9073 0.9319  2.45/ 3.36/ 3.81 (2,1,0) | -0.0002 [-0.0005,+0.0001] 0.156  -0.0002 [-0.0007,+0.0002] +0.0000 [+0.0000,+0.0000] +0.033 [-0.004,+0.080]  1.0/5  4.0/11.0  +0.0000/+0.0000  no
+TCrel0.1     0.9067 0.8823 0.9060 0.9319  2.80/ 3.80/ 3.81 (2,1,0) | -0.0011 [-0.0022,-0.0002] 0.0157  -0.0016 [-0.0031,-0.0003] +0.0000 [+0.0000,+0.0000] +0.293 [-0.086,+0.751]  1.0/5  5.0/16.0  +0.0000/+0.0000  no
+TCrel0.2     0.9056 0.8805 0.9043 0.9319  3.25/ 4.24/ 3.81 (2,1,0) | -0.0023 [-0.0045,-0.0004] 0.0152  -0.0032 [-0.0063,-0.0005] +0.0000 [+0.0000,+0.0000] +0.587 [-0.096,+1.320]  2.0/5  6.0/18.0  +0.0000/+0.0000  no
+WTconf0.8    0.9079 0.8841 0.9075 0.9321  2.43/ 3.28/ 3.87 (2,1,0) | +0.0000 [-0.0001,+0.0002] 0.408  +0.0000 [+0.0000,+0.0000] +0.0001 [-0.0002,+0.0005] +0.018 [-0.030,+0.081]  3.0/5  9.0/7.0  +0.0000/-0.0019  no
+WTconf0.9    0.9084 0.8848 0.9081 0.9322  2.20/ 3.02/ 3.66 (2,1,0) | +0.0005 [-0.0002,+0.0015] 0.14  +0.0005 [+0.0000,+0.0015] +0.0003 [-0.0008,+0.0013] -0.215 [-0.692,+0.062]  2.0/5  13.0/8.0  +0.0000/-0.0071  no
+
+worst-10 cases (E0's 10 lowest by TC / by WT): mean change, # improved > 0.01 / # worse > 0.01; cases losing > 0.05 in any region
+  LOO-ep253    TC +0.0072 (4 up / 1 down)  WT +0.0120 (5 up / 1 down)  any-region loss > 0.05: 2
+  LOO-runC_rot TC +0.0007 (2 up / 2 down)  WT +0.0054 (4 up / 4 down)  any-region loss > 0.05: 3
+  LOO-runD2_rot TC +0.0036 (3 up / 1 down)  WT -0.0024 (4 up / 4 down)  any-region loss > 0.05: 7
+  W211         TC +0.0010 (2 up / 1 down)  WT -0.0013 (2 up / 4 down)  any-region loss > 0.05: 3
+  W121         TC +0.0004 (0 up / 0 down)  WT +0.0015 (2 up / 2 down)  any-region loss > 0.05: 0
+  W112         TC +0.0055 (2 up / 1 down)  WT +0.0066 (3 up / 2 down)  any-region loss > 0.05: 3
+  W122         TC +0.0017 (1 up / 1 down)  WT +0.0041 (3 up / 1 down)  any-region loss > 0.05: 2
+  W212         TC -0.0009 (0 up / 0 down)  WT +0.0007 (3 up / 1 down)  any-region loss > 0.05: 0
+  W221         TC -0.0020 (0 up / 1 down)  WT -0.0011 (1 up / 2 down)  any-region loss > 0.05: 0
+  WTrel0.05    TC +0.0000 (0 up / 0 down)  WT -0.0026 (0 up / 1 down)  any-region loss > 0.05: 0
+  WTrel0.1     TC +0.0000 (0 up / 0 down)  WT -0.0026 (0 up / 1 down)  any-region loss > 0.05: 2
+  WTrel0.2     TC +0.0000 (0 up / 0 down)  WT -0.0078 (0 up / 2 down)  any-region loss > 0.05: 4
+  TCrel0.05    TC +0.0000 (0 up / 0 down)  WT +0.0000 (0 up / 0 down)  any-region loss > 0.05: 0
+  TCrel0.1     TC +0.0000 (0 up / 0 down)  WT +0.0000 (0 up / 0 down)  any-region loss > 0.05: 0
+  TCrel0.2     TC +0.0000 (0 up / 0 down)  WT +0.0000 (0 up / 0 down)  any-region loss > 0.05: 4
+  WTconf0.8    TC +0.0000 (0 up / 0 down)  WT -0.0019 (0 up / 1 down)  any-region loss > 0.05: 0
+  WTconf0.9    TC +0.0000 (0 up / 0 down)  WT -0.0071 (0 up / 2 down)  any-region loss > 0.05: 1
+
+fold consistency (FULL-VAL candidates, no selection): per-fold mean-Dice gain vs E0, folds 0-4:
+  LOO-ep253    +0.0021 -0.0260 +0.0017 +0.0024 -0.0015
+  LOO-runC_rot -0.0010 -0.0292 -0.0026 -0.0001 -0.0032
+  LOO-runD2_rot -0.0047 -0.0036 -0.0271 -0.0052 +0.0002
+  W211         -0.0034 -0.0033 -0.0126 -0.0026 -0.0002
+  W121         -0.0002 +0.0003 +0.0002 -0.0011 +0.0009
+  W112         +0.0015 -0.0266 +0.0011 +0.0024 -0.0031
+  W122         +0.0011 -0.0256 +0.0010 +0.0010 -0.0007
+  W212         -0.0003 -0.0007 -0.0007 +0.0002 -0.0011
+  W221         -0.0017 -0.0013 -0.0014 -0.0020 +0.0005
+  WTrel0.05    +0.0021 +0.0002 -0.0000 -0.0012 -0.0001
+  WTrel0.1     +0.0008 -0.0000 -0.0012 -0.0009 +0.0004
+  WTrel0.2     +0.0008 +0.0001 -0.0012 -0.0009 -0.0026
+  TCrel0.05    -0.0005 -0.0001 +0.0005 -0.0001 -0.0006
+  TCrel0.1     -0.0014 -0.0001 +0.0005 -0.0031 -0.0015
+  TCrel0.2     +0.0004 -0.0026 +0.0005 -0.0046 -0.0053
+  WTconf0.8    +0.0002 +0.0002 -0.0001 +0.0000 -0.0001
+  WTconf0.9    +0.0026 -0.0004 -0.0001 +0.0004 -0.0001
+
+component rules: voxels removed / of which GT tumour (same region) / cases changed / cases losing GT voxels / max per-case Dice loss
+  WTrel0.05       18729 /   5275 (0.048 % of GT) / 23 / 11 / 0.0417
+  WTrel0.1        41882 /  14540 (0.131 % of GT) / 26 / 14 / 0.0860
+  WTrel0.2        62956 /  25308 (0.229 % of GT) / 28 / 15 / 0.0860
+  TCrel0.05        2213 /   1246 (0.033 % of GT) / 16 / 11 / 0.0165
+  TCrel0.1        10950 /   8979 (0.240 % of GT) / 22 / 16 / 0.0440
+  TCrel0.2        23675 /  19028 (0.509 % of GT) / 25 / 18 / 0.1051
+  WTconf0.8        8430 /   1107 (0.010 % of GT) / 16 / 7 / 0.0114
+  WTconf0.9       19927 /   4181 (0.038 % of GT) / 21 / 9 / 0.0521
+
+== OUTER-FOLD results, MEAN-DICE-ONLY nested selection (exploratory): for each outer fold k, the candidate with the highest
+   mean Dice on the other 4 folds is chosen from {E0 + 17 candidates} (ties -> E0). Rules (a)-(c) of Amendment 28 were NOT
+   applied inside the selection folds, so this is NOT an evaluation of the full prespecified selection rule.
+   (the held-out fold takes no part in any new weight / post-processing choice) and scored on fold k; the 126 held-out
+   predictions are then pooled. Inherited full-VAL choices (see header) are NOT re-chosen per fold.
+  outer fold 0 (n=26): chosen W121         (inner 4-fold gain +0.0000) held-out E0 0.9132 -> chosen 0.9130 gain -0.0002
+  outer fold 1 (n=25): chosen LOO-ep253    (inner 4-fold gain +0.0012) held-out E0 0.8778 -> chosen 0.8518 gain -0.0260
+  outer fold 2 (n=25): chosen WTconf0.9    (inner 4-fold gain +0.0006) held-out E0 0.8981 -> chosen 0.8980 gain -0.0001
+  outer fold 3 (n=25): chosen WTrel0.05    (inner 4-fold gain +0.0006) held-out E0 0.9328 -> chosen 0.9316 gain -0.0012
+  outer fold 4 (n=25): chosen WTconf0.9    (inner 4-fold gain +0.0006) held-out E0 0.9172 -> chosen 0.9171 gain -0.0001
+  pooled outer-fold (126): Dice_Mean 0.9024 (E0 0.9079)  Dice_ET 0.8759 (E0 0.8841)  Dice_TC 0.8994 (E0 0.9075)  Dice_WT 0.9318 (E0 0.9319)
+    pooled outer-fold minus E0 Dice_Mean -0.0055 [-0.0168, +0.0006] Wilcoxon p=0.502
+    pooled outer-fold minus E0 Dice_ET   -0.0082 [-0.0247, +0.0005] Wilcoxon p=0.154
+    pooled outer-fold minus E0 Dice_TC   -0.0081 [-0.0245, +0.0007] Wilcoxon p=0.234
+    pooled outer-fold minus E0 Dice_WT   -0.0001 [-0.0014, +0.0010] Wilcoxon p=0.815
+  mean held-out gain over folds -0.0055 (mean-Dice-only selection) -> rule (d) as written NOT met
+
+Candidates passing (a)-(c): none; rule (d): not met

@@ -1,0 +1,165 @@
+--- a/data/BraTS.py
++++ b/data/BraTS.py
+@@ -8,6 +8,22 @@
+ from scipy import ndimage
+ 
+ 
++def nii_f32b0(path, has_label=True):
++    # 2026-10-14 (our run): same as data/preprocess.py process_f32b0 (modalities flair, t1ce, t1, t2; float32; z-score over
++    # the brain mask, background kept 0), computed on load instead of caching 1,251 x 143 MB pickles on the HDD.
++    import nibabel as nib
++    images = np.stack([np.array(nib.load(path + m + '.nii.gz').dataobj, dtype='float32', order='C')
++                       for m in ('flair', 't1ce', 't1', 't2')], -1)
++    mask = images.sum(-1) > 0
++    for k in range(4):
++        x = images[..., k]; y = x[mask]
++        x[mask] -= y.mean(); x[mask] /= y.std(); images[..., k] = x
++    if not has_label:
++        return images
++    label = np.array(nib.load(path + 'seg.nii.gz').dataobj, dtype='uint8', order='C')
++    return images, label
++
++
+ def pkload(fname):
+     with open(fname, 'rb') as f:
+         return pickle.load(f)
+@@ -147,17 +163,17 @@
+     def __getitem__(self, item):
+         path = self.paths[item]
+         if self.mode == 'train':
+-            image, label = pkload(path + 'data_f32b0.pkl')
++            image, label = nii_f32b0(path)
+             sample = {'image': image, 'label': label}
+             sample = transform(sample)
+             return sample['image'], sample['label']
+         elif self.mode == 'valid':
+-            image, label = pkload(path + 'data_f32b0.pkl')
++            image, label = nii_f32b0(path)
+             sample = {'image': image, 'label': label}
+             sample = transform_valid(sample)
+             return sample['image'], sample['label']
+         else:
+-            image = pkload(path + 'data_f32b0.pkl')
++            image = nii_f32b0(path, has_label=False)
+             image = np.pad(image, ((0, 0), (0, 0), (0, 5), (0, 0)), mode='constant')
+             image = np.ascontiguousarray(image.transpose(3, 0, 1, 2))
+             image = torch.from_numpy(image).float()
+--- a/train.py
++++ b/train.py
+@@ -104,6 +104,10 @@
+ 
+ parser.add_argument('--local_rank', default=0, type=int, help='node rank for distributed training')
+ 
++# 2026-10-14 (our single-GPU run): micro-batch x accumulation = the authors' batch 8 (4 GPUs x 2)
++parser.add_argument('--accum_steps', default=1, type=int)
++parser.add_argument('--init_weights', default='', type=str)  # 2026-10-14: fine-tuning start (Amendment 6/25 CV)
++
+ args = parser.parse_args()
+ 
+ 
+@@ -142,7 +146,7 @@
+         if not os.path.exists(checkpoint_dir):
+             os.makedirs(checkpoint_dir)
+ 
+-    resume = ''
++    resume = args.resume  # 2026-10-14: upstream hard-coded '' (resume never worked)
+ 
+     writer = SummaryWriter()
+ 
+@@ -151,9 +155,14 @@
+         checkpoint = torch.load(resume, map_location=lambda storage, loc: storage)
+ 
+         model.load_state_dict(checkpoint['state_dict'])
++        optimizer.load_state_dict(checkpoint['optim_dict'])   # 2026-10-14: resume optimiser state and epoch
++        args.start_epoch = checkpoint['epoch'] + 1
+ 
+         logging.info('Successfully loading checkpoint {} and training from epoch: {}'
+                      .format(args.resume, args.start_epoch))
++    elif args.init_weights:
++        model.load_state_dict(torch.load(args.init_weights, map_location=lambda storage, loc: storage)['state_dict'])
++        logging.info('initialised from {}'.format(args.init_weights))
+     else:
+         logging.info('re-training!!!')
+ 
+@@ -173,6 +182,7 @@
+     start_time = time.time()
+ 
+     torch.set_grad_enabled(True)
++    optimizer.zero_grad()
+ 
+     for epoch in range(args.start_epoch, args.end_epoch):
+         train_sampler.set_epoch(epoch)  # shuffle
+@@ -181,7 +191,8 @@
+ 
+         for i, data in enumerate(train_loader):
+ 
+-            adjust_learning_rate(optimizer, epoch, args.end_epoch, args.lr)
++            if i % args.accum_steps == 0:
++                adjust_learning_rate(optimizer, epoch, args.end_epoch, args.lr)
+ 
+             x, target = data
+             x = x.cuda(args.local_rank, non_blocking=True)
+@@ -200,9 +211,12 @@
+                 logging.info('Epoch: {}_Iter:{}  loss: {:.5f} || 1:{:.4f} | 2:{:.4f} | 3:{:.4f} ||'
+                              .format(epoch, i, reduce_loss, reduce_loss1, reduce_loss2, reduce_loss3))
+ 
+-            optimizer.zero_grad()
+-            loss.backward()
+-            optimizer.step()
++            if not torch.isfinite(loss):   # 2026-10-14: failure rule (Amendment 24) -> stop; train.sh resumes from the last checkpoint
++                raise RuntimeError('non-finite loss at epoch {} iter {}'.format(epoch, i))
++            (loss / args.accum_steps).backward()   # 2026-10-14: gradient accumulation (accum_steps=1 -> upstream behaviour)
++            if (i + 1) % args.accum_steps == 0:
++                optimizer.step()
++                optimizer.zero_grad()
+ 
+         end_epoch = time.time()
+         if args.local_rank == 0:
+@@ -218,6 +232,9 @@
+                 },
+                     file_name)
+ 
++            torch.save({'epoch': epoch, 'state_dict': model.state_dict(), 'optim_dict': optimizer.state_dict()},
++                       os.path.join(checkpoint_dir, 'model_last_resume.pth.tmp'))   # 2026-10-14: rolling resume point
++            os.replace(os.path.join(checkpoint_dir, 'model_last_resume.pth.tmp'), os.path.join(checkpoint_dir, 'model_last_resume.pth'))
+             writer.add_scalar('lr:', optimizer.param_groups[0]['lr'], epoch)
+             writer.add_scalar('loss:', reduce_loss, epoch)
+             writer.add_scalar('loss1:', reduce_loss1, epoch)
+--- a/predict.py
++++ b/predict.py
+@@ -200,7 +200,7 @@
+             if save_format == 'nii':
+                 # raise NotImplementedError
+                 oname = os.path.join(savepath, name + '.nii.gz')
+-                seg_img = np.zeros(shape=(H, W, T), dtype=np.uint8)
++                seg_img = np.zeros(shape=output.shape, dtype=np.uint8)  # 2026-10-14: was (H, W, T=160) -> 160-slice masks vs 155-slice images
+ 
+                 seg_img[np.where(output == 1)] = 1
+                 seg_img[np.where(output == 2)] = 2
+@@ -209,7 +209,8 @@
+                     print('1:', np.sum(seg_img == 1), ' | 2:', np.sum(seg_img == 2), ' | 4:', np.sum(seg_img == 4))
+                     print('WT:', np.sum((seg_img == 1) | (seg_img == 2) | (seg_img == 4)), ' | TC:',
+                           np.sum((seg_img == 1) | (seg_img == 4)), ' | ET:', np.sum(seg_img == 4))
+-                nib.save(nib.Nifti1Image(seg_img, None), oname)
++                ref = nib.load(os.path.join(os.environ['TRANSBTS_REF_ROOT'], name, name + '_flair.nii.gz')) if os.environ.get('TRANSBTS_REF_ROOT') else None  # 2026-10-14: keep geometry
++                nib.save(nib.Nifti1Image(seg_img, ref.affine if ref is not None else None, ref.header if ref is not None else None), oname)
+                 print('Successfully save {}'.format(oname))
+ 
+                 if snapshot:
+@@ -231,4 +232,4 @@
+                         imageio.imwrite(os.path.join(visual, name, str(frame)+'.png'), Snapshot_img[:, :, :, frame])
+ 
+ 
+-    print('runtimes:', sum(runtimes)/len(runtimes))
++    print('runtimes:', sum(runtimes)/len(runtimes) if runtimes else 'n/a (TTA)')  # 2026-10-14: ZeroDivision with TTA
+--- a/test.py
++++ b/test.py
+@@ -85,7 +85,7 @@
+         args.start_epoch = checkpoint['epoch']
+         print('Successfully load checkpoint {}'.format(os.path.join(args.experiment+args.test_date, args.test_file)))
+     else:
+-        print('There is no resume file to load!')
++        raise FileNotFoundError('checkpoint not found: ' + load_file)  # 2026-10-14: upstream printed and continued with random weights
+ 
+     valid_list = os.path.join(args.root, args.valid_dir, args.valid_file)
+     valid_root = os.path.join(args.root, args.valid_dir)

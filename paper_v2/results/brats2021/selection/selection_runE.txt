@@ -1,0 +1,1 @@
+runE 0.8966 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runE/runE_long400_best_evaluated.pth 100 both

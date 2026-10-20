@@ -1,0 +1,30 @@
+runC: VAL selection: runC 0.8994 components 5 /mnt/data1/kamil_research/experiments/eval_v2/work_runC/runC_dwt3d_best_evaluated.pth 100 both
+ctrl_maxpool3d: VAL selection: ctrl_maxpool3d 0.9008 components 1 /mnt/data1/kamil_research/experiments/eval_v2/work_ctrl_maxpool3d/ctrl_maxpool3d_best_evaluated.pth 1000 both
+
+== BraTS 2021 TEST (125, each scored once)
+  Run C (3D Haar DWT)          n=125  ET 0.8714  TC 0.9068  WT 0.9136  mean 0.8973 [0.8728, 0.9162]  HD95 3.71 (n=124)  HD95* 6.66
+  control (3D max-pool)        n=125  ET 0.8523  TC 0.9044  WT 0.9081  mean 0.8883 [0.8622, 0.9094]  HD95 4.02 (n=124)  HD95* 8.92
+
+  Run C minus control (positive Dice / negative HD95 = Run C better)
+  Dice_Mean  [PRIMARY]               n=125 +0.008980 [+0.002327, +0.017252]  Wilcoxon p=6.15e-06  Run C better on 84/125  -> favours Run C
+  Dice_ET                            n=125 +0.019070 [+0.002427, +0.042089]  Wilcoxon p=0.0029  Run C better on 78/125  -> favours Run C
+  Dice_TC                            n=125 +0.002384 [-0.003534, +0.008090]  Wilcoxon p=0.248  Run C better on 64/125  -> no difference detected
+  Dice_WT                            n=125 +0.005488 [+0.001960, +0.009218]  Wilcoxon p=3.64e-06  Run C better on 90/125  -> favours Run C
+  HD95 (defined for both, mm)        n=124 -0.309223 [-0.864856, +0.204016]  Wilcoxon p=0.00311  Run C better on 57/124  -> no difference detected
+  HD95* (undefined = 373.13 mm)      n=125 -2.258360 [-5.249364, -0.129450]  Wilcoxon p=0.000568  Run C better on 59/125  -> favours Run C
+
+== BraTS-Africa zero-shot, glioma (95)  [secondary]
+  Run C (3D Haar DWT)          n=95  ET 0.7467  TC 0.7698  WT 0.8160  mean 0.7775 [0.7291, 0.8202]  HD95 10.72 (n=94)  HD95* 19.17
+  control (3D max-pool)        n=95  ET 0.7368  TC 0.7518  WT 0.7920  mean 0.7602 [0.7135, 0.8047]  HD95 13.14 (n=93)  HD95* 21.85
+  Dice_Mean                          n= 95 +0.017304 [+0.003557, +0.031550]  Wilcoxon p=0.00211  Run C better on 62/95  -> favours Run C
+  Dice_ET                            n= 95 +0.009893 [-0.005879, +0.026230]  Wilcoxon p=0.436  Run C better on 45/95  -> no difference detected
+  Dice_TC                            n= 95 +0.017961 [-0.002978, +0.038794]  Wilcoxon p=0.42  Run C better on 45/95  -> no difference detected
+  Dice_WT                            n= 95 +0.024058 [+0.009360, +0.038341]  Wilcoxon p=2.4e-08  Run C better on 76/95  -> favours Run C
+
+== BraTS-Africa zero-shot, other_neoplasm (51)  [stress test]
+  Run C (3D Haar DWT)          n=51  ET 0.7021  TC 0.6912  WT 0.7075  mean 0.7003 [0.6370, 0.7601]  HD95 21.88 (n=51)  HD95* 35.29
+  control (3D max-pool)        n=51  ET 0.7529  TC 0.7258  WT 0.6898  mean 0.7228 [0.6653, 0.7748]  HD95 20.93 (n=50)  HD95* 32.43
+  Dice_Mean                          n= 51 -0.022574 [-0.066964, +0.020955]  Wilcoxon p=0.626  Run C better on 25/51  -> no difference detected
+  Dice_ET                            n= 51 -0.050889 [-0.106664, -0.000571]  Wilcoxon p=0.0313  Run C better on 14/51  -> favours the control
+  Dice_TC                            n= 51 -0.034569 [-0.100048, +0.035333]  Wilcoxon p=0.112  Run C better on 18/51  -> no difference detected
+  Dice_WT                            n= 51 +0.017736 [-0.009595, +0.044739]  Wilcoxon p=0.136  Run C better on 30/51  -> no difference detected

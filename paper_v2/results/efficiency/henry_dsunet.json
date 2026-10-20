@@ -1,0 +1,95 @@
+{
+ "method": "henry_dsunet",
+ "params": 23154735,
+ "params_M": 23.15,
+ "gflops_per_forward": 1995.7,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 16,
+ "sec_per_case_mean": 2.11,
+ "sec_per_case_sd": 0.18,
+ "peak_gpu_gib_max": 7.0,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 2.0423657400533557,
+   "peak_gib": 6.31122350692749,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 2.3179992160294205,
+   "peak_gib": 6.9976701736450195,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 1.953579317079857,
+   "peak_gib": 5.796838283538818,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 1.777054226025939,
+   "peak_gib": 5.1683478355407715,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 2.312263368163258,
+   "peak_gib": 6.8259100914001465,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 2.1254872828722,
+   "peak_gib": 6.31122350692749,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 2.3301170200575143,
+   "peak_gib": 6.9976701736450195,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 2.1137585029937327,
+   "peak_gib": 6.31122350692749,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 1.9849022619891912,
+   "peak_gib": 5.796838283538818,
+   "n_forward": 16
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 2.1289235609583557,
+   "peak_gib": 6.427140712738037,
+   "n_forward": 16
+  }
+ ],
+ "protocol": "simple TTA (16 transforms), fp16 autocast, whole cropped volume per pass; GFLOPs at 128^3",
+ "note": "passes are whole brain-cropped volumes, not fixed windows"
+}

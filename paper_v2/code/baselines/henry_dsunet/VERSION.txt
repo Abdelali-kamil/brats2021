@@ -1,0 +1,1 @@
+Henry et al.: official code github.com/lescientifik/open_brats2020 @ e5f9896 (no licence file: used locally, not redistributed); Ranger optimizer dependency @ c82a304 (its own LICENSE)

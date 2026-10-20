@@ -1,0 +1,1 @@
+runF 0.8905 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runF/runF_phenoD_best_evaluated.pth 500 both

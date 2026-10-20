@@ -1,0 +1,1 @@
+ctrl_maxpool3d 0.9008 components 1 /mnt/data1/kamil_research/experiments/eval_v2/work_ctrl_maxpool3d/ctrl_maxpool3d_best_evaluated.pth 1000 both

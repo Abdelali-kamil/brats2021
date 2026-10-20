@@ -1,0 +1,95 @@
+{
+ "method": "henry_dsunet_noTTA",
+ "params": 23154735,
+ "params_M": 23.15,
+ "gflops_per_forward": 1995.7,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 1,
+ "sec_per_case_mean": 0.4,
+ "sec_per_case_sd": 0.03,
+ "peak_gpu_gib_max": 6.5,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 0.4480183129198849,
+   "peak_gib": 5.866269111633301,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 0.4613421431276947,
+   "peak_gib": 6.5025529861450195,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 0.399369761813432,
+   "peak_gib": 5.388260841369629,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 0.3616388118825853,
+   "peak_gib": 4.805790901184082,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 0.41260348609648645,
+   "peak_gib": 6.343085289001465,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 0.3980063970666379,
+   "peak_gib": 5.866269111633301,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 0.4016164739150554,
+   "peak_gib": 6.5037736892700195,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 0.38918978604488075,
+   "peak_gib": 5.866269111633301,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 0.3718534999061376,
+   "peak_gib": 5.388260841369629,
+   "n_forward": 1
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 0.39988922397606075,
+   "peak_gib": 5.973946571350098,
+   "n_forward": 1
+  }
+ ],
+ "protocol": "no TTA, fp16 autocast, whole cropped volume per pass; GFLOPs at 128^3",
+ "note": "passes are whole brain-cropped volumes, not fixed windows"
+}

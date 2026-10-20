@@ -1,0 +1,13 @@
+[runF 2026-10-19 22:38:36] training starts/resumes (epoch 0)
+[runF 2026-10-20 12:51:07] training complete: [INFO] New best mean Dice 0.8721 -> /mnt/data1/kamil_research/experiments/runF_phenoD/checkpoints/runF_phenoD_best.pth
+[runF 2026-10-20 14:04:43] VAL eval runF FAILED (see /mnt/data1/kamil_research/experiments/eval_v2/eval_runF.log)
+[runF 2026-10-20 14:20:57] training complete: [INFO] New best mean Dice 0.8721 -> /mnt/data1/kamil_research/experiments/runF_phenoD/checkpoints/runF_phenoD_best.pth
+[runF 2026-10-20 16:02:38] VAL eval runF FAILED (see /mnt/data1/kamil_research/experiments/eval_v2/eval_runF.log)
+[runF 2026-10-20 16:55:08] training complete: [INFO] New best mean Dice 0.8721 -> /mnt/data1/kamil_research/experiments/runF_phenoD/checkpoints/runF_phenoD_best.pth
+[runF 2026-10-20 18:19:22] runF VAL: runF 0.8905 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runF/runF_phenoD_best_evaluated.pth 500 both
+trainfit runD done: 2 files
+trainfit runF done: 2 files
+[runF 2026-10-20 18:30:42] criteria (base): VERDICT for runF vs runD: (ii) subgroup effect without overall non-inferiority (not adopted). Outcome (i) requires BOTH the base and the rotation variant to pass.
+[runF 2026-10-20 21:57:15] runF_rot VAL: runF_rot 0.8918 largest 1 /mnt/data1/kamil_research/experiments/eval_v2/work_runF/runF_phenoD_best_evaluated.pth 500 both+rot
+[runF 2026-10-20 21:58:55] criteria (rot): VERDICT for runF_rot vs runD_rot: (ii) subgroup effect without overall non-inferiority (not adopted). Outcome (i) requires BOTH the base and the rotation variant to pass.
+[runF 2026-10-20 21:58:55] === Run F finished (VAL only; no TEST) ===

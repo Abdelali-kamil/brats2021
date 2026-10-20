@@ -1,0 +1,33 @@
+VAL-only comparison runE_rot vs runD_rot (126 cases, each with its own VAL-selected post-processing; TEST not read)
+  runE_rot: selection largest floors x1 ET-min 100 axis both+rot | recorded VAL 0.8963, recomputed 0.8963
+  runD_rot: selection largest floors x1 ET-min 100 axis both+rot | recorded VAL 0.8940, recomputed 0.8940
+
+             runE_rot   runD_rot   diff (runE_rot - runD_rot) [95% CI]   Wilcoxon p   runE_rot better/worse
+Dice_Mean      0.8963     0.8940   +0.0023 [-0.0026, +0.0090]   0.362   73/53
+Dice_ET        0.8718     0.8718   -0.0000 [-0.0042, +0.0040]   0.378   70/51
+Dice_TC        0.8954     0.8882   +0.0072 [-0.0039, +0.0260]   0.3   58/66
+Dice_WT        0.9215     0.9219   -0.0004 [-0.0049, +0.0033]   0.467   68/58
+HD95_ET          3.22       3.34   -0.036 [-0.118, +0.049] mm (n=123 defined pairs)  p=0.286   undefined 3 / 2
+HD95_TC          4.30       4.39   +0.007 [-0.091, +0.105] mm (n=124 defined pairs)  p=0.558   undefined 1 / 1
+HD95_WT          5.03       4.95   +0.081 [-0.281, +0.589] mm (n=126 defined pairs)  p=0.764   undefined 0 / 0
+
+Targeted VAL cases (ET/TC < 0.25, n=8; EXPLORATORY, cutoff derived from VAL): Dice_TC runE_rot vs runD_rot
+  BraTS2021_00111 ET/TC 0.16  TC 0.835 vs 0.854 (-0.019)   mean 0.740 vs 0.743
+  BraTS2021_00239 ET/TC 0.13  TC 0.897 vs 0.878 (+0.019)   mean 0.828 vs 0.822
+  BraTS2021_00321 ET/TC 0.19  TC 0.382 vs 0.329 (+0.053)   mean 0.636 vs 0.633
+  BraTS2021_00597 ET/TC 0.09  TC 0.000 vs 0.000 (+0.000)   mean 0.322 vs 0.319
+  BraTS2021_01414 ET/TC 0.24  TC 0.581 vs 0.575 (+0.006)   mean 0.790 vs 0.793
+  BraTS2021_01483 ET/TC 0.00  TC 0.002 vs 0.003 (-0.001)   mean 0.622 vs 0.618
+  BraTS2021_01503 ET/TC 0.01  TC 0.000 vs 0.116 (-0.116)   mean 0.299 vs 0.362
+  BraTS2021_01523 ET/TC 0.01  TC 0.671 vs 0.616 (+0.055)   mean 0.742 vs 0.690
+  mean Dice_TC 0.421 vs 0.421 (diff -0.001); runE_rot better in 4/8, worse in 3/8
+
+No-core VAL cases (GT ET = TC = 0; Dice 1 / HD95 0 when both empty, Dice 0 / HD95 undefined when only one empty):
+  BraTS2021_01179: ET 1.000 vs 1.000  TC 1.000 vs 0.000  WT 0.735 vs 0.775 | predicted voxels ET/TC/WT runE_rot 0/0/66277 vs runD_rot 0/1/73153 (GT WT 105314)
+  BraTS2021_01624: ET 1.000 vs 1.000  TC 1.000 vs 1.000  WT 0.940 vs 0.920 | predicted voxels ET/TC/WT runE_rot 0/0/33150 vs runD_rot 0/0/38098 (GT WT 33560)
+
+Case-level changes > 0.10 Dice in any region (runE_rot - runD_rot):
+  regressions (2): BraTS2021_01049 ET +0.000 TC -0.014 WT -0.179; BraTS2021_01503 ET -0.097 TC -0.116 WT +0.026
+  improvements (3): BraTS2021_00525 ET +0.091 TC +0.162 WT -0.001; BraTS2021_01179 ET +0.000 TC +1.000 WT -0.040; BraTS2021_01255 ET +0.009 TC +0.011 WT +0.105
+
+Per-fold mean-Dice difference on the Amendment-28 VAL folds (EXPLORATORY): -0.0044 -0.0026 +0.0132 +0.0048 +0.0005  (3/5 >= 0)

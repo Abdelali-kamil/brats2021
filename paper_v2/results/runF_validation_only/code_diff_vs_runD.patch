@@ -1,0 +1,86 @@
+--- /mnt/data1/kamil_research/experiments/runD_in_z/code/scripts/train_brats.py	2026-09-29 23:33:23.827877894 +0800
++++ /mnt/data1/kamil_research/experiments/runF_phenoD/code/scripts/train_brats.py	2026-10-19 22:32:02.869530823 +0800
+@@ -21,7 +21,7 @@
+ import torch.nn as nn
+ import torch.optim as optim
+ import torch.nn.functional as F
+-from torch.utils.data import DataLoader, random_split
++from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+ sys.path.insert(0, str(ROOT))
+@@ -265,6 +265,13 @@
+ 
+     parser.add_argument("--seed", type=int, default=42)
+     parser.add_argument("--eval-every", type=int, default=1)
++    # Amendment 29 (Run F): phenotype-balanced case sampling. Default "uniform" keeps the original
++    # DataLoader(shuffle=True) path unchanged.
++    parser.add_argument("--case-sampling", default="uniform", choices=("uniform", "phenotype"))
++    parser.add_argument("--target-list", default="",
++                        help="file with one TRAIN case id per line (the up-weighted phenotype group)")
++    parser.add_argument("--target-share", type=float, default=0.20,
++                        help="expected share of draws from the target group per epoch")
+     args = parser.parse_args()
+ 
+     set_seed(args.seed)
+@@ -295,10 +302,36 @@
+     num_workers = auto_num_workers(args.num_workers)
+     pin_memory = (device.type == "cuda")
+ 
++    train_sampler = None
++    if args.case_sampling == "phenotype":
++        # Amendment 29: WeightedRandomSampler with replacement, len(train) draws per epoch; target cases
++        # get weight r so that their expected share of draws is --target-share.
++        target = {l.strip() for l in open(args.target_list) if l.strip()}
++        ids = [d["id"] for d in train_dataset.datas]
++        missing = sorted(target - set(ids))
++        assert not missing, f"target ids not in TRAIN: {missing[:5]}"
++        n_t = sum(i in target for i in ids); n_o = len(ids) - n_t
++        r = args.target_share * n_o / ((1.0 - args.target_share) * n_t)
++        weights = torch.tensor([r if i in target else 1.0 for i in ids], dtype=torch.double)
++
++        class _LoggingSampler(WeightedRandomSampler):
++            def __iter__(self):
++                self.last = list(super().__iter__())
++                return iter(self.last)
++
++        train_sampler = _LoggingSampler(weights, num_samples=len(ids), replacement=True,
++                                        generator=torch.Generator().manual_seed(args.seed))
++        train_sampler.is_target = [i in target for i in ids]
++        print(f"[INFO] Case sampling: phenotype | target {n_t} / other {n_o} | weight ratio r={r:.4f} | "
++              f"expected target share {args.target_share:.2f} | draws/epoch {len(ids)} (with replacement)")
++    else:
++        print("[INFO] Case sampling: uniform (shuffle)")
++
+     train_loader = DataLoader(
+         train_dataset,
+         batch_size=max(1, args.batch_size),
+-        shuffle=True,
++        shuffle=(train_sampler is None),
++        sampler=train_sampler,
+         collate_fn=custom_collate,
+         num_workers=num_workers,
+         pin_memory=pin_memory,
+@@ -477,6 +510,9 @@
+             if args.data_aug else "none"
+         ),
+         "aug_mode": args.aug,
++        "case_sampling": args.case_sampling,            # Amendment 29
++        "target_list": args.target_list or None,
++        "target_share": args.target_share if args.case_sampling == "phenotype" else None,
+         "train_crop": "random",
+         "val_crop": "centre (deterministic)",
+         "split": "brats_split_3way(seed=%d): train/val/test, test held out" % args.seed,
+@@ -567,6 +603,12 @@
+                 print(f"[WARN] Final remainder step failed: {e}")
+                 optimizer.zero_grad(set_to_none=True)
+ 
++        if train_sampler is not None and getattr(train_sampler, "last", None):   # Amendment 29 log
++            drawn = train_sampler.last
++            n_tgt = sum(train_sampler.is_target[i] for i in drawn)
++            print(f"[SAMPLER] epoch {epoch}: target draws {n_tgt}/{len(drawn)} ({100.0 * n_tgt / len(drawn):.1f} %), "
++                  f"distinct cases {len(set(drawn))}")
++
+         # Eval
+         if epoch % max(1, args.eval_every) == 0:
+             val_metric = evaluate(model, val_loader, device)

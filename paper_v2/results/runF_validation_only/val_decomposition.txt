@@ -1,0 +1,65 @@
+groups: no-core 2 ['BraTS2021_01179', 'BraTS2021_01624']; low-ET/TC 8; small core (<5000 vox, not low) 15; rest 101
+
+VAL mean Dice per region; TC without the 2 no-core cases; low-ET/TC group (n=8)
+                  mean      ET      TC      WT  TC_without_nocore  TC_low8  mean_low8 nocore_TC_dice
+model                                                                                               
+runC            0.8994  0.8812  0.8885  0.9285             0.9029   0.4426     0.6276            0 0
+runC_rot        0.9027  0.8810  0.8973  0.9296             0.9037   0.4473     0.6287            0 1
+ctrl_maxpool3d  0.9008  0.8737  0.9032  0.9255             0.9017   0.4363     0.5920            1 1
+runD            0.8937  0.8716  0.8882  0.9215             0.8944   0.4215     0.6215            0 1
+runD_rot        0.8940  0.8718  0.8882  0.9219             0.8945   0.4215     0.6225            0 1
+runD2           0.8978  0.8745  0.8990  0.9198             0.8974   0.4402     0.6274            1 1
+runD2_rot       0.8991  0.8756  0.9001  0.9215             0.8985   0.4425     0.6304            1 1
+runE            0.8966  0.8725  0.8962  0.9209             0.8945   0.4233     0.6208            1 1
+ensemble3 (E0)  0.9079  0.8841  0.9075  0.9319             0.9061   0.4225     0.6250            1 1
+
+TC shortfall (sum of 1-Dice over 126 cases) and % from each group
+                TC_shortfall  TC_%nocore  TC_%low8  TC_%small  TC_%rest
+model                                                                  
+runC                    14.0        14.2      31.8       18.8      35.2
+runC_rot                12.9         7.7      34.2       19.7      38.4
+ctrl_maxpool3d          12.2         0.0      37.0       21.0      42.0
+runD                    14.1         7.1      32.8       19.5      40.6
+runD_rot                14.1         7.1      32.9       19.5      40.5
+runD2                   12.7         0.0      35.2       20.4      44.4
+runD2_rot               12.6         0.0      35.4       19.9      44.7
+runE                    13.1         0.0      35.3       19.4      45.4
+ensemble3 (E0)          11.6         0.0      39.7       19.2      41.1
+
+WT shortfall (sum of 1-Dice over 126 cases) and % from each group
+                WT_shortfall  WT_%nocore  WT_%low8  WT_%small  WT_%rest
+model                                                                  
+runC                     9.0         3.9       9.0       21.4      65.6
+runC_rot                 8.9         3.6       8.9       21.9      65.6
+ctrl_maxpool3d           9.4         3.5       8.9       21.8      65.9
+runD                     9.9         2.9       8.4       22.7      66.0
+runD_rot                 9.8         3.1       8.3       22.5      66.1
+runD2                   10.1         4.4       8.1       22.6      64.9
+runD2_rot                9.9         3.9       8.0       21.9      66.2
+runE                    10.0         3.3       8.1       22.1      66.5
+ensemble3 (E0)           8.6         3.9       8.9       22.4      64.7
+
+ET shortfall (sum of 1-Dice over 126 cases) and % from each group
+                ET_shortfall  ET_%nocore  ET_%low8  ET_%small  ET_%rest
+model                                                                  
+runC                    15.0         0.0      24.5       20.5      55.0
+runC_rot                15.0         0.0      24.7       20.3      55.0
+ctrl_maxpool3d          15.9         0.0      28.0       19.0      53.1
+runD                    16.2         0.0      22.4       21.4      56.2
+runD_rot                16.1         0.0      22.4       21.4      56.2
+runD2                   15.8         0.0      23.1       21.0      55.9
+runD2_rot               15.7         0.0      23.1       20.8      56.2
+runE                    16.1         0.0      22.9       20.7      56.4
+ensemble3 (E0)          14.6         0.0      24.8       20.6      54.6
+
+Dice_TC on the 8 low-ET/TC VAL cases, per model
+                  runC  runC_rot  ctrl_maxpool3d   runD  runD_rot  runD2  runD2_rot   runE  ensemble3 (E0)
+Patient_ID                                                                                                
+BraTS2021_00111  0.867     0.877           0.866  0.866     0.854  0.897      0.903  0.842           0.871
+BraTS2021_00239  0.959     0.960           0.970  0.877     0.878  0.905      0.908  0.896           0.947
+BraTS2021_00321  0.358     0.358           0.334  0.319     0.329  0.322      0.314  0.398           0.344
+BraTS2021_00597  0.013     0.027           0.038  0.000     0.000  0.000      0.000  0.000           0.000
+BraTS2021_01414  0.619     0.618           0.580  0.573     0.575  0.642      0.651  0.581           0.609
+BraTS2021_01483  0.001     0.001           0.010  0.003     0.003  0.001      0.000  0.002           0.001
+BraTS2021_01503  0.136     0.149           0.117  0.130     0.116  0.000      0.000  0.000           0.000
+BraTS2021_01523  0.590     0.589           0.576  0.603     0.616  0.755      0.764  0.666           0.608

@@ -1,0 +1,94 @@
+{
+ "method": "nnformer_noTTA",
+ "params": 37606726,
+ "params_M": 37.61,
+ "gflops_per_forward": 127.8,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 7.6,
+ "sec_per_case_mean": 1.8,
+ "sec_per_case_sd": 0.5,
+ "peak_gpu_gib_max": 0.52,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 0.9736730009317398,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 1.7160686259157956,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 1.485250216210261,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 1.1956373360008001,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 4
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 1.590364595875144,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 2.525728888809681,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 2.181457804981619,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 2.1080275701824576,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 2.3368436850141734,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 1.9343331351410598,
+   "peak_gib": 0.5203981399536133,
+   "n_forward": 8
+  }
+ ],
+ "protocol": "nnU-Net-v1 sliding window 128^3 step 0.5, gaussian, no TTA, mixed precision, incl. NIfTI read/write"
+}

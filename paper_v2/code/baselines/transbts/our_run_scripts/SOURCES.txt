@@ -1,0 +1,9 @@
+TransBTS official code github.com/Wenxuan-1119/TransBTS @ 7dcfc31 (Apache-2.0), downloaded 2026-10-14
+Amendment 24 written 2026-10-14 00:25:32; patches: data/BraTS.py (nii_f32b0), train.py (accum, resume), predict.py (geometry, ZeroDivision); originals *.orig
+2026-10-14 ~01:12: predict.py saves label maps at the prediction depth (155, was padded 160); test.py raises if the checkpoint is missing (upstream continued with random weights); train.py --init_weights for the BraTS-Africa CV. evaluate.sh written (dry-run on 1 VAL case with a dummy checkpoint OK; dummy moved to ~/delete/transbts_dryrun_20261014).
+2026-10-14 03:20: training was data-bound (GPU idle most of the time; workers gunzipping NIfTI). Added a lossless int16 .npy cache of the 1,000 TRAIN cases (npy_cache/, make_npy_cache.py; nii_f32b0 reads it when TRANSBTS_NPY_CACHE is set); inputs bit-identical (verified on 6 cases). Training restarted from the rolling checkpoint once the cache is complete (restart_with_cache.sh).
+2026-10-14 03:22: resume failed once (torch>=2.6 weights_only=True rejects numpy scalars in our own checkpoint) -> train.py/test.py torch.load(..., weights_only=False); resumed at epoch 2 at 03:23:44. Cache: label files of 656 cases are not stored as uint8 -> cached with the same np.array(..., dtype='uint8') conversion training applies; label written before image.
+2026-10-14 12:56 (Amendment 24 addendum 2, user decision): first run (default --criterion softmax_dice) collapsed to background=NCR
+  (class-1 Dice ~0.008 at epoch 137). Stopped; kept at code/checkpoint/FAILED_softmax_dice_TransBTS_fixedsplit_20261014 and
+  failed_softmax_dice_run/ (logs, old train.sh/evaluate.sh). Restarted from scratch with --criterion softmax_dice2 (authors'
+  own background-inclusive loss in models/criterions.py); run dir checkpoint/TransBTS_dice2_20261014; CV fine-tuning also softmax_dice2.

@@ -1,0 +1,12 @@
+Amendment 29 criteria: runF_rot vs runD_rot (VAL 126; TEST not read)
+T1 targeted (8 VAL cases ET/TC<0.25, EXPLORATORY): TC 0.5654 vs 0.4215, diff +0.1439, improved in 6/8  (need >= +0.05 and >= 5/8) -> PASS
+T2 mechanism (TRAIN, no TTA): target65 TC 0.7279 vs 0.5834 (+0.1445, need >= +0.05); other65 mean 0.9134 vs 0.9132 (+0.0001, need >= -0.01) -> PASS
+T3 reported (18 VAL cases ET/TC<0.5): TC diff +0.0624, improved 9/18
+O1 overall: mean Dice 0.8918 vs 0.8940, diff -0.0022 [-0.0077, +0.0026] (need point >= 0 and lower > -0.005) -> FAIL
+O2 per region: ET -0.0089  TC +0.0051  WT -0.0028  (none < -0.005) -> FAIL
+R1 serious regressions: 5 case(s) losing > 0.10 in a region ['BraTS2021_00321', 'BraTS2021_00525', 'BraTS2021_00768', 'BraTS2021_01314', 'BraTS2021_01606'] (need <= 2); empty-region 1->0 flips [] -> FAIL
+R2 HD95 (defined pairs): ET +0.075 mm (n=122, undefined 4/2)  TC +0.232 mm (n=125, undefined 1/1)  WT +0.309 mm (n=126, undefined 0/0)  (none > +0.5 mm) -> PASS
+F folds (exploratory; Amendment-28 folds): +0.0046 -0.0003 -0.0072 +0.0008 -0.0091  (2/5 >= 0)
+  no-core BraTS2021_01179: TC 0 vs 0 (pred TC vox 1321 vs 1)
+  no-core BraTS2021_01624: TC 1 vs 1 (pred TC vox 0 vs 0)
+VERDICT for runF_rot vs runD_rot: (ii) subgroup effect without overall non-inferiority (not adopted). Outcome (i) requires BOTH the base and the rotation variant to pass.

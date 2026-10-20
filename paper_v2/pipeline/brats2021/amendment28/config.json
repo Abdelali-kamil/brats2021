@@ -1,0 +1,14 @@
+{
+ "amendment": 28,
+ "members": ["ep253", "runC_rot", "runD2_rot"],
+ "E0": {"weights": [1, 1, 1], "wt_policy": "components", "floor_mult": 1, "et_min_volume": 100, "thresholds": [0.5, 0.5, 0.5],
+        "expected_val_dice": 0.9078717954500087},
+ "loo": [["runC_rot", "runD2_rot"], ["ep253", "runD2_rot"], ["ep253", "runC_rot"]],
+ "weights": [[2, 1, 1], [1, 2, 1], [1, 1, 2], [1, 2, 2], [2, 1, 2], [2, 2, 1]],
+ "cc_rules": [["WTrel", 0.05], ["WTrel", 0.10], ["WTrel", 0.20], ["TCrel", 0.05], ["TCrel", 0.10], ["TCrel", 0.20],
+              ["WTconf", 0.8], ["WTconf", 0.9]],
+ "folds": {"k": 5, "seed": 0, "method": "np.random.default_rng(0).permutation over sorted VAL case ids"},
+ "bootstrap": {"n": 10000, "seed": 0, "fresh_generator_per_comparison": true},
+ "rule": {"ci_lower_gt_0": true, "min_folds_nonneg": 4, "cc_max_gt_removed_frac": 0.001, "cc_max_case_dice_loss": 0.01,
+          "nested_heldout_gain_gt_0": true}
+}

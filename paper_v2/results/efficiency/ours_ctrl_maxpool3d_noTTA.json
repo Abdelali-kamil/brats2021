@@ -1,0 +1,94 @@
+{
+ "method": "ours_ctrl_maxpool3d_noTTA",
+ "params": 34355451,
+ "params_M": 34.36,
+ "gflops_per_forward": 2490.4,
+ "forward_input_shape": [
+  1,
+  4,
+  128,
+  128,
+  128
+ ],
+ "forwards_per_case_mean": 18,
+ "sec_per_case_mean": 2.27,
+ "sec_per_case_sd": 0.02,
+ "peak_gpu_gib_max": 4.17,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "torch": "2.12.0.dev20260407+cu128",
+ "cases": [
+  "BraTS2021_00003",
+  "BraTS2021_00026",
+  "BraTS2021_00035",
+  "BraTS2021_00046",
+  "BraTS2021_00048",
+  "BraTS2021_00074",
+  "BraTS2021_00085",
+  "BraTS2021_00090",
+  "BraTS2021_00100",
+  "BraTS2021_00103"
+ ],
+ "per_case": [
+  {
+   "case": "BraTS2021_00003",
+   "sec": 2.2654955349862576,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00026",
+   "sec": 2.268781332997605,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00035",
+   "sec": 2.2586942680645734,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00046",
+   "sec": 2.261785353999585,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00048",
+   "sec": 2.2704089330509305,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00074",
+   "sec": 2.3305564541369677,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00085",
+   "sec": 2.2636416379828006,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00090",
+   "sec": 2.2592104559298605,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00100",
+   "sec": 2.2471846130210906,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  },
+  {
+   "case": "BraTS2021_00103",
+   "sec": 2.2668763550464064,
+   "peak_gib": 4.166128158569336,
+   "n_forward": 18
+  }
+ ],
+ "protocol": "128^3 stride 64, gaussian, no TTA, F=24, WT largest"
+}

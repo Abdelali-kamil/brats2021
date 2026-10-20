@@ -1,0 +1,33 @@
+VAL-only comparison runC vs ctrl_maxpool3d (126 cases, each with its own VAL-selected post-processing; TEST not read)
+  runC: selection components floors x5 ET-min 100 axis both | recorded VAL 0.8994, recomputed 0.8994
+  ctrl_maxpool3d: selection components floors x1 ET-min 1000 axis both | recorded VAL 0.9008, recomputed 0.9008
+
+                 runC ctrl_maxpool3d   diff (runC - ctrl_maxpool3d) [95% CI]   Wilcoxon p   runC better/worse
+Dice_Mean      0.8994     0.9008   -0.0014 [-0.0108, +0.0069]   0.0137   77/49
+Dice_ET        0.8812     0.8737   +0.0075 [-0.0010, +0.0215]   0.483   64/56
+Dice_TC        0.8885     0.9032   -0.0147 [-0.0398, +0.0031]   0.655   61/65
+Dice_WT        0.9285     0.9255   +0.0030 [+0.0002, +0.0058]   0.000139   85/41
+HD95_ET          2.25       2.27   -0.158 [-0.840, +0.385] mm (n=122 defined pairs)  p=0.238   undefined 2 / 4
+HD95_TC          3.39       3.44   -0.109 [-0.816, +0.555] mm (n=124 defined pairs)  p=0.889   undefined 2 / 0
+HD95_WT          3.64       3.94   -0.298 [-0.928, +0.318] mm (n=126 defined pairs)  p=0.00693   undefined 0 / 0
+
+Targeted VAL cases (ET/TC < 0.25, n=8; EXPLORATORY, cutoff derived from VAL): Dice_TC runC vs ctrl_maxpool3d
+  BraTS2021_00111 ET/TC 0.16  TC 0.867 vs 0.866 (+0.001)   mean 0.720 vs 0.701
+  BraTS2021_00239 ET/TC 0.13  TC 0.959 vs 0.970 (-0.011)   mean 0.884 vs 0.907
+  BraTS2021_00321 ET/TC 0.19  TC 0.358 vs 0.334 (+0.024)   mean 0.651 vs 0.376
+  BraTS2021_00597 ET/TC 0.09  TC 0.013 vs 0.038 (-0.025)   mean 0.323 vs 0.333
+  BraTS2021_01414 ET/TC 0.24  TC 0.619 vs 0.580 (+0.039)   mean 0.817 vs 0.804
+  BraTS2021_01483 ET/TC 0.00  TC 0.001 vs 0.010 (-0.010)   mean 0.618 vs 0.630
+  BraTS2021_01503 ET/TC 0.01  TC 0.136 vs 0.117 (+0.019)   mean 0.339 vs 0.326
+  BraTS2021_01523 ET/TC 0.01  TC 0.590 vs 0.576 (+0.014)   mean 0.668 vs 0.658
+  mean Dice_TC 0.443 vs 0.436 (diff +0.006); runC better in 5/8, worse in 3/8
+
+No-core VAL cases (GT ET = TC = 0; Dice 1 / HD95 0 when both empty, Dice 0 / HD95 undefined when only one empty):
+  BraTS2021_01179: ET 1.000 vs 1.000  TC 0.000 vs 1.000  WT 0.744 vs 0.741 | predicted voxels ET/TC/WT runC 0/297/66544 vs ctrl_maxpool3d 0/0/67206 (GT WT 105314)
+  BraTS2021_01624: ET 1.000 vs 1.000  TC 0.000 vs 1.000  WT 0.902 vs 0.935 | predicted voxels ET/TC/WT runC 0/23/29880 vs ctrl_maxpool3d 0/0/36817 (GT WT 33560)
+
+Case-level changes > 0.10 Dice in any region (runC - ctrl_maxpool3d):
+  regressions (2): BraTS2021_01179 ET +0.000 TC -1.000 WT +0.003; BraTS2021_01624 ET +0.000 TC -1.000 WT -0.033
+  improvements (2): BraTS2021_00321 ET +0.767 TC +0.024 WT +0.032; BraTS2021_00525 ET -0.004 TC +0.116 WT +0.005
+
+Per-fold mean-Dice difference on the Amendment-28 VAL folds (EXPLORATORY): +0.0040 -0.0170 -0.0124 +0.0056 +0.0127  (3/5 >= 0)

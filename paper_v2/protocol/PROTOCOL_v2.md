@@ -449,3 +449,271 @@ no no-TTA test scoring).
   fp32). Crashes: resume from _last.pth, as for Run C.
 - Code check before launch: all five evaluated checkpoints (base, Runs A, C, D, D2) load strictly and give bit-identical
   outputs with the extended model code; 48/48 tests pass; control peak memory 12.6 GiB at batch 2, 128^3, AMP.
+
+### Amendment 22 — 2026-10-10 ~12:57 (+08:00), comparison baselines changed by the authors (written before any new baseline run)
+Author decision (user, 2026-10-10): nnU-Net and Swin UNETR are removed from the paper's comparison tables and text and
+replaced by SegResNet and 3D U-Net (already trained and scored once under Amendment 19) and by the deeply supervised 3D U-Net
+of Henry et al. (BrainLes 2020, LNCS pp. 327-339, doi 10.1007/978-3-030-72084-1_30; official code linked in the paper,
+github.com/lescientifik/open_brats2020). UNETR stays. nnU-Net and Swin UNETR results are NOT deleted: they stay in this
+repository and the paper states in one sentence that both were also evaluated and where their results are. Our model,
+checkpoints and all existing results are unchanged. Candidate check (2026-10-10): Scale Attention Network (Yuan, BrainLes
+2020/2021) was proposed but excluded because no official public code could be found; MedNeXt, UNETR++, nnFormer and TransBTS
+were not used (author choice).
+- Henry et al., reproduced on our split: official code at e5f98961 (repository has no licence file: used, not
+  redistributed) with two changes only: (i) the dataset uses our fixed split (train 1000 / val 126; test never loaded)
+  instead of the repository's random 5-fold split; (ii) the Ranger optimiser (lessw2020, c82a3046) has its deprecated
+  positional-scalar tensor calls rewritten in keyword form for current PyTorch (identical arithmetic). Configuration = the
+  paper's pipeline A, "U-Net like" variant (its ablation showed no clear benefit of the attention block or patient removal):
+  EquiUnet, width 48, group normalisation, deep supervision, Dice loss, Ranger lr 1e-4, 200 epochs with cosine decay in the
+  second half, batch 1, fp16, then stochastic weight averaging (5 x 30 epochs, lr 5e-5), i.e. `--arch EquiUnet --width 48
+  --deep_sup --swa`. The final model is the SWA model (the repository's rule); validation is used only by its own
+  monitoring. One model, not the authors' challenge ensemble. Inference: the repository's inference.py with its TTA
+  (`--tta`), sigmoid > 0.5, its label assembly, no further post-processing. TEST (125) scored ONCE with our scorer.
+- BraTS-Africa for Henry et al.: zero-shot with the same inference; classification with its zero-shot masks (Amendment 14A
+  pipeline).
+- BraTS-Africa 5-fold CV fine-tuning (Amendment 6 folds and rules: each method's own recipe from its BraTS weights, budget
+  ~9,600 samples = 150 epochs over the 64 TRAIN cases, same scorer) for SegResNet and 3D U-Net (MONAI pipeline exactly as for
+  Swin UNETR: val every 5 epochs, model.pt = best by val, their BraTS inference; 3D U-Net in fp32 as trained) and for
+  Henry et al. (its code: start from the SWA weights, 150 epochs, Ranger lr 1e-4, no SWA, so the repository keeps the final
+  model; its inference with TTA).
+- Efficiency for SegResNet, 3D U-Net and Henry et al. with the existing benchmark rules (each under its own inference).
+- Paired statistics of our configurations against each baseline as before (bootstrap 10,000 + Wilcoxon, unadjusted).
+- Collapse rule as Amendment 19b. All results are reported whatever they show.
+
+### Amendment 23 — 2026-10-13 ~17:15 (+08:00), BraTS-Africa zero-shot of the headline Ensemble 3 (user: "you can try A"); written before any Ensemble 3 BraTS-Africa prediction exists
+- Model: the headline Ensemble 3 exactly as frozen by Amendment 17 (selection.json: ep253 + runC_rot + runD2_rot,
+  probability average, each member with its own BraTS-VAL-chosen inference mode — ep253 nib; runC_rot both+rot;
+  runD2_rot both+rot — then WT components, floor x1, ET min-volume 100). Nothing is re-tuned on BraTS-Africa.
+- Data, preprocessing and scorer as Amendments 1-2/14 (146 gated subjects; gliomas (95) primary, other neoplasms (51) as a
+  stress test). Each subject predicted once; masks saved for the classification pipeline (Amendment 14A), run afterwards.
+- Reported: mean Dice with bootstrap CI; paired (bootstrap 10,000 + Wilcoxon, unadjusted) Ensemble 3 minus Run D2 + rot,
+  Run D + rot, SegResNet and Henry et al. on the 95 gliomas. Reported whatever it shows; it does not replace Run D2 as the
+  model fine-tuned in the CV (Amendment 6/18), which stays as run.
+- Disclosed deviations in Amendment 22's Henry et al. evaluation (found 2026-10-12, before its TEST scoring): (i) upstream
+  src/inference.py with --tta appended both the padded crop and the uncropped volume (torch.stack size mismatch on every
+  case); the extra append was removed, TTA unchanged; (ii) evaluate.sh read RUN_PATH while train.sh wrote RUN_DIR (path file
+  created; final SWA run moved to henry_dsunet/final_run/ so the CV step could not move the initial weights); (iii) the VAL
+  sanity gate selected 0 cases because the split CSV has CRLF line ends (fixed; TEST untouched until the gate passed:
+  VAL5 ET/TC/WT .871/.934/.944). Details in henry_dsunet/SOURCES.txt.
+
+### Amendment 24 — 2026-10-14 ~00:30 (+08:00), TransBTS added as a comparison baseline (user: "download code ... and run"); written before any TransBTS training
+- Method: TransBTS (Wang et al., MICCAI 2021, LNCS 12901:109-119), official code github.com/Wenxuan-1119/TransBTS @ 7dcfc31
+  (Apache-2.0; pristine copy in ~/code_for_papers/6_TransBTS/official_code; working copy experiments/transbts/code).
+- Recipe = the repository's train.py defaults: TransBTS (downsample 8x, skip connections, learned PE), z-score over the brain
+  mask (preprocess.py process_f32b0), pad 155->160, random 128^3 crop + flips + intensity shift, softmax Dice loss, Adam lr 2e-4
+  (poly 0.9 per epoch), weight decay 1e-5, amsgrad, fp32, 1000 epochs, effective batch 8, no validation, final (last-epoch)
+  model. Trained on our 1,000 TRAIN cases only (fixed split; VAL and TEST never loaded in training).
+- Single-GPU adaptations (not changing the method): batch 2 x 4 gradient-accumulation steps (= the authors' 4 GPUs x 2, BatchNorm
+  per 2 samples as in their DDP without SyncBN); preprocessing computed on load from the original NIfTI instead of cached
+  pickles (verified bit-identical on BraTS2021_00002); resume enabled (upstream hard-coded resume=''), rolling resume checkpoint.
+- Inference = the repository's predict.py: 8 overlapping 128^3 crops, 8-flip TTA, softmax average, argmax, labels 1/2/4,
+  no post-processing (its post_process flag is a no-op). Fixes: masks saved with the reference image geometry; ZeroDivision
+  after the last case with TTA. Scored with our common scorer.
+- Before the one-time TEST: sanity gate on the first 5 VAL cases (mean WT >= 0.70 and mean Dice >= 0.60), as for Henry et al.
+  Then: BraTS 2021 TEST (125) ONCE; BraTS-Africa zero-shot (146; gliomas primary); classification with its masks (Amendment 14A);
+  BraTS-Africa 5-fold CV fine-tuning under Amendment 6 rules (from its BraTS weights, 150 epochs over the 64 TRAIN cases, its
+  recipe, final model, its inference); efficiency benchmark. Paired statistics vs our configurations as before.
+- Failure rule: a crash or NaN loss resumes from the last rolling checkpoint (at most 3 times); if it still fails, it is
+  reported as not trained. All results reported whatever they show.
+
+Amendment 24 addendum 2 — 2026-10-14 ~12:52 (+08:00), TransBTS restarted with the repository's background-inclusive Dice loss
+(user decision, "Restart, authors' 2nd loss"); written before the restarted run exists and before any TransBTS VAL/TEST prediction.
+- Observed in the first run (default criterion softmax_dice = Dice of classes 1, 2, 3 only, no background term), from TRAIN-batch
+  logs only: class-1 (NCR) Dice 0.002 at epoch 5 -> 0.008 at epoch 137 while classes 2/3 rose to 0.84/0.85. A check of the epoch-99
+  checkpoint on tumour-centred 128^3 crops of 2 VAL cases (BraTS2021_00049, _00062; CPU, no score kept, nothing tuned on it):
+  argmax = class 1 on ~1.98 M of 2.10 M voxels (class-1 softmax ~0.47 in background), ED/ET Dice ~0.96, NCR ~0. I.e. the default
+  loss gives background no gradient and the run collapsed to "background = NCR" (WT/TC would be ~0; the VAL5 gate would fail).
+  Labels/cache verified correct (cache = NIfTI exactly; label 1 present in 38/40 sampled TRAIN cases, ~12k voxels).
+- Change: the full 1000-epoch run restarts FROM SCRATCH with --criterion softmax_dice2, the alternative loss in the authors' own
+  models/criterions.py (same Dice of classes 1-3 + Dice of class 0). Everything else unchanged (recipe, seed 1000, batch 2 x 4,
+  1000 epochs, final model, inference). The same criterion is used for the BraTS-Africa CV fine-tuning. Early check (TRAIN logs
+  only): class-1 Dice must clearly rise within the first ~10 epochs; if it does not, report to the user before continuing.
+- The first run is kept, not used: code/checkpoint/FAILED_softmax_dice_TransBTS_fixedsplit_20261014 (+ its train_*.log files).
+  Reported as a deviation from the repository default in the paper/repository if TransBTS is included.
+
+### Amendment 25 — 2026-10-14 ~01:00 (+08:00), one standard procedure for every comparison method (user: "all the papers I'm comparing against follow exactly the same conditions and evaluation protocol ... apply the same procedure to all of them"; training rule chosen by the user: each method's own official recipe)
+Applies to every baseline already run and to any added later; the user decides afterwards which methods the paper reports.
+1. Code: the authors' official code at a recorded commit, kept pristine in ~/code_for_papers/<n>_<method>/official_code;
+   our launchers and every patch (as a diff) in our_run_scripts/. Patches only for running on our hardware/data or for bugs,
+   never changing the method; each is disclosed.
+2. Training: the authors' own published recipe (architecture, preprocessing, augmentation, loss, optimiser, schedule, epochs,
+   model-selection rule). If the authors published no BraTS recipe, the official MONAI BraTS 2021 pipeline (as used for
+   SegResNet, UNETR, 3D U-Net). Data: our 1,000 TRAIN cases only; VAL (126) only where the method's own rule selects with
+   validation; TEST (125) never seen before step 4. One run, no seed search.
+3. Sanity gate (methods added from now on): the method's own inference on the first 5 VAL cases, common scorer; the test is
+   scored only if mean WT >= 0.70 and mean Dice >= 0.60.
+4. BraTS 2021 TEST (125) scored ONCE with the method's own official inference and the common scorer (Dice ET/TC/WT, mean;
+   HD95 and HD95* = undefined set to 373.13 mm); bootstrap CI; paired bootstrap (10,000) + Wilcoxon vs our configurations.
+5. BraTS-Africa zero-shot: same 146 gated subjects (95 gliomas primary, 51 other neoplasms as stress test), same staging and scorer.
+6. Classification (glioma vs other neoplasm): features from its zero-shot masks, Amendment 14A pipeline.
+7. BraTS-Africa 5-fold CV fine-tuning under Amendment 6 rules (same folds; from its BraTS weights; ~9,600 samples = 150 epochs
+   over the 64 TRAIN cases; its own recipe and selection rule; its own inference); pooled out-of-fold scoring.
+8. Efficiency: params, GFLOPs per forward pass, passes per case, s/case (mean of 10 test volumes after one warm-up, CUDA-
+   synchronised, its own inference incl. TTA, and without TTA) and peak memory, on the otherwise idle RTX 5090.
+Audit at this date: missing = UNETR step 7; step 8 for SegResNet, UNETR, 3D U-Net, Henry et al. Both are now run under this
+amendment (efficiency before TransBTS training, on the idle GPU); TransBTS follows all steps (Amendment 24).
+- Amendment 24 addendum (2026-10-14 ~01:12, before any TransBTS training): further fixes in the TransBTS code, disclosed:
+  predict.py wrote 160-slice label maps (padded depth) for 155-slice images -> saved at the prediction depth; test.py silently
+  continued with random weights when the checkpoint was missing -> now stops; train.py gets --init_weights (weights only) for
+  the BraTS-Africa CV start. Evaluation script transbts/evaluate.sh follows Amendment 25 steps 3-8.
+
+### Amendment 26 — 2026-10-14 ~01:14 (+08:00), nnFormer added under the standard procedure (Amendment 25) (user: "download in my project same process like other"); written before any nnFormer preprocessing or training
+- Method: nnFormer (Zhou et al., IEEE TIP 32:4036-4045, 2023), official code github.com/282857341/nnFormer @ d48aaeb (MIT);
+  pristine copy ~/code_for_papers/8_nnFormer/official_code; working copy experiments/nnformer.
+- Recipe = the authors' brain-tumour configuration: nnU-Net-v1 pipeline (plan_and_preprocess: crop, z-score over non-zero,
+  target spacing), trainer nnFormerTrainerV2_nnformer_tumor (embedding 96, depths 2-2-2-2, heads 3-6-12-24, window 4-4-8-4,
+  patch 128^3, batch 2, no deep supervision, SGD lr 1e-2 poly 0.9, 1000 epochs x 250 iterations, nnU-Net augmentation and
+  CE+Dice loss, mixed precision as in the code); model selection = its own rule, model_best (EMA validation Dice) on VAL,
+  which is the checkpoint its inference uses (-chk model_best).
+- Data: task Task003_tumor in the authors' layout; imagesTr = our TRAIN 1,000 + VAL 126 (the trainer trains on TRAIN and
+  validates on VAL via our split file: the authors' hard-coded MSD case lists are replaced, disclosed patch); imagesTs = TEST
+  125, never preprocessed with or seen by training. Channels in the authors' order (FLAIR, T1w, T1gd, T2w); labels converted
+  to the authors' convention (1 edema, 2 non-enhancing/necrotic core, 3 enhancing) and predictions converted back to BraTS
+  1/2/4 for the common scorer. Note: nnU-Net's planning fingerprint uses all imagesTr cases (TRAIN + VAL), as the framework does.
+- Inference: nnFormer_predict 3d_fullres, its defaults (sliding window step 0.5, Gaussian, mirroring TTA, mixed precision),
+  no post-processing (its tumour evaluation uses raw predictions).
+- BraTS-Africa CV (Amendment 6 budget for nnU-Net-type trainers): 19 epochs x 250 iterations x batch 2 = 9,500 samples per
+  fold, from its BraTS weights, validation on the fold's 12 VAL cases, its own model_best rule.
+- Then Amendment 25 steps 3-8 exactly as for every method. Runs after TransBTS (fixed GPU order); preprocessing is CPU-only.
+- Amendment 26 addendum (2026-10-14 ~01:30, before any nnFormer training): the authors' tumour trainer loads
+  /home/xychen/jsguo/weight/tumor_pretrain.model by default (not released; origin unknown, possibly trained on MSD/BraTS 2016-17
+  cases that are part of BraTS 2021). Disabled (load_pretrain_weight=False): nnFormer trains from scratch on our 1,000 TRAIN
+  cases like every other method. Environment: batchgenerators 0.21 (the nnU-Net-v1-era version the code imports).
+- Amendment 26 addendum 2 (2026-10-17 ~12:15, after training ended 11:48, before ANY nnFormer prediction or score existed):
+  the first VAL5 sanity run crashed while loading model_best.model (PyTorch >= 2.6 torch.load default weights_only=True rejects
+  the numpy scalars nnFormer saves in its checkpoints) -> SANITY_FAILED with no prediction made. Fix (loading only, as for
+  TransBTS on 10-14; user OK "Ok go"): weights_only=False in training/model_restore.py:168, run/load_pretrained_weights.py:21,
+  training/network_training/network_trainer.py:344 (originals *.orig; own checkpoints only). Model, inference settings and
+  procedure unchanged. SANITY_FAILED marker moved to ~/delete; evaluation restarted 12:17 from step 0 (VAL5 gate).
+
+### Amendment 27 — 2026-10-14 ~16:30 (+08:00), Run E: Run D's recipe trained for 400 epochs in one cosine cycle (user: "prepare for task 1 and 3 after 17 October"; options chosen: "Lessons 1+3 only", "400 epochs"); written before any Run E file or weight exists
+- Motivation (from VAL/TEST/log evidence already reported, no new look at TEST): lesson 1 = the 3D-DWT width-24 deep-supervision
+  network (Run C/D architecture) gave the largest gain; lesson 3 = more epochs helped only with strong augmentation (Run D 200 ep
+  -> D2 200+200 warm restart: VAL 0.8890 -> 0.8942), not without it (ep253 300 ep -> Run A 400 ep: VAL 0.8881 -> 0.8885).
+- **Run E** (tag runE_long400) = Run D exactly (frozen code experiments/runD_in_z/code, arch_flags.txt = --downsample dwt3d
+  --base-filters 24 --deep-supervision; --norm instance --normalisation zscore --aug strong; AdamW 2e-4, batch 2 x accumulation 4,
+  focal-BCE + Dice, seed 42, same split 1000/126/125) with ONE change: 400 epochs from scratch, one cosine cycle (T_max 400,
+  eta_min 1e-7) — i.e. Run D as first pre-registered in Amendment 15 before 15b cut it to 200. Checkpoint = best epoch by the
+  training script's VAL metric (as every run). Nothing else changes (no new loss, sampling, logging or selection rule).
+- Start: after the TransBTS and nnFormer evaluations have finished (EVALUATED, FAILED or SANITY_FAILED for both) and not before
+  2026-10-17, so that it does not slow them or disturb their efficiency timing. Fault-tolerant resume as Run D.
+- Evaluation = exactly Run D2's: eval_v2/eval_run.sh runE (VAL 126 -> post-processing rule -> TEST 125 once), then
+  eval_v2/eval_run_rot2.sh runE_rot runE (rotation TTA; VAL -> TEST once). Every candidate's TEST is scored once and reported
+  whatever it shows. Judged on VAL against the existing models (Run D2 rot VAL 0.8950, Run C rot 0.9006, Ensemble 3 0.9079).
+  The paper's headline (Ensemble 3) is NOT changed by this run; any new ensemble, BraTS-Africa evaluation or paper change needs
+  a further amendment and the user's decision.
+
+### Amendment 28 — 2026-10-17 ~12:35 (+08:00), VAL-only investigation of Ensemble 3 (user: "investigate and improve Ensemble 3 using only the training and validation data ... keep the current TEST results unchanged"); written before any of the analyses below was run
+- Data: the saved VAL probability maps (126 cases, float16 [ET,TC,WT]) of the three Ensemble 3 members (eval_ep253/probs_val,
+  eval_v2/work_runC_rot/probs_val, eval_v2/work_runD2_rot/probs_val) and the VAL ground truth. No inference, no retraining.
+  The TEST probability maps and TEST labels are NOT read by any script of this amendment; the scored TEST results stay as they are.
+- Caveat stated in advance: VAL already chose every checkpoint, the members and the post-processing of Ensemble 3 (870
+  configurations, Amendment 17), so VAL is reused and gains on it are optimistic; any revised configuration needs a fresh
+  independent test set for confirmation (none is scored here).
+- Reference E0 = Ensemble 3 exactly (equal mean of the 3 members, thresholds 0.5, wt_policy components, floors x1,
+  ET min-volume 100). Its VAL mean Dice must reproduce 0.90787.
+- Step 1, error analysis on E0's VAL predictions (descriptive only): per case and region, FP voxels in predicted components
+  that touch no GT voxel of that region ("FP blob"), remaining FP ("boundary FP"), FN voxels in GT components that no
+  prediction touches ("missed region"), remaining FN ("boundary FN"); for TC also core<->edema confusion (TC FN predicted as
+  WT-only, TC FP that is GT edema); empty-GT cases. Worst 10 VAL cases by TC and by WT Dice are listed with their dominant error.
+- Candidates (fixed now; 17 + E0):
+  LOO (3): each 2-member ensemble with E0's post-processing.
+  Weights (6): (w_ep253, w_runC_rot, w_runD2_rot) in {(2,1,1),(1,2,1),(1,1,2),(1,2,2),(2,1,2),(2,2,1)}, normalised, E0 post-proc.
+  Component rules on E0 (8), applied after E0's post-processing, ET/TC then re-nested by the hierarchy:
+    WTrel f: drop WT components with volume < f x the largest WT component, f in {0.05, 0.10, 0.20};
+    TCrel f: drop TC components with volume < f x the largest TC component, f in {0.05, 0.10, 0.20};
+    WTconf t: drop WT components whose maximum ensemble WT probability < t, t in {0.8, 0.9} (never the largest component).
+  Second stage only if >= 1 weight AND >= 1 component rule each pass the rule below: their combination (best of each) is evaluated.
+- Reported for every candidate vs E0 on the same 126 VAL cases: mean and per-region Dice, HD95 (mean over defined values, n
+  undefined), paired difference with bootstrap 95% CI (10,000, fresh seed-0 generator per comparison) + two-sided Wilcoxon,
+  per-fold differences, and the change on E0's worst 10 cases by TC and by WT. For component rules: GT voxels removed
+  (removed components that overlap the GT of that region), number of cases affected.
+- Folds: the 126 VAL cases split once into 5 folds by np.random.default_rng(0).permutation (sorted case ids), fixed now.
+  No BraTS cross-validation folds exist for our models (single 1000/126/125 split), so these VAL folds are the consistency check.
+- A candidate is "reliably better" only if ALL hold: (a) VAL mean-Dice gain > 0 with bootstrap CI lower bound > 0;
+  (b) gain >= 0 in >= 4 of the 5 VAL folds; (c) component rules: GT voxels removed <= 0.1 % of all VAL GT voxels of that region
+  and no case loses > 0.01 Dice in any region from the removal; (d) nested check: selecting the best of {E0 + all candidates}
+  on 4 folds and scoring it on the held-out fold gives a mean held-out gain > 0 over E0. Unadjusted for the 17 comparisons
+  (stated in the report). If no candidate satisfies (a)-(d), the report says that nothing reliably improves VAL and E0 stays.
+- Code/output: eval_v2/amendment28/ (analysis script, config, per-case CSVs, comparison table, report).
+- Amendment 28 addendum (2026-10-17 ~12:50, user clarifications, before any candidate result was seen): (1) E0 must reproduce
+  Ensemble 3 exactly (same saved member VAL probabilities, unchanged since the 10-03 selection; equal mean; same post-processing),
+  checked per region against ensemble3/ensemble_val_search.csv and reported before any comparison. (2) This is an EXPLORATORY
+  validation analysis: folds inside the 126 previously used VAL cases cannot undo the earlier 870-configuration selection.
+  (3) In the nested check each outer held-out fold is excluded from every new weight / post-processing choice; choices inherited
+  from the earlier full-VAL search (checkpoints, member inference modes, member set, thresholds, wt_policy, floors, ET min-volume)
+  are listed explicitly and not re-chosen. (4) Full-VAL scores and pooled outer-fold results are reported separately.
+  (5) TEST unchanged; the 8 CPU workers are reduced if they measurably slow the running TransBTS training / nnFormer evaluation.
+- Amendment 28 RESULT (2026-10-17 ~13:45, exploratory, VAL only, TEST not read): E0 reproduces Ensemble 3 exactly (ET 0.884133,
+  TC 0.907550, WT 0.931933, mean 0.907872; differences 0). No candidate meets rules (a)-(c); nested outer-fold selection gives a
+  pooled held-out change of -0.0055 [-0.0168, +0.0006] (rule d not met). E0 (Ensemble 3) is retained unchanged. Errors are
+  dominated by boundary / core<->edema confusion (86 % of TC FN are predicted as edema), not FP blobs (TC 3.6 %, WT 2.8 % of
+  error voxels). Full output: eval_v2/amendment28/report.txt, comparison_val.csv, worst_cases_val.csv.
+- Amendment 28 clarifications (2026-10-17, user): (1) BraTS2021_01624 verified from its label file: GT ET = TC = 0 voxels (edema
+  only, 33,560); E0 predicts 0 ET/TC (Dice 1.0, HD95 0); LOO-ep253 / LOO-runC_rot / W112 / W122 predict 457-2,589 ET/TC voxels
+  (Dice 0, HD95 undefined, excluded from HD95 means); case kept in all primary results. (2) The nested outer-fold analysis
+  selected by mean Dice only (rules (a)-(c) not applied inside the selection folds) and is labelled "mean-Dice-only nested
+  selection (exploratory)", not an evaluation of the full prespecified rule. (3) Conclusion wording: none of the tested
+  post-processing or re-weighting candidates demonstrated a reliable improvement in this exploratory analysis. E0 (Ensemble 3)
+  retained. Details: eval_v2/amendment28/clarifications.txt.
+
+- Amendment 24 addendum 3 (2026-10-18, user-approved): the TransBTS efficiency benchmark failed (bench_transbts.py default
+  --ckpt pointed to the collapsed first run). It is re-run with the identical script and settings and --ckpt set to
+  TransBTS_dice2_20261014/model_epoch_last.pth (the checkpoint every TransBTS score used), after Run E has finished and with no
+  job of ours on the GPU (transbts/bench_rerun_after_runE.sh). No retraining, no code edit.
+- Amendment 27 addendum (2026-10-18, user): Run E runs and is evaluated unchanged (VAL -> TEST once -> rotation-TTA variant).
+  Additionally, once Run E's VAL selection exists, Run E is compared with Run D on VAL only under the same evaluation variant
+  (runE vs runD, runE_rot vs runD_rot; eval_v2/runE_vs_runD/compare_val.py, each run with its own VAL-selected post-processing,
+  verified to reproduce Run D's recorded VAL 0.8937 / 0.8940). Run E's TEST result is not used to select or modify Run F
+  (eval_v2/proposal_20261017, pending).
+
+### Amendment 29 — 2026-10-19 ~22:25 (+08:00), Run F: phenotype-balanced case sampling on the Run D recipe (user: "ok go", option A, after the 10-19 review); written before any Run F file, weight or result exists
+- Motivation (VAL / TRAIN only; TEST not used): eval_v2/next_step_20261019/val_decomposition.txt shows that the 8 VAL cases with a
+  predominantly non-enhancing core (GT ET/TC < 0.25) have TC Dice 0.42-0.45 in all nine of our models (DWT / max-pool, Run C / D
+  recipes, 200 / 200+200 / 400 epochs, TTA, Ensemble 3) and carry 32-40 % of the TC shortfall; trainfit/ shows Run C under-fits this
+  phenotype on its own TRAIN cases (no-TTA TC 0.713 on the 65 TRAIN cases with ET/TC < 0.25 vs 0.931 on 65 random other TRAIN cases;
+  VAL other cases 0.926). Run E (400 epochs, uniform sampling) left the subgroup unchanged (0.421 vs 0.421). Caveat: the 0.25 cutoff
+  was derived from the VAL error analysis (VAL results for this change are optimistic); annotation ambiguity (NCR vs edema) is an
+  alternative explanation that this experiment cannot exclude.
+- **Run F** (tag runF_phenoD; dir experiments/runF_phenoD) = Run D exactly (code = a COPY of the frozen experiments/runD_in_z/code;
+  arch_flags.txt = --downsample dwt3d --base-filters 24 --deep-supervision; --norm instance --normalisation zscore --aug strong;
+  AdamW 2e-4, cosine T_max 200, batch 2 x accumulation 4, focal-BCE + Dice, AMP, seed 42, 200 epochs, same split, random 128^3
+  crops, checkpoint = best training-time centre-crop VAL metric) with ONE change: training cases are drawn by
+  torch WeightedRandomSampler(replacement=True, num_samples=1000 per epoch, generator seeded 42) instead of DataLoader shuffle.
+  Target group = the 65 TRAIN cases with GT TC > 0 and ET/TC < 0.25, computed from TRAIN labels only (list + sha256 frozen in the run
+  dir before training); weight ratio r = 0.20 x 935 / (0.80 x 65) = 3.596, i.e. expected target share 20 % of draws (6.5 % now),
+  other cases equal weight. New flags --case-sampling {uniform,phenotype} (default uniform = unchanged code path),
+  --target-list, --target-share; target draws per epoch are logged. Pre-launch checks: diff limited to the sampler; sampler dry run
+  (share 20 +- 1 % over 200 epochs); smoke run on the copy; tests.
+- **Control** = Run D as already trained (same frozen code, same seed, uninterrupted run; saved VAL probabilities reused). One run per
+  arm: seed-to-seed variation is not estimated. Run F tests the whole sampling strategy (weighting + with-replacement draws); it does
+  not isolate the weighting alone.
+- **Evaluation = VAL ONLY, no TEST, no BraTS-Africa, no new ensemble.** eval_v2/eval_run_valonly.sh = eval_run.sh steps 1-3 (VAL in
+  nib and both orders, Amendment-5 30-setting Dice sweep, higher VAL Dice selects) with the TEST step removed; then the rotation-TTA
+  variant runF_rot on VAL only (eval_run_rot2.sh steps 1-3). Comparison: eval_v2/runE_vs_runD/compare_val.py runF runD and
+  runF_rot runD_rot. TRAIN-fit check (mechanism): evaluate_brats.py --no-tta --axis-order nib with each run's VAL-selected
+  post-processing on trainfit/train_target65.txt and train_other65.txt, for Run D (control, run before Run F results exist) and Run F.
+- **Success criteria (fixed now), Run F vs Run D and Run F rot vs Run D rot, VAL 126, each with its own VAL-selected post-processing:**
+  T1 targeted (EXPLORATORY, n = 8, VAL-derived cutoff): mean Dice_TC on the 8 VAL cases with ET/TC < 0.25 improves by >= +0.05 and
+     improves in >= 5 of 8;
+  T2 mechanism (TRAIN): no-TTA Dice_TC on the 65 TRAIN target cases improves by >= +0.05, and the 65 other TRAIN cases' mean Dice
+     does not fall by more than 0.01;
+  T3 reported only: Dice_TC on the 18 VAL cases with ET/TC < 0.5;
+  O1 overall: paired mean-Dice difference >= 0 (point estimate) and bootstrap 95 % CI lower bound > -0.005;
+  O2 per region: no region (ET, TC, WT) lower by more than 0.005;
+  R1 serious regressions: at most 2 cases losing > 0.10 Dice in any region; no empty GT ET/TC region that Run D scores 1.0 becomes 0;
+  R2 HD95: per-region mean (defined values) not worse by more than 0.5 mm; undefined counts reported;
+  F  exploratory: Amendment-28 VAL folds, >= 3 of 5 with non-negative mean difference (reported).
+  Outcome (i) candidate improvement = T1, T2, O1, O2, R1, R2 all hold for both variants; (ii) subgroup-only = T1/T2 hold but O1 or
+  O2 fails (reported, not adopted); (iii) no effect / harm (reported). Reported whatever it shows.
+- Even outcome (i) changes neither the headline (Ensemble 3) nor the paper: any new ensemble, TEST scoring or paper change needs a
+  further amendment and the user's decision, and a confirmatory claim needs an independent, previously unused labelled cohort
+  (BraTS 2021 TEST has been inspected repeatedly and cannot confirm a revised method).
+- Compute: ~11-13 h training (Run D: 10.75 h), ~3 h VAL evaluation, ~3 h rotation variant. Fault-tolerant resume (up to 10 attempts)
+  as Run D; boot-hook entry added. Never stopped unless the user asks.
+- Amendment 29 addendum (2026-10-20 ~13:50, user: "ok you go best", after an external audit; written while the Run F VAL evaluation
+  was at step 1/4, before any criteria output or per-case Run F VAL score existed): outcome (ii) "subgroup-only" means T1 AND T2 hold
+  (both) while O1 or O2 fails. criteria.py line 95 had implemented T1 OR T2; corrected to T1 AND T2 (backup
+  criteria.py.bak_20261020_1350_pre_T1andT2). Outcome (i) is unchanged (all six criteria, both variants). Separately noted:
+  queue_runF.sh writes DONE even if a train-fit, the rotation evaluation or a criteria step fails; the running script is not edited
+  (bash reads it incrementally), so every step's output is checked by hand before DONE is trusted.
